@@ -255,7 +255,7 @@
     <!-- =========================================================
          BGM (loop)
          ========================================================= -->
-    <audio id="bgm" src="./audio/StellarGravity_01.mp3" loop preload="auto"></audio>
+    <audio id="bgm" src="audio/StellarGravity_01.mp3" loop preload="auto"></audio>
 
     <!-- Matter.js canvas is injected here -->
     <div id="canvas-container"></div>
@@ -337,29 +337,25 @@
         /* =========================================================
          * Stellar Gravity
          * ---------------------------------------------------------
-         * Game Overview
-         * - 中央のコア（恒星）へ向けて惑星を射出する物理パズルゲーム
-         * - ランチャーは自動回転し、クリック／タップで発射
-         * - 同じ段階の惑星同士が衝突すると合体・進化
-         * - 危険ライン（DEADLINE）外に惑星が留まるとゲームオーバー
-         * - 最終段階「Black Hole」に到達するとステージクリア
+         * Game Summary:
+         * - Center core (sun-like)
+         * - Launcher rotates around center automatically
+         * - Tap/click to shoot a planet toward center
+         * - Same size (same index) merges into next level
+         * - If any planet stays outside DEADLINE for 3 sec -> Game Over
+         * - Grow to BlackHole -> Clear
          * ========================================================= */
-
 
         /* =========================================================
-         * Platform Detection
-         * - iOS / iPadOS 判定
-         * - WebAudio のユーザー操作制限対策用
+         * iOS 判定（起動時に1回だけ）
          * ========================================================= */
-
         const isIOS =
             /iPhone|iPad|iPod/.test(navigator.userAgent) ||
             (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 
         /* =========================================================
-         * Constants / Tuning Parameters
-         * - スコア、演出タイミング、物理挙動の調整用定数
+         * Constants / Tuning
          * ========================================================= */
         const SUPERNOVA_BONUS = 3000;
         const SUPERNOVA_CLEAR_DELAY = 450;
@@ -382,10 +378,10 @@
         let CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
 
         /* =========================================================
-         * Radius Settings
-         * - CORE_RADIUS     : 中央コアの半径
-         * - DEADLINE_RADIUS : 危険ライン（ゲームオーバー判定）
-         * - SPAWN_RADIUS    : 惑星射出位置（ランチャー半径）
+         * Difficulty Radii
+         * - CORE_RADIUS:   center core radius
+         * - DEADLINE_RADIUS: danger threshold
+         * - SPAWN_RADIUS: launcher distance from center
          * ========================================================= */
         const DEADLINE_RADIUS = 180;
         const SPAWN_RADIUS = 220;
@@ -407,7 +403,6 @@
 
         /* =========================================================
          * Rotation Boost
-         * - BOOST 中はランチャー回転速度と背景演出が加速
          * ========================================================= */
         let isBoosting = false;
         const ROTATE_BASE_SPEED = 0.015;
@@ -424,9 +419,9 @@
         document.getElementById("hi-stage-val").innerText = hiStage;
 
         /* =========================================================
-         * Planet Definitions
-         * - 惑星の進化段階・半径・色・加算スコア
-         * - index が進化段階を表す
+         * Planet Definitions (merge levels)
+         * index: 0..8
+         * score: points gained when the higher planet is created
          * ========================================================= */
         const PLANETS = [
             { name: "Meteor", radius: 10, color: "#aab7b8", score: 1 },
@@ -456,6 +451,13 @@
         let gameOverTime = null;
         let particles = [];
         let bgStars = [];
+
+
+        // ★ デバッグ用：どの惑星でクリアするか
+        const DEBUG_CLEAR_INDEX = 3; // Earth
+        // 本番は ↓
+        const CLEAR_INDEX = PLANETS.length - 1; // BlackHole
+        let isBlackHoleCore = false;
 
         /* =========================================================
          * Audio (WebAudio for SFX)
@@ -734,10 +736,10 @@
             Runner.run(runner, engine);
 
             /* =====================================================
-             * Render Loop (afterRender)
-             * - ランチャー回転更新
-             * - 背景星・ガイドライン・コア・惑星・パーティクル描画
-             * - DEADLINE 判定とゲームオーバー監視
+             * Render loop: afterRender
+             * - rotate launcher
+             * - draw background / guideline / core / planets / particles
+             * - deadline + game over check
              * ===================================================== */
             Events.on(render, "afterRender", () => {
                 const ctx = render.context;
@@ -851,23 +853,56 @@
 
 
 
-                /* core (glow + body) */
+                /* core (star / black hole) */
                 ctx.save();
                 ctx.translate(CENTER.x, CENTER.y);
-                const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
-                const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
-                grad.addColorStop(0, "rgba(255, 100, 50, 0.8)");
-                grad.addColorStop(1, "rgba(255, 0, 0, 0)");
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(0, 0, gR, 0, Math.PI * 2);
-                ctx.fill();
 
-                ctx.beginPath();
-                ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
-                ctx.fillStyle = "#fff700";
-                ctx.fill();
+                if (!isBlackHoleCore) {
+                    // ===== 通常の恒星 =====
+                    const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
+                    const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                } else {
+                    // ===== ブラックホール =====
+
+                    const t2 = performance.now() * 0.002;
+
+                    // 外側フレア（赤）
+                    for (let i = 0; i < 6; i++) {
+                        const r = CORE_RADIUS * (1.8 + i * 0.25);
+                        const a = 0.15 + Math.sin(t2 + i) * 0.1;
+
+                        ctx.beginPath();
+                        ctx.arc(0, 0, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,80,40,${a})`;
+                        ctx.lineWidth = 6;
+                        ctx.stroke();
+                    }
+
+                    // 内部グラデーション（暗赤 → 黒）
+                    const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
+                    holeGrad.addColorStop(0, "rgba(0,0,0,1)");
+                    holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
+                    holeGrad.addColorStop(1, "rgba(0,0,0,1)");
+
+                    ctx.fillStyle = holeGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 ctx.restore();
+
 
                 /* draw planets (custom) */
                 Composite.allBodies(engine.world).forEach(b => {
@@ -995,8 +1030,8 @@
             });
 
             /* =====================================================
-             * Physics Update (beforeUpdate)
-             * - 全惑星に中央コアへの疑似重力を付与
+             * Physics loop: beforeUpdate
+             * - apply custom gravity toward CENTER
              * ===================================================== */
             Events.on(engine, "beforeUpdate", () => {
                 Composite.allBodies(engine.world).forEach(b => {
@@ -1111,9 +1146,9 @@
             }
 
             /* =====================================================
-             * Collision Handling
-             * - 同段階の惑星が衝突すると次段階へ合体
-             * - Black Hole 生成時はスーパーノヴァ演出 → ステージクリア
+             * Collision: merge logic
+             * - same index and not BlackHole -> merge into next level
+             * - when BlackHole is created -> supernova + clear
              * ===================================================== */
             Events.on(engine, "collisionStart", (e) => {
 
@@ -1187,10 +1222,12 @@
                     setTimeout(() => {
 
                         // ★ BlackHole（Clear）
-                        if (nP.name === "BlackHole") {
+                        if (nI === CLEAR_INDEX) {
 
                             if (isClearing) return;
                             isClearing = true;
+
+                            isBlackHoleCore = true;
 
                             isGameRunning = false;
                             isClickable = false;
@@ -1409,6 +1446,8 @@
 
             isClearing = false;
 
+            isBlackHoleCore = false; 
+
             e.preventDefault();
             e.stopPropagation();
 
@@ -1471,9 +1510,7 @@
         }, { passive: false });
 
         /* =========================================================
-         * Resize Handling
-         * - 画面サイズ変更時にキャンバスと物理世界を同期
-         * - 全ボディを中心差分だけ平行移動して位置ズレを防止
+         * Resize
          * ========================================================= */
         window.addEventListener("resize", () => {
             const dpr = window.devicePixelRatio || 1;
