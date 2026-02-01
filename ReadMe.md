@@ -52,4 +52,5 @@ PC・スマートフォンのブラウザでそのままプレイできます。
 ---
 
 ## 🌐 プレイURL（GitHub Pages）
+https://hidecade.github.io/Stellar-Gravity/
 
