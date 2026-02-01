@@ -337,25 +337,29 @@
         /* =========================================================
          * Stellar Gravity
          * ---------------------------------------------------------
-         * Game Summary:
-         * - Center core (sun-like)
-         * - Launcher rotates around center automatically
-         * - Tap/click to shoot a planet toward center
-         * - Same size (same index) merges into next level
-         * - If any planet stays outside DEADLINE for 3 sec -> Game Over
-         * - Grow to BlackHole -> Clear
+         * Game Overview
+         * - 中央のコア（恒星）へ向けて惑星を射出する物理パズルゲーム
+         * - ランチャーは自動回転し、クリック／タップで発射
+         * - 同じ段階の惑星同士が衝突すると合体・進化
+         * - 危険ライン（DEADLINE）外に惑星が留まるとゲームオーバー
+         * - 最終段階「Black Hole」に到達するとステージクリア
          * ========================================================= */
 
+
         /* =========================================================
-         * iOS 判定（起動時に1回だけ）
+         * Platform Detection
+         * - iOS / iPadOS 判定
+         * - WebAudio のユーザー操作制限対策用
          * ========================================================= */
+
         const isIOS =
             /iPhone|iPad|iPod/.test(navigator.userAgent) ||
             (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 
         /* =========================================================
-         * Constants / Tuning
+         * Constants / Tuning Parameters
+         * - スコア、演出タイミング、物理挙動の調整用定数
          * ========================================================= */
         const SUPERNOVA_BONUS = 3000;
         const SUPERNOVA_CLEAR_DELAY = 450;
@@ -378,10 +382,10 @@
         let CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
 
         /* =========================================================
-         * Difficulty Radii
-         * - CORE_RADIUS:   center core radius
-         * - DEADLINE_RADIUS: danger threshold
-         * - SPAWN_RADIUS: launcher distance from center
+         * Radius Settings
+         * - CORE_RADIUS     : 中央コアの半径
+         * - DEADLINE_RADIUS : 危険ライン（ゲームオーバー判定）
+         * - SPAWN_RADIUS    : 惑星射出位置（ランチャー半径）
          * ========================================================= */
         const DEADLINE_RADIUS = 180;
         const SPAWN_RADIUS = 220;
@@ -403,6 +407,7 @@
 
         /* =========================================================
          * Rotation Boost
+         * - BOOST 中はランチャー回転速度と背景演出が加速
          * ========================================================= */
         let isBoosting = false;
         const ROTATE_BASE_SPEED = 0.015;
@@ -419,9 +424,9 @@
         document.getElementById("hi-stage-val").innerText = hiStage;
 
         /* =========================================================
-         * Planet Definitions (merge levels)
-         * index: 0..8
-         * score: points gained when the higher planet is created
+         * Planet Definitions
+         * - 惑星の進化段階・半径・色・加算スコア
+         * - index が進化段階を表す
          * ========================================================= */
         const PLANETS = [
             { name: "Meteor", radius: 10, color: "#aab7b8", score: 1 },
@@ -729,10 +734,10 @@
             Runner.run(runner, engine);
 
             /* =====================================================
-             * Render loop: afterRender
-             * - rotate launcher
-             * - draw background / guideline / core / planets / particles
-             * - deadline + game over check
+             * Render Loop (afterRender)
+             * - ランチャー回転更新
+             * - 背景星・ガイドライン・コア・惑星・パーティクル描画
+             * - DEADLINE 判定とゲームオーバー監視
              * ===================================================== */
             Events.on(render, "afterRender", () => {
                 const ctx = render.context;
@@ -990,8 +995,8 @@
             });
 
             /* =====================================================
-             * Physics loop: beforeUpdate
-             * - apply custom gravity toward CENTER
+             * Physics Update (beforeUpdate)
+             * - 全惑星に中央コアへの疑似重力を付与
              * ===================================================== */
             Events.on(engine, "beforeUpdate", () => {
                 Composite.allBodies(engine.world).forEach(b => {
@@ -1106,9 +1111,9 @@
             }
 
             /* =====================================================
-             * Collision: merge logic
-             * - same index and not BlackHole -> merge into next level
-             * - when BlackHole is created -> supernova + clear
+             * Collision Handling
+             * - 同段階の惑星が衝突すると次段階へ合体
+             * - Black Hole 生成時はスーパーノヴァ演出 → ステージクリア
              * ===================================================== */
             Events.on(engine, "collisionStart", (e) => {
 
@@ -1466,7 +1471,9 @@
         }, { passive: false });
 
         /* =========================================================
-         * Resize
+         * Resize Handling
+         * - 画面サイズ変更時にキャンバスと物理世界を同期
+         * - 全ボディを中心差分だけ平行移動して位置ズレを防止
          * ========================================================= */
         window.addEventListener("resize", () => {
             const dpr = window.devicePixelRatio || 1;
