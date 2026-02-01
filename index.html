@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Stellar Gravity</title>
+
+    <!-- =========================================================
+         Physics Engine
+         - Matter.js（重力・衝突・剛体など）
+         ========================================================= -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <style>
+        /* =========================================================
+           Global / Layout
+           ========================================================= */
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            font-family: "Courier New", sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            color: white;
+        }
+
+        /* Matter.js canvas (full-screen fixed) */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+        }
+
+     
+
+        /* =========================================================
+           HUD (score / next)
+           - pointer-events:none で操作を邪魔しない
+           ========================================================= */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-item {
+            margin-bottom: 10px;
+        }
+
+        .score-num {
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 15px #4facfe;
+            font-family: Arial, sans-serif;
+        }
+
+        .hi-score-num {
+            font-size: 40px;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241,196,15,0.5);
+            font-family: Arial, sans-serif;
+        }
+
+        /* =========================================================
+           Overlay (title / game over / clear)
+           ========================================================= */
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s;
+            pointer-events: auto;
+        }
+
+            #overlay.hide {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+        h1 {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1.1;
+            letter-spacing: 6px;
+            font-weight: 300;
+        }
+
+        .btn {
+            margin-top: 40px;
+            padding: 15px 50px;
+            font-size: 18px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.8);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 4px;
+            pointer-events: auto;
+        }
+
+            .btn:hover {
+                background: white;
+                color: black;
+            }
+
+        /* =========================================================
+           BOOST Button (visual / hit target)
+           ========================================================= */
+        #boost-btn {
+            position: fixed;
+            bottom: 32px;
+            left: 32px;
+            /* button body */
+            padding: 42px 120px;
+            font-size: 22px;
+            letter-spacing: 4px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 3px solid rgba(255,255,255,0.9);
+            border-radius: 90px;
+            cursor: pointer;
+            z-index: 20;
+            user-select: none;
+            -webkit-user-select: none;
+            /* subtle inner glow */
+            box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
+            isolation: isolate;
+        }
+
+            /* Outer large frame (main highlight) */
+            #boost-btn::before {
+                content: "";
+                position: absolute;
+                inset: -18px;
+                border-radius: 120px;
+                border: 4px solid rgba(79,172,254,0.9);
+                box-shadow: 0 0 30px rgba(79,172,254,0.6), 0 0 70px rgba(79,172,254,0.4);
+                pointer-events: none;
+                z-index: -1;
+            }
+
+        .boosting {
+            box-shadow: 0 0 20px rgba(79,172,254,0.9);
+        }
+
+        /* =========================================================
+           Stage UI (bottom-right)
+           ========================================================= */
+        #stage-ui {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            text-align: right;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .stage-label {
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: #aaa;
+        }
+
+        .stage-num {
+            font-size: 36px;
+            font-weight: bold;
+            text-shadow: 0 0 12px rgba(255,255,255,0.6);
+            font-family: Arial, sans-serif;
+        }
+
+        .hi-stage {
+            margin-left: 12px;
+            font-size: 18px;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+
+        /* NEXT label text (currently hidden) */
+        #next-name {
+            opacity: 0.85;
+            text-shadow: 0 0 6px rgba(255,255,255,0.4);
+            display: none;
+        }
+
+        /* Overlay sub buttons */
+        .sub-btn {
+            margin-top: 16px;
+            padding: 10px 36px;
+            font-size: 14px;
+            letter-spacing: 3px;
+            opacity: 0.75;
+            border-color: rgba(255,255,255,0.5);
+        }
+
+            .sub-btn:hover {
+                opacity: 1;
+                background: rgba(255,255,255,0.15);
+                color: white;
+            }
+
+        /* BGM toggle (title screen only; placed inside overlay) */
+        #bgm-toggle {
+            position: fixed;
+            left: 70%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 18;
+            padding: 6px 20px;
+            font-size: 12px;
+            letter-spacing: 2px;
+            background: rgba(0,0,0,0.45);
+            color: rgba(255,255,255,0.85);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 999px;
+            opacity: 0.6;
+        }
+
+            #bgm-toggle:hover {
+                opacity: 1;
+            }
+
+
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================================================
+         BGM (loop)
+         ========================================================= -->
+    <audio id="bgm" src="audio/StellarGravity_01.mp3" loop preload="auto"></audio>
+
+    <!-- Matter.js canvas is injected here -->
+    <div id="canvas-container"></div>
+
+    <!-- =========================================================
+         HUD
+         ========================================================= -->
+    <div id="ui-layer">
+        <div style="text-align:left;">
+            <div class="hud-item">
+                <span style="font-size:20px;color:#aaa;">HIGH SCORE</span><br />
+                <span id="hi-score-val" class="hi-score-num">0</span>
+                <span class="hi-stage">
+                    STAGE <span id="hi-stage-val">1</span>
+                </span>
+            </div>
+            <div class="hud-item">
+                <span style="font-size:20px;color:#aaa;">SCORE</span><br />
+                <span id="score-val" class="score-num">0</span>
+            </div>
+        </div>
+
+        <div style="text-align:right;">
+            <span style="font-size:20px;color:#aaa;">NEXT</span>
+
+            <div id="next-wrap" style="width:80px; text-align:center;">
+                <div id="next-ui" style="height:40px;"></div>
+
+                <div id="next-name"
+                     style="margin-top:6px; font-size:14px; letter-spacing:1px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         Overlay (title / result)
+         - BGM ON/OFF is title-screen-only (inside overlay)
+         ========================================================= -->
+    <div id="overlay">
+        <h1 id="title-text">STELLAR<br />GRAVITY</h1>
+
+        <button id="start-btn" class="btn">START</button>
+
+        <button id="clear-hi-btn" class="btn sub-btn">
+            CLEAR HIGH SCORE
+        </button>
+
+        <button id="bgm-toggle" class="btn sub-btn" style="margin-top:24px;">
+            BGM ON
+        </button>
+    </div>
+
+    <!-- =========================================================
+         BOOST
+         ========================================================= -->
+    <div style="margin-top:12px; pointer-events:auto;">
+        <button id="boost-btn"
+                style="
+                padding:6px 16px;
+                border-radius:20px;
+                background:rgba(255,255,255,0.1);
+                border:1px solid rgba(255,255,255,0.6);
+                color:white;
+                letter-spacing:2px;
+                cursor:pointer;
+            ">
+            BOOST
+        </button>
+    </div>
+
+    <!-- Stage display (bottom-right) -->
+    <div id="stage-ui">
+        <div class="stage-label">STAGE</div>
+        <div id="stage-val" class="stage-num">1</div>
+    </div>
+
+    <script>
+        /* =========================================================
+         * Stellar Gravity
+         * ---------------------------------------------------------
+         * Game Summary:
+         * - Center core (sun-like)
+         * - Launcher rotates around center automatically
+         * - Tap/click to shoot a planet toward center
+         * - Same size (same index) merges into next level
+         * - If any planet stays outside DEADLINE for 3 sec -> Game Over
+         * - Grow to BlackHole -> Clear
+         * ========================================================= */
+
+        /* =========================================================
+         * iOS 判定（起動時に1回だけ）
+         * ========================================================= */
+        const isIOS =
+            /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+
+        /* =========================================================
+         * Constants / Tuning
+         * ========================================================= */
+        const SUPERNOVA_BONUS = 3000;
+        const SUPERNOVA_CLEAR_DELAY = 450;
+        const SUPERNOVA_END_DELAY = 1100;
+
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+
+
+        /* =========================================================
+         * クリアかどうか
+         * ========================================================= */
+        let isClearing = false;
+
+        /* =========================================================
+         * Screen / Center
+         * ========================================================= */
+        let WIDTH = window.innerWidth;
+        let HEIGHT = window.innerHeight;
+        let CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+        /* =========================================================
+         * Difficulty Radii
+         * - CORE_RADIUS:   center core radius
+         * - DEADLINE_RADIUS: danger threshold
+         * - SPAWN_RADIUS: launcher distance from center
+         * ========================================================= */
+        const DEADLINE_RADIUS = 180;
+        const SPAWN_RADIUS = 220;
+
+        // RedZone visual tuning
+        const REDZONE_ROT_SPEED = 0.0015;   // 回転速度
+        const REDZONE_SPARK_RATE = 0.12;    // 火花発生率
+
+
+        /* Core growth on stage clear */
+        const CORE_DEFAULT = 25;
+        const CORE_MAX = 70;
+        const CORE_GROW = 10;
+        let CORE_RADIUS = CORE_DEFAULT;
+
+        /* State flags related to stage clear / continue */
+        let pendingCoreBoost = false;
+        let isContinue = false;
+
+        /* =========================================================
+         * Rotation Boost
+         * ========================================================= */
+        let isBoosting = false;
+        const ROTATE_BASE_SPEED = 0.015;
+        const ROTATE_BOOST_MULT = 3.5;
+        const STAR_BOOST_MULT = 3.0;
+
+        /* =========================================================
+         * Stage / Hi-Stage
+         * ========================================================= */
+        let stage = 1;
+        document.getElementById("stage-val").innerText = stage;
+
+        let hiStage = localStorage.getItem("stellarGravity_hiStage") || 1;
+        document.getElementById("hi-stage-val").innerText = hiStage;
+
+        /* =========================================================
+         * Planet Definitions (merge levels)
+         * index: 0..8
+         * score: points gained when the higher planet is created
+         * ========================================================= */
+        const PLANETS = [
+            { name: "Meteor", radius: 10, color: "#aab7b8", score: 1 },
+            { name: "Moon", radius: 16, color: "#dfe6e9", score: 2 },
+            { name: "Mars", radius: 22, color: "#ff7675", score: 4 },
+            { name: "Earth", radius: 30, color: "#74b9ff", score: 8 },
+            { name: "Neptune", radius: 38, color: "#a29bfe", score: 16 },
+            { name: "Saturn", radius: 48, color: "#ffeaa7", score: 32 },
+            { name: "Jupiter", radius: 58, color: "#fab1a0", score: 64 },
+            { name: "Sun", radius: 70, color: "#ff9f43", score: 128 },
+            { name: "BlackHole", radius: 85, color: "#ffffff", score: 256 }
+        ];
+
+        /* =========================================================
+         * Game State
+         * ========================================================= */
+        let engine, render, runner;
+
+        let score = 0;
+        let hiScore = localStorage.getItem("stellarGravity_hiScore") || 0;
+
+        let isGameRunning = false;
+        let isClickable = true;
+        let nextQueue = [];
+        let launcherAngle = -Math.PI / 2;
+
+        let gameOverTime = null;
+        let particles = [];
+        let bgStars = [];
+
+        /* =========================================================
+         * Audio (WebAudio for SFX)
+         * ========================================================= */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let noiseBuffer = null;
+
+        document.getElementById("hi-score-val").innerText = hiScore;
+
+        /* =========================================================
+         * Utility: BOOST safe area (avoid mis-tap shooting)
+         * ========================================================= */
+        function isInBoostSafeArea(clientX, clientY) {
+            const rect = boostBtn.getBoundingClientRect();
+            const margin = 30;
+
+            return (
+                clientX >= rect.left - margin &&
+                clientX <= rect.right + margin &&
+                clientY >= rect.top - margin &&
+                clientY <= rect.bottom + margin
+            );
+        }
+
+        /* =========================================================
+         * Noise buffer (for suction / explosion ambience)
+         * ========================================================= */
+        function createNoiseBuffer() {
+            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            return buffer;
+        }
+
+        /* =========================================================
+         * SFX: suction sound
+         * ========================================================= */
+        function playSuctionSound() {
+            const t = audioCtx.currentTime;
+            const drum = audioCtx.createOscillator(), g = audioCtx.createGain();
+
+            drum.type = 'sine';
+
+            // ★ 音程アップ
+            drum.frequency.setValueAtTime(140, t);                // 100 → 140
+            drum.frequency.exponentialRampToValueAtTime(45, t + 1.5); // 30 → 45
+
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.6, t + 0.1);         // 少し音量も整理
+            g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+
+            drum.connect(g);
+            g.connect(audioCtx.destination);
+            drum.start(t);
+            drum.stop(t + 1.8);
+
+            if (!noiseBuffer) noiseBuffer = createNoiseBuffer();
+            const burst = audioCtx.createBufferSource();
+            burst.buffer = noiseBuffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+
+            // ★ ノイズも少し明るく
+            filter.frequency.setValueAtTime(220, t); // 150 → 220
+
+            const nG = audioCtx.createGain();
+            nG.gain.setValueAtTime(0.12, t);
+            nG.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+
+            burst.connect(filter);
+            filter.connect(nG);
+            nG.connect(audioCtx.destination);
+
+            burst.start(t);
+            burst.stop(t + 1.2);
+        }
+
+
+        /* =========================================================
+         * SFX: heavy explosion (merge)
+         * ========================================================= */
+        function playExplosionSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const t = audioCtx.currentTime;
+
+            const osc = audioCtx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(180, t);
+            osc.frequency.exponentialRampToValueAtTime(60, t + 0.45);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
+
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = "lowpass";
+            noiseFilter.frequency.setValueAtTime(400, t);
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.15, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+
+            const delay = audioCtx.createDelay(0.6);
+            delay.delayTime.setValueAtTime(0.12, t);
+
+            const feedback = audioCtx.createGain();
+            feedback.gain.setValueAtTime(0.25, t);
+
+            delay.connect(feedback);
+            feedback.connect(delay);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            gain.connect(delay);
+            delay.connect(audioCtx.destination);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            osc.start(t);
+            osc.stop(t + 0.8);
+
+            noise.start(t);
+            noise.stop(t + 0.5);
+        }
+
+        /* =========================================================
+         * SFX: black hole (clear)
+         * ========================================================= */
+        function playBlackHoleSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const t = audioCtx.currentTime;
+
+            const osc1 = audioCtx.createOscillator();
+            osc1.type = "triangle";
+            osc1.frequency.setValueAtTime(42, t + 0.3);
+            osc1.frequency.exponentialRampToValueAtTime(18, t + 2.2);
+
+            const gain1 = audioCtx.createGain();
+            gain1.gain.setValueAtTime(0.0001, t);
+            gain1.gain.exponentialRampToValueAtTime(0.45, t + 0.6);
+            gain1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+
+            const lfo = audioCtx.createOscillator();
+            lfo.type = "sine";
+            lfo.frequency.setValueAtTime(6, t);
+
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.setValueAtTime(14, t);
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc1.frequency);
+
+            const boom = audioCtx.createOscillator();
+            boom.type = "sine";
+            boom.frequency.setValueAtTime(60, t + 2.3);
+            boom.frequency.exponentialRampToValueAtTime(28, t + 2.55);
+
+            const boomGain = audioCtx.createGain();
+            boomGain.gain.setValueAtTime(0.0001, t + 2.25);
+            boomGain.gain.exponentialRampToValueAtTime(1.0, t + 2.35);
+            boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
+
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+
+            boom.connect(boomGain);
+            boomGain.connect(audioCtx.destination);
+
+            osc1.start(t + 0.3);
+            osc1.stop(t + 2.5);
+
+            lfo.start(t);
+            lfo.stop(t + 2.5);
+
+            boom.start(t + 2.25);
+            boom.stop(t + 3.0);
+        }
+
+        /* =========================================================
+         * Drawing: planet (custom glow)
+         * ========================================================= */
+        function drawPlanet(ctx, x, y, r, color, time, bodyId) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            const pulse = Math.sin(time * 0.003 + bodyId) * 0.05 + 0.95;
+            const curR = r * pulse;
+
+            for (let i = 0; i < 3; i++) {
+                const shift = Math.sin(time * 0.002 + (i * 2) + bodyId) * (r * 0.15);
+                ctx.beginPath();
+                ctx.arc(0, 0, curR + shift + (i * 2), 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.35 - (i * 0.1);
+                ctx.fill();
+            }
+
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.arc(0, 0, curR, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = curR * 1.5;
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* =========================================================
+         * Background stars
+         * ========================================================= */
+        const STAR_COUNT = Math.floor(80 * 1.5);
+        const STAR_SIZE_MIN = 0.4;
+        const STAR_SIZE_MAX = 3.0;
+
+        const STAR_WHITE_RATIO = 0.65;
+        const STAR_HUE_MIN = 180;
+        const STAR_HUE_MAX = 320;
+        const STAR_SAT = 90;
+        const STAR_LIT = 80;
+
+        function generateStars() {
+            bgStars = [];
+
+            for (let i = 0; i < STAR_COUNT; i++) {
+                const isWhite = Math.random() < STAR_WHITE_RATIO;
+                const alpha = 0.25 + Math.random() * 0.75;
+
+                let color;
+                if (isWhite) {
+                    color = `rgba(235, 245, 255, ${alpha})`;
+                } else {
+                    const hue = STAR_HUE_MIN + Math.random() * (STAR_HUE_MAX - STAR_HUE_MIN);
+                    color = `hsla(${hue}, ${STAR_SAT}%, ${STAR_LIT}%, ${alpha})`;
+                }
+
+                bgStars.push({
+                    r: Math.random() * Math.max(WIDTH, HEIGHT),
+                    angle: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 0.006 + 0.004,
+                    size: STAR_SIZE_MIN + Math.random() * (STAR_SIZE_MAX - STAR_SIZE_MIN),
+                    color
+                });
+            }
+        }
+
+        /* =========================================================
+         * Pre-initialize world / renderer / loop events
+         * ========================================================= */
+        function preInit() {
+            generateStars();
+
+            engine = Engine.create({ gravity: { x: 0, y: 0, scale: 0 } });
+
+            render = Render.create({
+                element: document.getElementById("canvas-container"),
+                engine: engine,
+                options: {
+                    width: WIDTH,
+                    height: HEIGHT,
+                    wireframes: false,
+                    background: "transparent"
+                }
+            });
+
+            Render.run(render);
+            runner = Runner.create();
+            Runner.run(runner, engine);
+
+            /* =====================================================
+             * Render loop: afterRender
+             * - rotate launcher
+             * - draw background / guideline / core / planets / particles
+             * - deadline + game over check
+             * ===================================================== */
+            Events.on(render, "afterRender", () => {
+                const ctx = render.context;
+                const now = Date.now();
+
+                if (isGameRunning) {
+                    const speed = isBoosting
+                        ? ROTATE_BASE_SPEED * ROTATE_BOOST_MULT
+                        : ROTATE_BASE_SPEED;
+                    launcherAngle += speed;
+                }
+
+                const nextNameEl = document.getElementById("next-name");
+                const nextName2El = document.getElementById("next-name2");
+
+                if (nextQueue.length >= 2) {
+                    nextNameEl.textContent = PLANETS[nextQueue[1]].name;
+                }
+
+                /* background stars */
+                bgStars.forEach(s => {
+                    const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
+                    s.angle += s.speed * mult;
+
+                    ctx.save();
+                    ctx.fillStyle = s.color;
+                    ctx.beginPath();
+                    ctx.arc(
+                        CENTER.x + Math.cos(s.angle) * s.r,
+                        CENTER.y + Math.sin(s.angle) * s.r,
+                        s.size,
+                        0, Math.PI * 2
+                    );
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                ctx.globalAlpha = 1;
+
+                /* =====================================================
+                 * RedZone (animated dash rotation)
+                 * ===================================================== */
+                const t = performance.now();
+
+                ctx.save();
+                ctx.translate(CENTER.x, CENTER.y);
+
+                ctx.beginPath();
+                ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
+                ctx.setLineDash([10, 14]);
+
+                // ★ 回転
+                ctx.lineDashOffset = -(t * 0.02) % 1000;
+
+                // ★ 点滅（α振動）
+                const blink =
+                    0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * 0.006));
+
+                ctx.strokeStyle = `rgba(255, 60, 60, ${blink})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 外側グロー（こちらは弱く固定）
+                ctx.beginPath();
+                ctx.setLineDash([]);
+                ctx.arc(0, 0, DEADLINE_RADIUS + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255, 80, 80, 0.25)";
+                ctx.lineWidth = 6;
+                ctx.stroke();
+
+                ctx.restore();
+
+
+                /* =====================================================
+                 * RedZone sparks（見える版）
+                 * ===================================================== */
+                const SPARK_RATE = isIOS ? 0.25 : 0.45;   // ★増やす（iOSは控えめ）
+                const SPARK_MAX = 220;                  // ★増えすぎ防止
+
+                if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
+
+                if (Math.random() < SPARK_RATE) {
+                    // 1回で複数発生させて「散ってる感」を出す
+                    const burst = 2 + (isBoosting ? 4 : 2);
+
+                    for (let k = 0; k < burst; k++) {
+                        const ang = Math.random() * Math.PI * 2;
+
+                        // 円周上（少し外側も混ぜる）
+                        const r = DEADLINE_RADIUS + (Math.random() * 10 - 5);
+                        const x = CENTER.x + Math.cos(ang) * r;
+                        const y = CENTER.y + Math.sin(ang) * r;
+
+                        // 外向き＋少しランダム
+                        const sp = (isBoosting ? 5.0 : 3.2) * (0.6 + Math.random() * 0.8);
+                        const ox = Math.cos(ang) * sp + (Math.random() - 0.5) * 1.0;
+                        const oy = Math.sin(ang) * sp + (Math.random() - 0.5) * 1.0;
+
+                        particles.push({
+                            type: "spark",
+                            x, y,
+                            px: x, py: y,
+                            vx: ox,
+                            vy: oy,
+                            life: 1.0,
+                            size: 1.5 + Math.random() * 2.5,
+                            color: "rgba(255,60,60,1)"   // ★ 赤
+                        });
+                    }
+                }
+
+
+
+                /* core (glow + body) */
+                ctx.save();
+                ctx.translate(CENTER.x, CENTER.y);
+                const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
+                const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
+                grad.addColorStop(0, "rgba(255, 100, 50, 0.8)");
+                grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff700";
+                ctx.fill();
+                ctx.restore();
+
+                /* draw planets (custom) */
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (!b.isStatic && b.index !== undefined) {
+                        drawPlanet(ctx, b.position.x, b.position.y, b.circleRadius, PLANETS[b.index].color, now, b.id);
+                    }
+                });
+
+                /* launcher guide + next preview */
+                if (isClickable && isGameRunning) {
+                    const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+                    const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.setLineDash([4, 6]);
+                    ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
+                    ctx.lineWidth = 1.5;
+                    ctx.moveTo(sX, sY);
+                    ctx.lineTo(CENTER.x, CENTER.y);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+
+                    ctx.save();
+                    ctx.translate(WIDTH - 50, 80);
+                    drawPlanet(ctx, 0, 0, PLANETS[nextQueue[1]].radius * 0.7, PLANETS[nextQueue[1]].color, now, 1);
+                    ctx.restore();
+                }
+
+                /* particles */
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+
+                    // ★ life減衰はここで一元管理
+                    if (p.type === "flash") {
+                        p.life -= 0.07;
+                    } else if (p.type === "spark") {
+                        p.life -= 0.04;   // ← spark専用（少し長生き）
+                    } else {
+                        p.life -= 0.02;
+                    }
+
+                    if (p.type === "shockwave") {
+                        p.radius += (p.speed || 0) * 0.5;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,255,255,${p.life})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.restore();
+
+                    } else if (p.type === "flash") {
+                        ctx.save();
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = p.color || "rgba(255,255,255,1)";
+                        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                        ctx.restore();
+
+                    } else if (p.type === "spark") {
+                        p.px = p.x;
+                        p.py = p.y;
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        ctx.save();
+                        ctx.globalCompositeOperation = "lighter";
+                        ctx.globalAlpha = Math.max(0, p.life);
+
+                        // ★ 赤いストリーク
+                        ctx.strokeStyle = "rgba(255,60,60,1)";
+                        ctx.lineWidth = 2.2;
+                        ctx.beginPath();
+                        ctx.moveTo(p.px, p.py);
+                        ctx.lineTo(p.x, p.y);
+                        ctx.stroke();
+
+                        // ★ 赤いコア（少し明るめ）
+                        ctx.fillStyle = "rgba(255,120,120,1)";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.restore();
+
+                        if (p.life <= 0) particles.splice(i, 1);
+                        continue;
+                    } else {
+                        p.x += p.vx || 0;
+                        p.y += p.vy || 0;
+
+                        ctx.save();
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+
+
+                /* =====================================================
+                 * Game Over Check
+                 * - if any planet center goes outside DEADLINE for > 3s
+                 * ===================================================== */
+                let isOut = false;
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (!b.isStatic && b.index !== undefined) {
+                        const d = Math.sqrt((b.position.x - CENTER.x) ** 2 + (b.position.y - CENTER.y) ** 2);
+                        if (d > DEADLINE_RADIUS) isOut = true;
+                    }
+                });
+
+                if (isOut && isGameRunning) {
+                    if (!gameOverTime) gameOverTime = now;
+                    if (now - gameOverTime > 3000) triggerGameOver();
+                } else {
+                    gameOverTime = null;
+                }
+            });
+
+            /* =====================================================
+             * Physics loop: beforeUpdate
+             * - apply custom gravity toward CENTER
+             * ===================================================== */
+            Events.on(engine, "beforeUpdate", () => {
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (b.isStatic) return;
+                    const dx = CENTER.x - b.position.x;
+                    const dy = CENTER.y - b.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    const force = 0.0028 * b.mass;
+
+                    Body.applyForce(b, b.position, { x: (dx / dist) * force, y: (dy / dist) * force });
+                });
+            });
+
+            /* =====================================================
+             * Helpers: remove all dynamic bodies
+             * ===================================================== */
+            function removeAllDynamicBodies() {
+                const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
+                if (bodies.length) Composite.remove(engine.world, bodies);
+            }
+
+            /* =====================================================
+             * Supernova effect (BlackHole clear)
+             * ===================================================== */
+            function triggerSupernovaAt(x, y, color = "#ffffff") {
+
+                particles.push({ type: "flash", life: 1.0, color: "rgba(255,255,255,1)" });
+                setTimeout(() => {
+                    particles.push({ type: "flash", life: 0.6, color: "rgba(255,200,150,0.8)" });
+                }, 120);
+                setTimeout(() => {
+                    particles.push({ type: "flash", life: 0.35, color: "rgba(255,120,80,0.6)" });
+                }, 300);
+
+                const waves = [
+                    { r: 10, sp: 10, life: 1.2 },
+                    { r: 40, sp: 8, life: 1.1 },
+                    { r: 90, sp: 6, life: 1.0 },
+                    { r: 160, sp: 4, life: 0.9 },
+                    { r: 240, sp: 2.5, life: 0.8 }
+                ];
+
+                waves.forEach((w, i) => {
+                    setTimeout(() => {
+                        particles.push({
+                            type: "shockwave",
+                            x, y,
+                            radius: w.r,
+                            speed: w.sp,
+                            life: w.life
+                        });
+                    }, i * 80);
+                });
+
+                for (let i = 0; i < 260; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 14 + 4;
+
+                    particles.push({
+                        x, y,
+                        vx: Math.cos(ang) * sp,
+                        vy: Math.sin(ang) * sp,
+                        life: 1.2,
+                        color,
+                        size: Math.random() * 3.2 + 1.2
+                    });
+                }
+
+                setTimeout(() => {
+
+                    particles.push({
+                        type: "flash",
+                        life: 0.9,
+                        color: "rgba(0,0,0,0.85)"
+                    });
+
+                    particles.push({
+                        type: "shockwave",
+                        x, y,
+                        radius: Math.max(WIDTH, HEIGHT),
+                        speed: -10,
+                        life: 1.4
+                    });
+
+                    for (let i = 0; i < 180; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const r = Math.random() * 260 + 60;
+                        const sp = Math.random() * 6 + 3;
+
+                        particles.push({
+                            x: x + Math.cos(ang) * r,
+                            y: y + Math.sin(ang) * r,
+                            vx: -Math.cos(ang + Math.PI / 6) * sp,
+                            vy: -Math.sin(ang + Math.PI / 6) * sp,
+                            life: 1.3,
+                            color: "#ffffff",
+                            size: Math.random() * 2.2 + 0.8
+                        });
+                    }
+
+                    if (typeof playBlackHoleSound === "function") {
+                        playBlackHoleSound();
+                    }
+
+                }, 520);
+
+                playExplosionSound();
+                setTimeout(playExplosionSound, 180);
+                setTimeout(playExplosionSound, 420);
+
+            }
+
+            /* =====================================================
+             * Collision: merge logic
+             * - same index and not BlackHole -> merge into next level
+             * - when BlackHole is created -> supernova + clear
+             * ===================================================== */
+            Events.on(engine, "collisionStart", (e) => {
+
+                // ★ ゲーム停止中 or クリア中は一切処理しない
+                if (!isGameRunning || isClearing) return;
+
+                e.pairs.forEach(p => {
+                    const a = p.bodyA;
+                    const b = p.bodyB;
+
+                    // ★ index がない or 既に合体処理中なら無視
+                    if (
+                        a.index === undefined ||
+                        b.index === undefined ||
+                        a.isMerging ||
+                        b.isMerging
+                    ) return;
+
+                    // ★ 同段階のみ合体
+                    if (a.index !== b.index || a.index >= PLANETS.length - 1) return;
+
+                    // ★ この瞬間にロック（超重要）
+                    a.isMerging = true;
+                    b.isMerging = true;
+
+                    const mid = {
+                        x: (a.position.x + b.position.x) / 2,
+                        y: (a.position.y + b.position.y) / 2
+                    };
+
+                    const nI = a.index + 1;
+                    const nP = PLANETS[nI];
+
+                    // ★ remove は遅延（同フレーム衝突破壊防止）
+                    setTimeout(() => {
+                        Composite.remove(engine.world, [a, b]);
+                    }, 0);
+
+                    /* ===============================
+                     * 演出
+                     * =============================== */
+                    playExplosionSound();
+
+
+                    particles.push({
+                        type: "shockwave",
+                        x: mid.x,
+                        y: mid.y,
+                        radius: 10,
+                        speed: 5,
+                        life: 1
+                    });
+
+                    for (let i = 0; i < 12; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const s = Math.random() * 4 + 2;
+                        particles.push({
+                            x: mid.x,
+                            y: mid.y,
+                            vx: Math.cos(ang) * s,
+                            vy: Math.sin(ang) * s,
+                            life: 1,
+                            color: nP.color,
+                            size: 3
+                        });
+                    }
+
+                    /* ===============================
+                     * 合体後処理
+                     * =============================== */
+                    setTimeout(() => {
+
+                        // ★ BlackHole（Clear）
+                        if (nP.name === "BlackHole") {
+
+                            if (isClearing) return;
+                            isClearing = true;
+
+                            isGameRunning = false;
+                            isClickable = false;
+
+                            updateScore(SUPERNOVA_BONUS);
+
+                            triggerSupernovaAt(mid.x, mid.y, "#ffffff");
+
+                            setTimeout(removeAllDynamicBodies, SUPERNOVA_CLEAR_DELAY);
+                            setTimeout(triggerGameClear, SUPERNOVA_END_DELAY);
+
+                        }
+                        // ★ 通常合体
+                        else {
+                            const nb = Bodies.circle(mid.x, mid.y, nP.radius, {
+                                index: nI,
+                                restitution: 0.4,
+                                friction: 0.8,
+                                frictionAir: 0.02,
+                                render: { visible: false }
+                            });
+
+                            Composite.add(engine.world, nb);
+
+                            updateScore(nP.score);
+                        }
+
+                    }, 60);
+                });
+            });
+
+
+        }
+
+        /* =========================================================
+         * BOOST Controls
+         * - mouse / touch / space key
+         * ========================================================= */
+        const boostBtn = document.getElementById("boost-btn");
+
+        const clearHiBtn = document.getElementById("clear-hi-btn");
+
+        boostBtn.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
+            isBoosting = true;
+        });
+
+        boostBtn.addEventListener("mouseup", (e) => {
+            e.stopPropagation();
+            isBoosting = false;
+        });
+
+        boostBtn.addEventListener("mouseleave", () => {
+            isBoosting = false;
+        });
+
+        boostBtn.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isBoosting = true;
+        });
+
+        boostBtn.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            isBoosting = false;
+        });
+
+        boostBtn.addEventListener("touchcancel", () => {
+            isBoosting = false;
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space") {
+                e.preventDefault();
+                isBoosting = true;
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "Space") {
+                isBoosting = false;
+            }
+        });
+
+        /* BOOST visual feedback */
+        setInterval(() => {
+            boostBtn.style.boxShadow = isBoosting
+                ? "0 0 20px rgba(79,172,254,0.9)"
+                : "none";
+        }, 50);
+
+        /* =========================================================
+         * Score
+         * ========================================================= */
+        function updateScore(points) {
+            score += points;
+            document.getElementById("score-val").innerText = score;
+
+            if (score > hiScore) {
+                hiScore = score;
+                document.getElementById("hi-score-val").innerText = hiScore;
+                localStorage.setItem("stellarGravity_hiScore", hiScore);
+            }
+        }
+
+        /* =========================================================
+         * Game Over
+         * ========================================================= */
+        function triggerGameOver() {
+            stopBGM();
+            isGameRunning = false;
+            document.getElementById("stage-val").innerText = stage;
+            isContinue = false;
+
+            document.getElementById("overlay").classList.remove("hide");
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
+
+            document.querySelector("#overlay h1").innerHTML = "GAME OVER";
+            document.getElementById("start-btn").textContent = "START";
+            /* ★ 再表示 */
+            clearHiBtn.style.display = "";
+        }
+
+        /* =========================================================
+         * Clear
+         * ========================================================= */
+        function triggerGameClear() {
+            stopBGM();
+
+            stage++;
+
+            if (stage > hiStage) {
+                hiStage = stage;
+                document.getElementById("hi-stage-val").innerText = hiStage;
+                localStorage.setItem("stellarGravity_hiStage", hiStage);
+            }
+
+            document.getElementById("stage-val").innerText = stage;
+            pendingCoreBoost = true;
+            isContinue = true;
+            isGameRunning = false;
+
+            document.getElementById("overlay").classList.remove("hide");
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
+
+            document.querySelector("#overlay h1").innerHTML = "CLEAR";
+            document.getElementById("start-btn").textContent = "NEXT";
+            /* ★ ここ */
+            clearHiBtn.style.display = "none";
+        }
+
+        /* =========================================================
+         * Shoot (tap/click)
+         * - takes nextQueue[0], pushes new random (0..3)
+         * - sets initial velocity toward center (+ drift when boosting)
+         * ========================================================= */
+        function shoot(e) {
+            if (e && isInBoostSafeArea(e.clientX, e.clientY)) return;
+
+            if (e && document.getElementById("bgm-toggle")
+                .contains(e.target)) return;
+
+            if (!isGameRunning || !isClickable || !document.getElementById("overlay").classList.contains("hide")) return;
+
+            isClickable = false;
+
+            const nI = nextQueue.shift();
+            nextQueue.push(Math.floor(Math.random() * 4));
+
+            playSuctionSound();
+
+            const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+            const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+
+            const b = Bodies.circle(sX, sY, PLANETS[nI].radius, {
+                index: nI,
+                restitution: 0.2,
+                friction: 0.8,
+                frictionAir: isBoosting ? 0.008 : 0.02,
+                render: { visible: false }
+            });
+
+            const BASE_SPEED = 6;
+            const BOOST_DRIFT = isBoosting ? 0.35 : 0;
+
+            const vxC = -Math.cos(launcherAngle);
+            const vyC = -Math.sin(launcherAngle);
+
+            const vxT = -Math.sin(launcherAngle);
+            const vyT = Math.cos(launcherAngle);
+
+            const vx = (vxC + vxT * BOOST_DRIFT) * BASE_SPEED;
+            const vy = (vyC + vyT * BOOST_DRIFT) * BASE_SPEED;
+
+            Body.setVelocity(b, { x: vx, y: vy });
+
+            Composite.add(engine.world, b);
+
+            setTimeout(() => { isClickable = true; }, 600);
+        }
+
+        /* =========================================================
+         * Init (create world once)
+         * ========================================================= */
+        preInit();
+
+        /* =========================================================
+         * Start / Next button
+         * - hides overlay
+         * - resets on START, continues on NEXT
+         * - rebuilds world and core
+         * ========================================================= */
+        document.getElementById("start-btn").addEventListener("click", (e) => {
+
+            isClearing = false;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (isGameRunning) return;
+            if (audioCtx.state === "suspended") audioCtx.resume();
+
+            playBGM();
+
+            const isNext = document.getElementById("start-btn").textContent === "NEXT";
+
+            document.getElementById("overlay").classList.add("hide");
+            bgmToggleBtn.style.pointerEvents = "none";
+            bgmToggleBtn.style.opacity = "0.4";
+
+            if (!isNext) {
+                stage = 1;
+                score = 0;
+                CORE_RADIUS = CORE_DEFAULT;
+                pendingCoreBoost = false;
+                isContinue = false;
+
+                document.getElementById("stage-val").innerText = stage;
+                document.getElementById("score-val").innerText = "0";
+            }
+
+            Composite.clear(engine.world, false);
+
+            if (isNext && pendingCoreBoost) {
+                CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
+                pendingCoreBoost = false;
+            }
+
+            Composite.add(engine.world, Bodies.circle(CENTER.x, CENTER.y, CORE_RADIUS, {
+                isStatic: true,
+                render: { visible: false }
+            }));
+
+            nextQueue = [
+                Math.floor(Math.random() * 4),
+                Math.floor(Math.random() * 4)
+            ];
+
+            gameOverTime = null;
+            isClickable = true;
+            isGameRunning = true;
+        });
+
+        /* =========================================================
+         * Input
+         * ========================================================= */
+        window.addEventListener("mousedown", (e) => {
+            if (isGameRunning && e.button === 0) shoot(e);
+        });
+
+        window.addEventListener("touchstart", (e) => {
+            if (isGameRunning) {
+                shoot(e);
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        /* =========================================================
+         * Resize
+         * ========================================================= */
+        window.addEventListener("resize", () => {
+            const dpr = window.devicePixelRatio || 1;
+
+            // ★ 旧センターを保持
+            const oldCenter = { ...CENTER };
+
+            WIDTH = window.innerWidth;
+            HEIGHT = window.innerHeight;
+            CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+            const dx = CENTER.x - oldCenter.x;
+            const dy = CENTER.y - oldCenter.y;
+
+            /* ===== Render のサイズ更新 ===== */
+            render.canvas.width = WIDTH * dpr;
+            render.canvas.height = HEIGHT * dpr;
+            render.canvas.style.width = WIDTH + "px";
+            render.canvas.style.height = HEIGHT + "px";
+
+            render.context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            render.options.width = WIDTH;
+            render.options.height = HEIGHT;
+
+            /* ===== ★ 全ボディを同じ量だけ平行移動 ===== */
+            Matter.Composite.allBodies(engine.world).forEach(b => {
+                Matter.Body.setPosition(b, {
+                    x: b.position.x + dx,
+                    y: b.position.y + dy
+                });
+            });
+        });
+
+
+
+        /* =========================================================
+         * Clear High Score / Stage (title overlay only)
+         * ========================================================= */
+
+        document.getElementById("clear-hi-btn").addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const overlay = document.getElementById("overlay");
+            if (overlay.classList.contains("hide")) return;
+
+            if (!confirm("HIGH SCORE と STAGE をリセットしますか？")) return;
+
+            hiScore = 0;
+            hiStage = 1;
+
+            localStorage.setItem("stellarGravity_hiScore", 0);
+            localStorage.setItem("stellarGravity_hiStage", 1);
+
+            document.getElementById("hi-score-val").innerText = "0";
+            document.getElementById("hi-stage-val").innerText = "1";
+
+            alert("HIGH SCORE をリセットしました");
+        });
+
+        /* =========================================================
+         * BGM Toggle (title screen only)
+         * ========================================================= */
+        let isBgmEnabled = true;
+
+        const bgmToggleBtn = document.getElementById("bgm-toggle");
+
+        bgmToggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            if (isGameRunning) return;
+
+            isBgmEnabled = !isBgmEnabled;
+            bgm.volume = isBgmEnabled ? 0.1 : 0.0;
+
+            bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
+            localStorage.setItem(
+                "stellarGravity_bgm",
+                isBgmEnabled ? "on" : "off"
+            );
+        });
+
+        /* Load initial BGM setting */
+        isBgmEnabled = localStorage.getItem("stellarGravity_bgm") !== "off";
+        bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
+
+        /* =========================================================
+         * HTMLAudio BGM helpers
+         * ========================================================= */
+        const bgm = document.getElementById("bgm");
+
+        let bgmFadeInterval = null;
+
+        function playBGM() {
+            // ★ OFFなら何もしない
+            if (!isBgmEnabled) return;
+
+            // フェード中なら止める
+            if (bgmFadeInterval) {
+                clearInterval(bgmFadeInterval);
+                bgmFadeInterval = null;
+            }
+
+            bgm.volume = 0.1;
+
+            if (bgm.paused) {
+                bgm.play().catch(() => { });
+            }
+        }
+
+        function stopBGM() {
+            // すでに止まっていたら何もしない
+            if (bgm.paused) return;
+
+            // フェード多重防止
+            if (bgmFadeInterval) return;
+
+            let vol = bgm.volume;
+
+            bgmFadeInterval = setInterval(() => {
+                vol -= 0.01;
+
+                if (vol > 0.01) {
+                    bgm.volume = vol;
+                } else {
+                    bgm.pause();
+                    bgm.currentTime = 0;
+                    bgm.volume = 0.1; // 次回再生用に戻す
+
+                    clearInterval(bgmFadeInterval);
+                    bgmFadeInterval = null;
+                }
+            }, 50);
+        }
+
+    </script>
+</body>
+</html>
