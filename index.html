@@ -246,6 +246,23 @@
                 opacity: 1;
             }
 
+        #reset-btn {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 8px 22px;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
 
     </style>
 </head>
@@ -346,6 +363,8 @@
         <div id="stage-val" class="stage-num">1</div>
     </div>
 
+    <button id="reset-btn">RESET</button>
+
 
 
     <script>
@@ -381,9 +400,16 @@
 
 
         /* =========================================================
-         * クリアかどうか
+         * ゲーム変数
          * ========================================================= */
         let isClearing = false;
+        let isPaused = false;
+
+        /* =========================================================
+         * リセットボタン
+         * ========================================================= */
+        const resetBtn = document.getElementById("reset-btn");
+
 
         /* =========================================================
          * Screen / Center
@@ -473,6 +499,37 @@
         // 本番は ↓
         const CLEAR_INDEX = PLANETS.length - 1; // BlackHole
         let isBlackHoleCore = false;
+
+
+        /* =========================================================
+         * ゲームタイトルに戻る
+         * ========================================================= */
+        function returnToTitle() {
+            // 物理演算停止
+            Runner.stop(runner);
+
+            // フラグ初期化
+            isGameRunning = false;
+            isPaused = false;
+            isClickable = false;
+
+            // BGM停止
+            stopBGM();
+
+            // ゲーム内のオブジェクトを消去
+            Composite.clear(engine.world, false);
+
+            // オーバーレイをタイトル状態に
+            const overlay = document.getElementById("overlay");
+            overlay.classList.remove("hide");
+
+            document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
+            document.getElementById("start-btn").textContent = "START";
+
+            // クリアメッセージなどを消す
+            document.getElementById("clear-message").style.display = "none";
+        }
+
 
         /* =========================================================
          * Audio (WebAudio for SFX)
@@ -1425,6 +1482,11 @@
          * - sets initial velocity toward center (+ drift when boosting)
          * ========================================================= */
         function shoot(e) {
+
+            if (isPaused) return;
+
+            if (e && resetBtn.contains(e.target)) return;
+
             if (e && isInBoostSafeArea(e.clientX, e.clientY)) return;
 
             if (e && document.getElementById("bgm-toggle")
@@ -1482,6 +1544,9 @@
          * ========================================================= */
         document.getElementById("start-btn").addEventListener("click", (e) => {
 
+            if (isPaused) {
+                isPaused = false;
+            }
 
             document.getElementById("clear-message").style.display = "none";
 
@@ -1536,6 +1601,39 @@
             isClickable = true;
             isGameRunning = true;
         });
+
+
+        /* =========================================================
+         * Reset Game Button
+         * ========================================================= */
+
+        resetBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!isGameRunning) return;
+
+            isPaused = true;
+            Runner.stop(runner);
+            stopBGM();
+
+            const ok = confirm("ゲームを中断してタイトルに戻りますか？");
+
+            if (ok) {
+                returnToTitle();
+            } else {
+                isPaused = false;
+                Runner.run(runner, engine);
+                playBGM();
+            }
+        });
+
+        resetBtn.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+
 
         /* =========================================================
          * Input
