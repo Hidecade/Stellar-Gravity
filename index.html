@@ -256,6 +256,8 @@
          BGM (loop)
          ========================================================= -->
     <audio id="bgm" src="audio/StellarGravity_01.mp3" loop preload="auto"></audio>
+    <audio id="clear-bgm" src="audio/StellarGravity_Clear.mp3" preload="auto"></audio>
+
 
     <!-- Matter.js canvas is injected here -->
     <div id="canvas-container"></div>
@@ -307,6 +309,17 @@
         <button id="bgm-toggle" class="btn sub-btn" style="margin-top:24px;">
             BGM ON
         </button>
+
+        <p id="clear-message"
+           style="
+     margin-top:20px;
+     font-size:16px;
+     letter-spacing:1px;
+     opacity:0.9;
+     display:none;
+   ">
+        </p>
+
     </div>
 
     <!-- =========================================================
@@ -332,6 +345,8 @@
         <div class="stage-label">STAGE</div>
         <div id="stage-val" class="stage-num">1</div>
     </div>
+
+
 
     <script>
         /* =========================================================
@@ -814,7 +829,7 @@
 
 
                 /* =====================================================
-                 * RedZone sparks（見える版）
+                 * RedZone sparks
                  * ===================================================== */
                 const SPARK_RATE = isIOS ? 0.25 : 0.45;   // ★増やす（iOSは控えめ）
                 const SPARK_MAX = 220;                  // ★増えすぎ防止
@@ -1222,7 +1237,7 @@
                     setTimeout(() => {
 
                         // ★ BlackHole（Clear）
-                        if (nI === CLEAR_INDEX) {
+                        if (nI === DEBUG_CLEAR_INDEX) {
 
                             if (isClearing) return;
                             isClearing = true;
@@ -1338,6 +1353,9 @@
          * ========================================================= */
         function triggerGameOver() {
             stopBGM();
+
+            document.getElementById("clear-message").style.display = "none";
+
             isGameRunning = false;
             document.getElementById("stage-val").innerText = stage;
             isContinue = false;
@@ -1350,6 +1368,7 @@
             document.getElementById("start-btn").textContent = "START";
             /* ★ 再表示 */
             clearHiBtn.style.display = "";
+
         }
 
         /* =========================================================
@@ -1357,6 +1376,11 @@
          * ========================================================= */
         function triggerGameClear() {
             stopBGM();
+
+            // クリアBGM再生
+            if (isBgmEnabled) {
+                playClearBgm();
+            }
 
             stage++;
 
@@ -1379,6 +1403,20 @@
             document.getElementById("start-btn").textContent = "NEXT";
             /* ★ ここ */
             clearHiBtn.style.display = "none";
+
+            const msg = document.getElementById("clear-message");
+
+
+            msg.innerHTML =
+                "Mass and density have reached critical levels.<br>" +
+                "The core has collapsed into a Black Hole.<br><br>" +
+
+                "Beyond the event horizon,<br>" +
+                "a new star system awaits.<br><br>" +
+
+                "<span style='font-size:20px; letter-spacing:3px;'>NEXT STAGE</span>";
+
+            msg.style.display = "block";
         }
 
         /* =========================================================
@@ -1444,9 +1482,12 @@
          * ========================================================= */
         document.getElementById("start-btn").addEventListener("click", (e) => {
 
+
+            document.getElementById("clear-message").style.display = "none";
+
             isClearing = false;
 
-            isBlackHoleCore = false; 
+            isBlackHoleCore = false;
 
             e.preventDefault();
             e.stopPropagation();
@@ -1454,6 +1495,7 @@
             if (isGameRunning) return;
             if (audioCtx.state === "suspended") audioCtx.resume();
 
+            // BGM停止
             playBGM();
 
             const isNext = document.getElementById("start-btn").textContent === "NEXT";
@@ -1602,50 +1644,100 @@
          * HTMLAudio BGM helpers
          * ========================================================= */
         const bgm = document.getElementById("bgm");
+        const clearBgm = document.getElementById("clear-bgm");
 
         let bgmFadeInterval = null;
 
-        function playBGM() {
-            // ★ OFFなら何もしない
-            if (!isBgmEnabled) return;
+        // 今どちらが鳴っているか
+        let currentAudio = null;
 
-            // フェード中なら止める
+
+        /* ===== フェードアウト共通処理 ===== */
+        function fadeOut(audio, callback) {
+            if (!audio || audio.paused) {
+                if (callback) callback();
+                return;
+            }
+
+            // 既存フェードを止める
             if (bgmFadeInterval) {
                 clearInterval(bgmFadeInterval);
                 bgmFadeInterval = null;
             }
 
-            bgm.volume = 0.1;
-
-            if (bgm.paused) {
-                bgm.play().catch(() => { });
-            }
-        }
-
-        function stopBGM() {
-            // すでに止まっていたら何もしない
-            if (bgm.paused) return;
-
-            // フェード多重防止
-            if (bgmFadeInterval) return;
-
-            let vol = bgm.volume;
+            let vol = audio.volume;
 
             bgmFadeInterval = setInterval(() => {
-                vol -= 0.01;
+                vol -= 0.03;   // ← この数値で「すっと感」を調整
 
-                if (vol > 0.01) {
-                    bgm.volume = vol;
+                if (vol > 0.02) {
+                    audio.volume = vol;
                 } else {
-                    bgm.pause();
-                    bgm.currentTime = 0;
-                    bgm.volume = 0.1; // 次回再生用に戻す
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.volume = 0.8;   // 次回再生用の初期値に戻す
 
                     clearInterval(bgmFadeInterval);
                     bgmFadeInterval = null;
+
+                    if (callback) callback();
                 }
-            }, 50);
+            }, 40);
         }
+
+
+        /* ===== 通常BGM再生 ===== */
+        function playBGM() {
+            // OFF設定なら何もしない
+            if (!isBgmEnabled) return;
+
+            // すでにbgmが鳴っていたら何もしない
+            if (currentAudio === bgm && !bgm.paused) return;
+
+            // 何か別の音が鳴っていれば止める
+            stopBGM(() => {
+                bgm.currentTime = 0;
+                bgm.volume = 0.3;
+                bgm.play().catch(() => { });
+
+                currentAudio = bgm;
+            });
+        }
+
+
+        /* ===== クリアBGM再生 ===== */
+        function playClearBgm() {
+            // OFF設定なら何もしない
+            if (!isBgmEnabled) return;
+
+            // すでにclearBgmが鳴っていたら何もしない
+            if (currentAudio === clearBgm && !clearBgm.paused) return;
+
+            // 何か別の音が鳴っていれば止める
+            stopBGM(() => {
+                clearBgm.currentTime = 0;
+                clearBgm.volume = 0.3;
+                clearBgm.play().catch(() => { });
+
+                currentAudio = clearBgm;
+            });
+        }
+
+
+        /* ===== 停止（現在鳴っている音をフェードアウト） ===== */
+        function stopBGM(callback = null) {
+            if (!currentAudio) {
+                if (callback) callback();
+                return;
+            }
+
+            fadeOut(currentAudio, () => {
+                currentAudio = null;
+                if (callback) callback();
+            });
+        }
+
+
 
     </script>
 </body>
