@@ -138,13 +138,13 @@
             bottom: 32px;
             left: 32px;
             /* button body */
-            padding: 42px 120px;
+            padding: 6px 16px;
             font-size: 22px;
-            letter-spacing: 4px;
-            background: rgba(0,0,0,0.6);
+            letter-spacing: 2px;
+            background: rgba(255,255,255,0.1);
             color: white;
-            border: 3px solid rgba(255,255,255,0.9);
-            border-radius: 90px;
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 20px;
             cursor: pointer;
             z-index: 20;
             user-select: none;
@@ -152,6 +152,7 @@
             /* subtle inner glow */
             box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
             isolation: isolate;
+            cursor: pointer;
         }
 
             /* Outer large frame (main highlight) */
@@ -230,6 +231,7 @@
             position: fixed;
             left: 70%;
             bottom: 18px;
+
             transform: translateX(-50%);
             z-index: 18;
             padding: 6px 20px;
@@ -248,21 +250,36 @@
 
         #reset-btn {
             position: fixed;
-            top: 20px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 100;
-            padding: 8px 22px;
-            background: rgba(0, 0, 0, 0.65);
+            padding: 6px 16px;
+            min-width: 80px;
+            min-height: 36px;
+            background: rgba(0, 0, 0, 0.75);
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 24px;
-            letter-spacing: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            letter-spacing: 1px;
+            font-size: 12px;
             cursor: pointer;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            z-index: 999999;
+            pointer-events: auto;
+            display: none;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+            transition: background 0.2s ease, transform 0.1s ease;
         }
+
+            #reset-btn:active {
+                background: rgba(60, 60, 60, 0.9);
+                transform: translateX(-50%) scale(0.96);
+            }
+
+
 
     </style>
 </head>
@@ -342,17 +359,8 @@
     <!-- =========================================================
          BOOST
          ========================================================= -->
-    <div style="margin-top:12px; pointer-events:auto;">
-        <button id="boost-btn"
-                style="
-                padding:6px 16px;
-                border-radius:20px;
-                background:rgba(255,255,255,0.1);
-                border:1px solid rgba(255,255,255,0.6);
-                color:white;
-                letter-spacing:2px;
-                cursor:pointer;
-            ">
+    <div style="margin-top: 12px; pointer-events: auto;">
+        <button id="boost-btn">
             BOOST
         </button>
     </div>
@@ -405,10 +413,8 @@
         let isClearing = false;
         let isPaused = false;
 
-        /* =========================================================
-         * リセットボタン
-         * ========================================================= */
-        const resetBtn = document.getElementById("reset-btn");
+        const bgm = document.getElementById("bgm");
+        const clearBgm = document.getElementById("clear-bgm");
 
 
         /* =========================================================
@@ -505,30 +511,36 @@
          * ゲームタイトルに戻る
          * ========================================================= */
         function returnToTitle() {
-            // 物理演算停止
+
+            // 物理演算を完全停止
             Runner.stop(runner);
 
-            // フラグ初期化
             isGameRunning = false;
             isPaused = false;
             isClickable = false;
 
-            // BGM停止
             stopBGM();
 
-            // ゲーム内のオブジェクトを消去
+            // ワールドの完全クリア
             Composite.clear(engine.world, false);
 
-            // オーバーレイをタイトル状態に
+            // ★ ここが超重要：再スタート時にrunnerを再起動できるように
+            Runner.run(runner, engine);
+
             const overlay = document.getElementById("overlay");
             overlay.classList.remove("hide");
 
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
             document.getElementById("start-btn").textContent = "START";
 
-            // クリアメッセージなどを消す
             document.getElementById("clear-message").style.display = "none";
+
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
+
+            updateResetButtonVisibility();
         }
+
 
 
         /* =========================================================
@@ -538,6 +550,12 @@
         let noiseBuffer = null;
 
         document.getElementById("hi-score-val").innerText = hiScore;
+
+        // SFX用マスターゲイン
+        const sfxMasterGain = audioCtx.createGain();
+        sfxMasterGain.gain.value = 1.8;   // ← ここで効果音全体を大きく
+        sfxMasterGain.connect(audioCtx.destination);
+
 
         /* =========================================================
          * Utility: BOOST safe area (avoid mis-tap shooting)
@@ -582,7 +600,7 @@
             g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
 
             drum.connect(g);
-            g.connect(audioCtx.destination);
+            g.connect(sfxMasterGain);
             drum.start(t);
             drum.stop(t + 1.8);
 
@@ -602,7 +620,7 @@
 
             burst.connect(filter);
             filter.connect(nG);
-            nG.connect(audioCtx.destination);
+            nG.connect(sfxMasterGain);
 
             burst.start(t);
             burst.stop(t + 1.2);
@@ -647,14 +665,14 @@
             feedback.connect(delay);
 
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(sfxMasterGain);
 
             gain.connect(delay);
-            delay.connect(audioCtx.destination);
+            delay.connect(sfxMasterGain);
 
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
-            noiseGain.connect(audioCtx.destination);
+            noiseGain.connect(sfxMasterGain);
 
             osc.start(t);
             osc.stop(t + 0.8);
@@ -701,10 +719,10 @@
             boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
 
             osc1.connect(gain1);
-            gain1.connect(audioCtx.destination);
+            gain1.connect(sfxMasterGain);
 
             boom.connect(boomGain);
-            boomGain.connect(audioCtx.destination);
+            boomGain.connect(sfxMasterGain);
 
             osc1.start(t + 0.3);
             osc1.stop(t + 2.5);
@@ -1342,6 +1360,7 @@
 
         const clearHiBtn = document.getElementById("clear-hi-btn");
 
+
         boostBtn.addEventListener("mousedown", (e) => {
             e.stopPropagation();
             isBoosting = true;
@@ -1383,6 +1402,8 @@
                 isBoosting = false;
             }
         });
+
+
 
         /* BOOST visual feedback */
         setInterval(() => {
@@ -1426,19 +1447,18 @@
             /* ★ 再表示 */
             clearHiBtn.style.display = "";
 
+            updateResetButtonVisibility();
+
+
         }
 
         /* =========================================================
          * Clear
          * ========================================================= */
         function triggerGameClear() {
-            stopBGM();
 
-            // クリアBGM再生
-            if (isBgmEnabled) {
-                playClearBgm();
-            }
-
+            playClearBgm();
+     
             stage++;
 
             if (stage > hiStage) {
@@ -1451,6 +1471,8 @@
             pendingCoreBoost = true;
             isContinue = true;
             isGameRunning = false;
+            updateResetButtonVisibility();
+
 
             document.getElementById("overlay").classList.remove("hide");
             bgmToggleBtn.style.pointerEvents = "auto";
@@ -1465,13 +1487,9 @@
 
 
             msg.innerHTML =
-                "Mass and density have reached critical levels.<br>" +
-                "The core has collapsed into a Black Hole.<br><br>" +
+                "The core has collapsed<br>into a Black Hole.<br><br>" +
 
-                "Beyond the event horizon,<br>" +
-                "a new star system awaits.<br><br>" +
-
-                "<span style='font-size:20px; letter-spacing:3px;'>NEXT STAGE</span>";
+                "A new star system awaits.";
 
             msg.style.display = "block";
         }
@@ -1485,7 +1503,9 @@
 
             if (isPaused) return;
 
-            if (e && resetBtn.contains(e.target)) return;
+            const reset = document.getElementById("reset-btn");
+            if (e && reset && reset.contains(e.target)) return;
+
 
             if (e && isInBoostSafeArea(e.clientX, e.clientY)) return;
 
@@ -1560,7 +1580,6 @@
             if (isGameRunning) return;
             if (audioCtx.state === "suspended") audioCtx.resume();
 
-            // BGM停止
             playBGM();
 
             const isNext = document.getElementById("start-btn").textContent === "NEXT";
@@ -1600,6 +1619,8 @@
             gameOverTime = null;
             isClickable = true;
             isGameRunning = true;
+
+            updateResetButtonVisibility();
         });
 
 
@@ -1607,7 +1628,18 @@
          * Reset Game Button
          * ========================================================= */
 
-        resetBtn.addEventListener("click", (e) => {
+        function updateResetButtonVisibility() {
+            const btn = document.getElementById("reset-btn");
+
+            if (!btn) return;
+
+            btn.style.display = isGameRunning ? "block" : "none";
+        }
+
+
+        const resetBtn = document.getElementById("reset-btn");
+
+        function handleResetRequest(e) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -1615,39 +1647,59 @@
 
             isPaused = true;
             Runner.stop(runner);
-            stopBGM();
 
             const ok = confirm("ゲームを中断してタイトルに戻りますか？");
 
             if (ok) {
+                stopBGM();
                 returnToTitle();
-            } else {
-                isPaused = false;
-                Runner.run(runner, engine);
-                playBGM();
+                return;
             }
-        });
+
+            // キャンセル時のみ再開
+            isPaused = false;
+            Runner.run(runner, engine);
+        }
+
+        resetBtn.addEventListener("click", handleResetRequest);
+
+        resetBtn.addEventListener("touchend", handleResetRequest, { passive: false });
+
+
+
 
         resetBtn.addEventListener("touchstart", (e) => {
             e.preventDefault();
             e.stopPropagation();
+        }, { passive: false });
+
+
+        resetBtn.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
         });
-
-
 
         /* =========================================================
          * Input
          * ========================================================= */
         window.addEventListener("mousedown", (e) => {
-            if (isGameRunning && e.button === 0) shoot(e);
+            if (isGameRunning && !isPaused && e.button === 0) shoot(e);
         });
 
         window.addEventListener("touchstart", (e) => {
+
+            const reset = document.getElementById("reset-btn");
+
+            if (reset && reset.contains(e.target)) {
+                return;   // RESETなら完全無視
+            }
+
             if (isGameRunning) {
                 shoot(e);
                 e.preventDefault();
             }
         }, { passive: false });
+
 
         /* =========================================================
          * Resize
@@ -1725,7 +1777,6 @@
             if (isGameRunning) return;
 
             isBgmEnabled = !isBgmEnabled;
-            bgm.volume = isBgmEnabled ? 0.1 : 0.0;
 
             bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
             localStorage.setItem(
@@ -1739,15 +1790,13 @@
         bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
 
         /* =========================================================
-         * HTMLAudio BGM helpers
-         * ========================================================= */
-        const bgm = document.getElementById("bgm");
-        const clearBgm = document.getElementById("clear-bgm");
+        * HTMLAudio BGM helpers (Refactored)
+        * ========================================================= */
+
 
         let bgmFadeInterval = null;
-
-        // 今どちらが鳴っているか
         let currentAudio = null;
+        let isBgmFading = false;
 
 
         /* ===== フェードアウト共通処理 ===== */
@@ -1763,62 +1812,28 @@
                 bgmFadeInterval = null;
             }
 
+            isBgmFading = true;
+
             let vol = audio.volume;
 
             bgmFadeInterval = setInterval(() => {
-                vol -= 0.03;   // ← この数値で「すっと感」を調整
+                vol -= 0.03;
 
                 if (vol > 0.02) {
                     audio.volume = vol;
                 } else {
                     audio.pause();
                     audio.currentTime = 0;
-                    audio.volume = 0.8;   // 次回再生用の初期値に戻す
+                    audio.volume = 0.8;
 
                     clearInterval(bgmFadeInterval);
                     bgmFadeInterval = null;
 
+                    isBgmFading = false;
+
                     if (callback) callback();
                 }
             }, 40);
-        }
-
-
-        /* ===== 通常BGM再生 ===== */
-        function playBGM() {
-            // OFF設定なら何もしない
-            if (!isBgmEnabled) return;
-
-            // すでにbgmが鳴っていたら何もしない
-            if (currentAudio === bgm && !bgm.paused) return;
-
-            // 何か別の音が鳴っていれば止める
-            stopBGM(() => {
-                bgm.currentTime = 0;
-                bgm.volume = 0.3;
-                bgm.play().catch(() => { });
-
-                currentAudio = bgm;
-            });
-        }
-
-
-        /* ===== クリアBGM再生 ===== */
-        function playClearBgm() {
-            // OFF設定なら何もしない
-            if (!isBgmEnabled) return;
-
-            // すでにclearBgmが鳴っていたら何もしない
-            if (currentAudio === clearBgm && !clearBgm.paused) return;
-
-            // 何か別の音が鳴っていれば止める
-            stopBGM(() => {
-                clearBgm.currentTime = 0;
-                clearBgm.volume = 0.3;
-                clearBgm.play().catch(() => { });
-
-                currentAudio = clearBgm;
-            });
         }
 
 
@@ -1833,6 +1848,57 @@
                 currentAudio = null;
                 if (callback) callback();
             });
+        }
+
+
+        /* ===== 強制停止 ===== */
+        function forceStopBGM() {
+            if (bgmFadeInterval) {
+                clearInterval(bgmFadeInterval);
+                bgmFadeInterval = null;
+            }
+            isBgmFading = false;
+
+            if (currentAudio) {
+                try {
+                    currentAudio.pause();
+                } catch { }
+                currentAudio.currentTime = 0;
+            }
+
+            currentAudio = null;
+        }
+
+
+        /* ===== 通常BGM再生 ===== */
+        function playBGM() {
+            
+            if (!isBgmEnabled) return;
+
+            forceStopBGM();
+
+            bgm.currentTime = 0;
+            bgm.volume = 0.8;
+
+            bgm.play().catch(() => { });
+
+            currentAudio = bgm;
+        }
+
+
+        /* ===== クリアBGM再生 ===== */
+        function playClearBgm() {
+            
+            if (!isBgmEnabled) return;
+
+            forceStopBGM();
+
+            clearBgm.currentTime = 0;
+            clearBgm.volume = 0.5;
+
+            clearBgm.play().catch(() => { });
+
+            currentAudio = clearBgm;
         }
 
 
