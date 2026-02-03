@@ -635,19 +635,19 @@
          * Utility: BOOST safe area (修正版)
          * 左下方向への判定を大幅に強化
          * ========================================================= */
+
         function isInBoostSafeArea(clientX, clientY) {
             const rect = boostBtn.getBoundingClientRect();
 
-            // 判定を広げるピクセル数
-            const marginDefault = 30;  // 右・上方向
-            const marginExtended = 100; // 左・下方向（ここを広げる）
+            // 右・上方向のゆとり
+            const margin = 40;
 
-            return (
-                clientX >= rect.left - marginExtended && // ボタンより左 100px までガード
-                clientX <= rect.right + marginDefault &&
-                clientY >= rect.top - marginDefault &&
-                clientY <= rect.bottom + marginExtended // ボタンより下 100px までガード
-            );
+            // 判定ロジック
+            const isTooLeft = clientX <= rect.right + margin; // ボタンの右端より左側すべて
+            const isTooBottom = clientY >= rect.top - margin; // ボタンの上端より下側すべて
+
+            // 「画面の左下エリア」をまるごとガード
+            return isTooLeft && isTooBottom;
         }
 
         /* =========================================================
@@ -1493,11 +1493,23 @@
             isBoosting = false;
         });
 
-        /* boostBtn の touchstart イベントを以下のように補強 */
-        boostBtn.addEventListener("touchstart", (e) => {
-            e.preventDefault();  // ブラウザの標準動作を禁止
-            e.stopPropagation(); // 親要素（window）へのイベント伝達を完全に遮断
-            isBoosting = true;
+        /* window の touchstart イベントリスナーを以下のように修正 */
+        window.addEventListener("touchstart", (e) => {
+            const touch = e.touches[0]; // タッチされた座標を取得
+            const reset = document.getElementById("reset-btn");
+
+            if (reset && reset.contains(e.target)) return;
+
+            // 修正ポイント：タッチ座標を渡してガード判定を行う
+            if (isGameRunning && !isPaused) {
+                if (isInBoostSafeArea(touch.clientX, touch.clientY)) {
+                    // ガード範囲内なら何もしない
+                    e.preventDefault();
+                    return;
+                }
+                shoot(e);
+                e.preventDefault();
+            }
         }, { passive: false });
 
         boostBtn.addEventListener("touchend", (e) => {
