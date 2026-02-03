@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Stellar Gravity</title>
+    <meta name="apple-mobile-web-app-title" content="StellarGrav">
+
+
+    <link rel="icon" href="img/StellarGravity.ico" type="image/x-icon">
+
+    <link rel="apple-touch-icon" href="img/icon.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="img/StellarGravity.png">
+
 
     <!-- =========================================================
          Physics Engine
@@ -22,14 +33,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            height: 100dvh;
             width: 100vw;
             font-family: "Courier New", sans-serif;
-            overflow: hidden;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
             color: white;
+            position: fixed; /* スクロールによるガタつきを防止 */
+            overflow: hidden;
         }
 
         /* Matter.js canvas (full-screen fixed) */
@@ -41,9 +53,10 @@
             height: 100%;
             z-index: 0;
             display: block;
+            -webkit-touch-callout: none; /* 長押しによるメニュー（画像保存など）を禁止 */
         }
 
-     
+
 
         /* =========================================================
            HUD (score / next)
@@ -207,7 +220,7 @@
         #next-name {
             opacity: 0.85;
             text-shadow: 0 0 6px rgba(255,255,255,0.4);
-            display: none;
+            display: block;
         }
 
         /* Overlay sub buttons */
@@ -231,7 +244,6 @@
             position: fixed;
             left: 70%;
             bottom: 18px;
-
             transform: translateX(-50%);
             z-index: 18;
             padding: 6px 20px;
@@ -278,10 +290,8 @@
                 background: rgba(60, 60, 60, 0.9);
                 transform: translateX(-50%) scale(0.96);
             }
-
-
-
     </style>
+
 </head>
 
 <body>
@@ -299,14 +309,12 @@
     <!-- =========================================================
          HUD
          ========================================================= -->
-    <div id="ui-layer">
+    <div id="ui-layer" style="padding: 20px 10px 20px 20px;">
         <div style="text-align:left;">
             <div class="hud-item">
                 <span style="font-size:20px;color:#aaa;">HIGH SCORE</span><br />
                 <span id="hi-score-val" class="hi-score-num">0</span>
-                <span class="hi-stage">
-                    STAGE <span id="hi-stage-val">1</span>
-                </span>
+                <span class="hi-stage">STAGE <span id="hi-stage-val">1</span></span>
             </div>
             <div class="hud-item">
                 <span style="font-size:20px;color:#aaa;">SCORE</span><br />
@@ -314,14 +322,14 @@
             </div>
         </div>
 
-        <div style="text-align:right;">
-            <span style="font-size:20px;color:#aaa;">NEXT</span>
+        <div style="text-align: right; margin-right: -5px;">
+            <div style="display: inline-flex; flex-direction: column; align-items: center; min-width: 100px;">
+                <span style="font-size:20px; color:#aaa; letter-spacing:2px; margin-bottom: 2px;">NEXT</span>
 
-            <div id="next-wrap" style="width:80px; text-align:center;">
-                <div id="next-ui" style="height:40px;"></div>
+                <div id="next-ui" style="height:55px; width:60px; margin: 0 auto;"></div>
 
                 <div id="next-name"
-                     style="margin-top:6px; font-size:14px; letter-spacing:1px;">
+                     style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;">
                 </div>
             </div>
         </div>
@@ -478,15 +486,15 @@
          * score: points gained when the higher planet is created
          * ========================================================= */
         const PLANETS = [
-            { name: "Meteor", radius: 10, color: "#aab7b8", score: 1 },
-            { name: "Moon", radius: 16, color: "#dfe6e9", score: 2 },
-            { name: "Mars", radius: 22, color: "#ff7675", score: 4 },
-            { name: "Earth", radius: 30, color: "#74b9ff", score: 8 },
-            { name: "Neptune", radius: 38, color: "#a29bfe", score: 16 },
-            { name: "Saturn", radius: 48, color: "#ffeaa7", score: 32 },
-            { name: "Jupiter", radius: 58, color: "#fab1a0", score: 64 },
-            { name: "Sun", radius: 70, color: "#ff9f43", score: 128 },
-            { name: "BlackHole", radius: 85, color: "#ffffff", score: 256 }
+            { name: "W.Dwarf", radius: 10, color: "#aab7b8", score: 1 },  // 灰色：冷えゆく白色矮星
+            { name: "Sirius.B", radius: 16, color: "#dfe6e9", score: 2 },     // 明るい灰：シリウスの伴星（白色矮星）
+            { name: "B.Star", radius: 22, color: "#ff7675", score: 4 }, // 薄赤：バーナード星（赤色矮星）
+            { name: "Vega", radius: 30, color: "#74b9ff", score: 8 },         // 青：こと座のベガ（青白い主系列星）
+            { name: "Capella", radius: 38, color: "#a29bfe", score: 16 },    // 紫：カペラ（黄色〜紫がかった巨星のイメージ）
+            { name: "Procyon", radius: 48, color: "#ffeaa7", score: 32 },    // 薄黄：プロキオン（黄白色の準巨星）
+            { name: "Arcturus", radius: 58, color: "#fab1a0", score: 64 },   // 橙：アークトゥルス（オレンジ色の巨星）
+            { name: "Antares", radius: 70, color: "#ff9f43", score: 128 },   // 輝く橙：アンタレス（赤色超巨星）
+            { name: "BlackHole", radius: 85, color: "#ffffff", score: 256 }  // 白：ブラックホールのイベントホライズン
         ];
 
         /* =========================================================
@@ -513,6 +521,9 @@
         const CLEAR_INDEX = PLANETS.length - 1; // BlackHole
         let isBlackHoleCore = false;
 
+        // コンボ管理用の変数
+        let lastMergeTime = 0;
+        let comboCount = 0;
 
         /* =========================================================
          * クリア時に呼ぶ
@@ -558,10 +569,14 @@
         function requestFullScreen() {
             const el = document.documentElement;
 
+            // 標準のAPI（AndroidやiPad用）
             if (el.requestFullscreen) {
                 el.requestFullscreen();
-            } else if (el.webkitRequestFullscreen) { // Safari
+            } else if (el.webkitRequestFullscreen) {
                 el.webkitRequestFullscreen();
+            } else if (isIOS) {
+                // iPhone Safari用の擬似全画面対策
+                window.scrollTo(0, 0); // アドレスバーを隠すためのスクロール
             }
         }
 
@@ -902,11 +917,12 @@
                     launcherAngle += speed;
                 }
 
-                const nextNameEl = document.getElementById("next-name");
-                const nextName2El = document.getElementById("next-name2");
 
+                // 1. まず現在の恒星名を表示するロジック（恒星名が正しく出るように）
                 if (nextQueue.length >= 2) {
-                    nextNameEl.textContent = PLANETS[nextQueue[1]].name;
+                    const nextPlanet = PLANETS[nextQueue[1]];
+                    document.getElementById("next-name").textContent = nextPlanet.name;
+                    document.getElementById("next-name").style.color = nextPlanet.color; // 名前も星の色に合わせると綺麗です
                 }
 
                 /* background stars */
@@ -930,9 +946,12 @@
                 ctx.globalAlpha = 1;
 
                 /* =====================================================
-                 * RedZone (animated dash rotation)
+                 * RedZone (animated dash rotation) & Warning Logic
                  * ===================================================== */
                 const t = performance.now();
+
+                // ★ 追加: 警告状態の判定
+                const isWarning = gameOverTime !== null;
 
                 ctx.save();
                 ctx.translate(CENTER.x, CENTER.y);
@@ -941,23 +960,26 @@
                 ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
                 ctx.setLineDash([10, 14]);
 
-                // ★ 回転
+                // 回転
                 ctx.lineDashOffset = -(t * 0.02) % 1000;
 
-                // ★ 点滅（α振動）
-                const blink =
-                    0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * 0.006));
+                // ★ 修正: 点滅ロジックの強化
+                // 警告時はベースの透明度を上げ、周期を速くする
+                const blinkBase = isWarning ? 0.7 : 0.3;
+                const blinkFreq = isWarning ? 0.015 : 0.006;
+                const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
 
-                ctx.strokeStyle = `rgba(255, 60, 60, ${blink})`;
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
+                ctx.lineWidth = isWarning ? 4 : 2; // 警告時は線を太く
                 ctx.stroke();
 
-                // 外側グロー（こちらは弱く固定）
+                // 外側グロー
                 ctx.beginPath();
                 ctx.setLineDash([]);
                 ctx.arc(0, 0, DEADLINE_RADIUS + 3, 0, Math.PI * 2);
-                ctx.strokeStyle = "rgba(255, 80, 80, 0.25)";
-                ctx.lineWidth = 6;
+                // 警告時はグローも赤く強くする
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink * 0.5})` : "rgba(255, 80, 80, 0.25)";
+                ctx.lineWidth = isWarning ? 10 : 6;
                 ctx.stroke();
 
                 ctx.restore();
@@ -966,24 +988,21 @@
                 /* =====================================================
                  * RedZone sparks
                  * ===================================================== */
-                const SPARK_RATE = isIOS ? 0.25 : 0.45;   // ★増やす（iOSは控えめ）
-                const SPARK_MAX = 220;                  // ★増えすぎ防止
+                // ★ 修正: 警告時は火花の発生率を上げる
+                const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
+                const SPARK_MAX = 220;
 
                 if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
 
                 if (Math.random() < SPARK_RATE) {
-                    // 1回で複数発生させて「散ってる感」を出す
                     const burst = 2 + (isBoosting ? 4 : 2);
 
                     for (let k = 0; k < burst; k++) {
                         const ang = Math.random() * Math.PI * 2;
-
-                        // 円周上（少し外側も混ぜる）
                         const r = DEADLINE_RADIUS + (Math.random() * 10 - 5);
                         const x = CENTER.x + Math.cos(ang) * r;
                         const y = CENTER.y + Math.sin(ang) * r;
 
-                        // 外向き＋少しランダム
                         const sp = (isBoosting ? 5.0 : 3.2) * (0.6 + Math.random() * 0.8);
                         const ox = Math.cos(ang) * sp + (Math.random() - 0.5) * 1.0;
                         const oy = Math.sin(ang) * sp + (Math.random() - 0.5) * 1.0;
@@ -996,7 +1015,7 @@
                             vy: oy,
                             life: 1.0,
                             size: 1.5 + Math.random() * 2.5,
-                            color: "rgba(255,60,60,1)"   // ★ 赤
+                            color: isWarning ? "rgba(255, 255, 255, 1)" : "rgba(255,60,60,1)" // 警告時は白混ぜて輝かせる
                         });
                     }
                 }
@@ -1062,41 +1081,80 @@
                 });
 
                 /* launcher guide + next preview */
-                if (isClickable && isGameRunning) {
-                    const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
-                    const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+                if (isGameRunning) {
+                    // 1. 発射台（ランチャー）の描画
+                    if (isClickable) {
+                        const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+                        const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
 
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.setLineDash([4, 6]);
-                    ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
-                    ctx.lineWidth = 1.5;
-                    ctx.moveTo(sX, sY);
-                    ctx.lineTo(CENTER.x, CENTER.y);
-                    ctx.stroke();
-                    ctx.restore();
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([4, 6]);
+                        ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(sX, sY);
+                        ctx.lineTo(CENTER.x, CENTER.y);
+                        ctx.stroke();
+                        ctx.restore();
 
-                    drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+                        // 発射待機中の星を描画
+                        drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+                    }
 
-                    ctx.save();
-                    ctx.translate(WIDTH - 50, 80);
-                    drawPlanet(ctx, 0, 0, PLANETS[nextQueue[1]].radius * 0.7, PLANETS[nextQueue[1]].color, now, 1);
-                    ctx.restore();
+                    // 2. 右上の NEXT プレビュー（恒星名・星画像をセンタリング）
+                    if (nextQueue.length >= 2) {
+                        const nextPlanet = PLANETS[nextQueue[1]];
+
+                        // --- 恒星名と色の更新 ---
+                        const nameEl = document.getElementById("next-name");
+                        if (nameEl) {
+                            nameEl.textContent = nextPlanet.name;
+                            nameEl.style.color = nextPlanet.color;
+                        }
+
+                        // --- 恒星画像の描画（HTMLのnext-ui位置を自動取得） ---
+                        const nextUiEl = document.getElementById("next-ui");
+                        if (nextUiEl) {
+                            const rect = nextUiEl.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+
+                            ctx.save();
+                            ctx.translate(centerX, centerY);
+                            // 右端で窮屈に見えるなら、倍率を 0.7 程度に下げると余白が生まれます
+                            drawPlanet(ctx, 0, 0, nextPlanet.radius * 0.7, nextPlanet.color, now, 1);
+                            ctx.restore();
+                        }
+                    }
                 }
 
                 /* particles */
+                /* particles loop */
                 for (let i = particles.length - 1; i >= 0; i--) {
                     const p = particles[i];
 
-                    // ★ life減衰はここで一元管理
+                    // 1. 寿命（life）の減衰を一括管理
                     if (p.type === "flash") {
                         p.life -= 0.07;
                     } else if (p.type === "spark") {
-                        p.life -= 0.04;   // ← spark専用（少し長生き）
+                        p.life -= 0.04;
                     } else {
                         p.life -= 0.02;
                     }
 
+                    // 2. 寿命が尽きたらその場で削除して次のループへ
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    // 3. 座標の更新（共通処理）
+                    p.px = p.x; // spark用に前の座標を保存（軌跡用）
+                    p.py = p.y;
+                    p.x += (p.vx || 0);
+                    p.y += (p.vy || 0);
+
+                    // 4. タイプ別の描画処理
                     if (p.type === "shockwave") {
                         p.radius += (p.speed || 0) * 0.5;
                         ctx.save();
@@ -1115,37 +1173,27 @@
                         ctx.restore();
 
                     } else if (p.type === "spark") {
-                        p.px = p.x;
-                        p.py = p.y;
-                        p.x += p.vx;
-                        p.y += p.vy;
-
                         ctx.save();
                         ctx.globalCompositeOperation = "lighter";
-                        ctx.globalAlpha = Math.max(0, p.life);
+                        ctx.globalAlpha = p.life;
 
-                        // ★ 赤いストリーク
-                        ctx.strokeStyle = "rgba(255,60,60,1)";
+                        // 赤いストリーク（線）
+                        ctx.strokeStyle = p.color || "rgba(255,60,60,1)";
                         ctx.lineWidth = 2.2;
                         ctx.beginPath();
                         ctx.moveTo(p.px, p.py);
                         ctx.lineTo(p.x, p.y);
                         ctx.stroke();
 
-                        // ★ 赤いコア（少し明るめ）
+                        // コア（点）
                         ctx.fillStyle = "rgba(255,120,120,1)";
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                         ctx.fill();
-
                         ctx.restore();
 
-                        if (p.life <= 0) particles.splice(i, 1);
-                        continue;
                     } else {
-                        p.x += p.vx || 0;
-                        p.y += p.vy || 0;
-
+                        // 通常のパーティクル
                         ctx.save();
                         ctx.fillStyle = p.color;
                         ctx.globalAlpha = p.life;
@@ -1154,10 +1202,7 @@
                         ctx.fill();
                         ctx.restore();
                     }
-
-                    if (p.life <= 0) particles.splice(i, 1);
                 }
-
 
                 /* =====================================================
                  * Game Over Check
@@ -1300,27 +1345,21 @@
              * - same index and not BlackHole -> merge into next level
              * - when BlackHole is created -> supernova + clear
              * ===================================================== */
-            Events.on(engine, "collisionStart", (e) => {
 
-                // ★ ゲーム停止中 or クリア中は一切処理しない
+            Events.on(engine, "collisionStart", (e) => {
                 if (!isGameRunning || isClearing) return;
 
                 e.pairs.forEach(p => {
                     const a = p.bodyA;
                     const b = p.bodyB;
 
-                    // ★ index がない or 既に合体処理中なら無視
-                    if (
-                        a.index === undefined ||
-                        b.index === undefined ||
-                        a.isMerging ||
-                        b.isMerging
-                    ) return;
+                    // indexがない、または既に合体処理中（isMerging）なら無視
+                    if (a.index === undefined || b.index === undefined || a.isMerging || b.isMerging) return;
 
-                    // ★ 同段階のみ合体
+                    // 同じ種類の惑星のみ合体、かつ最大サイズ（ブラックホール）でないこと
                     if (a.index !== b.index || a.index >= PLANETS.length - 1) return;
 
-                    // ★ この瞬間にロック（超重要）
+                    // --- 合体処理開始のロック ---
                     a.isMerging = true;
                     b.isMerging = true;
 
@@ -1332,65 +1371,84 @@
                     const nI = a.index + 1;
                     const nP = PLANETS[nI];
 
-                    // ★ remove は遅延（同フレーム衝突破壊防止）
-                    setTimeout(() => {
-                        Composite.remove(engine.world, [a, b]);
-                    }, 0);
+                    // 次のフレームで即座に削除（衝突判定の重複を防ぐ）
+                    Composite.remove(engine.world, [a, b]);
 
                     /* ===============================
-                     * 演出
+                     * 演出: 音・パーティクル・重力波
                      * =============================== */
                     playExplosionSound();
 
+                    // 重力波: 周囲の惑星をわずかに弾き飛ばす
+                    const allBodies = Composite.allBodies(engine.world);
+                    allBodies.forEach(body => {
+                        if (body.isStatic || body.isMerging) return;
+                        const dx = body.position.x - mid.x;
+                        const dy = body.position.y - mid.y;
+                        const distSq = dx * dx + dy * dy;
+                        const forceRadius = 150; // 効果範囲
 
+                        if (distSq < forceRadius * forceRadius) {
+                            const dist = Math.sqrt(distSq);
+                            const forceMagnitude = 0.003 * body.mass; // 弾く強さ
+                            Body.applyForce(body, body.position, {
+                                x: (dx / dist) * forceMagnitude,
+                                y: (dy / dist) * forceMagnitude
+                            });
+                        }
+                    });
+
+                    // パーティクル演出
                     particles.push({
                         type: "shockwave",
-                        x: mid.x,
-                        y: mid.y,
-                        radius: 10,
-                        speed: 5,
-                        life: 1
+                        x: mid.x, y: mid.y,
+                        radius: 10, speed: 5, life: 1
                     });
 
                     for (let i = 0; i < 12; i++) {
                         const ang = Math.random() * Math.PI * 2;
                         const s = Math.random() * 4 + 2;
                         particles.push({
-                            x: mid.x,
-                            y: mid.y,
+                            x: mid.x, y: mid.y,
                             vx: Math.cos(ang) * s,
                             vy: Math.sin(ang) * s,
-                            life: 1,
-                            color: nP.color,
-                            size: 3
+                            life: 1, color: nP.color, size: 3
                         });
                     }
 
                     /* ===============================
-                     * 合体後処理
+                     * スコア計算 (コンボシステム)
+                     * =============================== */
+                    const now = Date.now();
+                    if (now - lastMergeTime < 800) { // 0.8秒以内の合体でコンボ
+                        comboCount++;
+                    } else {
+                        comboCount = 0;
+                    }
+                    lastMergeTime = now;
+
+                    // コンボ倍率を適用（例: 2回目は1.2倍、3回目は1.4倍...）
+                    const comboBonus = 1 + (comboCount * 0.2);
+                    const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
+                    updateScore(Math.floor(points * comboBonus));
+
+                    /* ===============================
+                     * 合体後の新天体生成
                      * =============================== */
                     setTimeout(() => {
-
-                        // ★ BlackHole（Clear）
+                        // ブラックホール（クリア判定）の場合
                         if (nI === CLEAR_INDEX) {
-
                             if (isClearing) return;
                             isClearing = true;
-
                             isBlackHoleCore = true;
-
                             isGameRunning = false;
                             isClickable = false;
 
-                            updateScore(SUPERNOVA_BONUS);
-
                             triggerSupernovaAt(mid.x, mid.y, "#ffffff");
-
                             setTimeout(removeAllDynamicBodies, SUPERNOVA_CLEAR_DELAY);
                             setTimeout(triggerGameClear, SUPERNOVA_END_DELAY);
-
                         }
-                        // ★ 通常合体
+                        // 通常の進化
                         else {
                             const nb = Bodies.circle(mid.x, mid.y, nP.radius, {
                                 index: nI,
@@ -1399,13 +1457,9 @@
                                 frictionAir: 0.02,
                                 render: { visible: false }
                             });
-
                             Composite.add(engine.world, nb);
-
-                            updateScore(nP.score);
                         }
-
-                    }, 60);
+                    }, 40); // わずかな遅延で生成（物理挙動の安定化）
                 });
             });
 
@@ -1516,6 +1570,7 @@
          * Clear
          * ========================================================= */
         function triggerGameClear() {
+            const clearedStage = stage;
 
             onClear(); 
 
@@ -1538,8 +1593,9 @@
             bgmToggleBtn.style.pointerEvents = "auto";
             bgmToggleBtn.style.opacity = "0.75";
 
-            document.querySelector("#overlay h1").innerHTML = "CLEAR";
+            document.querySelector("#overlay h1").innerHTML = "STAGE " + clearedStage + "<br>CLEAR";
             document.getElementById("start-btn").textContent = "NEXT";
+
             
             clearHiBtn.style.display = "none";
 
@@ -1628,6 +1684,10 @@
         document.getElementById("start-btn").addEventListener("click", (e) => {
 
             requestFullScreen();
+
+            // クリア音を含め、今鳴っているすべての音を即座に消去
+
+            forceStopBGM();
 
             if (isPaused) {
                 isPaused = false;
@@ -1866,39 +1926,33 @@
 
         /* ===== フェードアウト共通処理 ===== */
         function fadeOut(audio, callback) {
-            if (!audio || audio.paused) {
+            if (!audio) {
                 if (callback) callback();
                 return;
             }
 
-            // 既存フェードを止める
             if (bgmFadeInterval) {
                 clearInterval(bgmFadeInterval);
                 bgmFadeInterval = null;
             }
 
             isBgmFading = true;
-
             let vol = audio.volume;
 
             bgmFadeInterval = setInterval(() => {
-                vol -= 0.03;
-
-                if (vol > 0.02) {
+                vol -= 0.05; // 少し速めにフェード
+                if (vol > 0.05) {
                     audio.volume = vol;
                 } else {
-                    audio.pause();
-                    audio.currentTime = 0;
-                    audio.volume = 0.8;
-
                     clearInterval(bgmFadeInterval);
                     bgmFadeInterval = null;
-
+                    audio.pause();
+                    audio.volume = 0; // 完全に0にする
+                    audio.currentTime = 0;
                     isBgmFading = false;
-
                     if (callback) callback();
                 }
-            }, 40);
+            }, 30);
         }
 
 
@@ -1924,16 +1978,15 @@
             }
             isBgmFading = false;
 
-            if (currentAudio) {
-                try {
-                    currentAudio.pause();
-                } catch { }
-                currentAudio.currentTime = 0;
-            }
+            // すべてのオーディオ要素を配列に入れて一括停止
+            [bgm, clearBgm].forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+                a.volume = 0.8; // 次回再生用にデフォルトへ
+            });
 
             currentAudio = null;
         }
-
 
         /* ===== 通常BGM再生 ===== */
         function playBGM() {
@@ -1950,47 +2003,63 @@
             currentAudio = bgm;
         }
 
+        /* 修正箇所：scriptタグ内の上部、変数定義のあたりに追加 */
+        function unlockAudio() {
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+            // 空のバッファを再生してアンロック
+            const buffer = audioCtx.createBuffer(1, 1, 22050);
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
 
-        /* ===== クリアBGM再生 ===== */
-function playClearBgm() {
+            // HTMLAudio要素も一度 play -> pause してアンロック
+            bgm.play().then(() => { bgm.pause(); }).catch(() => { });
+            clearBgm.play().then(() => { clearBgm.pause(); }).catch(() => { });
 
-    if (!isBgmEnabled) return;
-
-    // ★ AudioContext を必ず起こす
-    if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-    }
-
-    // ★ 直前の音を完全停止
-    forceStopBGM();
-
-    // ★ Safari対策：わずかに遅延
-    setTimeout(() => {
-
-        clearBgm.currentTime = 0;
-        clearBgm.volume = 0.3;
-
-        const playPromise = clearBgm.play();
-
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    currentAudio = clearBgm;
-                })
-                .catch(() => {
-                    // ★ 1回だけリトライ（iOS対策）
-                    setTimeout(() => {
-                        clearBgm.play().catch(() => { });
-                        currentAudio = clearBgm;
-                    }, 120);
-                });
-        } else {
-            // 古いブラウザ用
-            currentAudio = clearBgm;
+            // 一度実行したらイベントを削除
+            window.removeEventListener('touchstart', unlockAudio);
+            window.removeEventListener('mousedown', unlockAudio);
         }
 
-    }, 80);
-}
+        // 最初のタップ時にアンロックを実行
+        window.addEventListener('touchstart', unlockAudio);
+        window.addEventListener('mousedown', unlockAudio);
+
+        /* 修正箇所：playClearBgm 関数を差し替え */
+        function playClearBgm() {
+            if (!isBgmEnabled) return;
+
+            // 前の音を止める（フェードなしで即座に止めるのが確実）
+            forceStopBGM();
+
+            // iOSでは resume が必須
+            if (audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+
+            // 音量をセットして再生
+            clearBgm.currentTime = 0;
+            clearBgm.volume = 0.3;
+
+            const playPromise = clearBgm.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    currentAudio = clearBgm;
+                }).catch(err => {
+                    console.log("Audio play blocked:", err);
+                    // アンロックが漏れていた場合の最終手段
+                    const retryPlay = () => {
+                        clearBgm.play();
+                        currentAudio = clearBgm;
+                        window.removeEventListener('touchstart', retryPlay);
+                    };
+                    window.addEventListener('touchstart', retryPlay);
+                });
+            }
+        }
 
 
 
