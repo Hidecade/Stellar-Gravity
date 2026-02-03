@@ -632,17 +632,21 @@
 
 
         /* =========================================================
-         * Utility: BOOST safe area (avoid mis-tap shooting)
+         * Utility: BOOST safe area (修正版)
+         * 左下方向への判定を大幅に強化
          * ========================================================= */
         function isInBoostSafeArea(clientX, clientY) {
             const rect = boostBtn.getBoundingClientRect();
-            const margin = 30;
+
+            // 判定を広げるピクセル数
+            const marginDefault = 30;  // 右・上方向
+            const marginExtended = 100; // 左・下方向（ここを広げる）
 
             return (
-                clientX >= rect.left - margin &&
-                clientX <= rect.right + margin &&
-                clientY >= rect.top - margin &&
-                clientY <= rect.bottom + margin
+                clientX >= rect.left - marginExtended && // ボタンより左 100px までガード
+                clientX <= rect.right + marginDefault &&
+                clientY >= rect.top - marginDefault &&
+                clientY <= rect.bottom + marginExtended // ボタンより下 100px までガード
             );
         }
 
@@ -1489,11 +1493,12 @@
             isBoosting = false;
         });
 
+        /* boostBtn の touchstart イベントを以下のように補強 */
         boostBtn.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault();  // ブラウザの標準動作を禁止
+            e.stopPropagation(); // 親要素（window）へのイベント伝達を完全に遮断
             isBoosting = true;
-        });
+        }, { passive: false });
 
         boostBtn.addEventListener("touchend", (e) => {
             e.preventDefault();
