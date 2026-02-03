@@ -632,22 +632,18 @@
 
 
         /* =========================================================
-         * Utility: BOOST safe area (修正版)
-         * 左下方向への判定を大幅に強化
+         * Utility: BOOST safe area (avoid mis-tap shooting)
          * ========================================================= */
-
         function isInBoostSafeArea(clientX, clientY) {
             const rect = boostBtn.getBoundingClientRect();
+            const margin = 60;
 
-            // 右・上方向のゆとり
-            const margin = 40;
-
-            // 判定ロジック
-            const isTooLeft = clientX <= rect.right + margin; // ボタンの右端より左側すべて
-            const isTooBottom = clientY >= rect.top - margin; // ボタンの上端より下側すべて
-
-            // 「画面の左下エリア」をまるごとガード
-            return isTooLeft && isTooBottom;
+            return (
+                clientX >= rect.left - margin &&
+                clientX <= rect.right + margin &&
+                clientY >= rect.top - margin &&
+                clientY <= rect.bottom + margin
+            );
         }
 
         /* =========================================================
@@ -1493,24 +1489,11 @@
             isBoosting = false;
         });
 
-        /* window の touchstart イベントリスナーを以下のように修正 */
-        window.addEventListener("touchstart", (e) => {
-            const touch = e.touches[0]; // タッチされた座標を取得
-            const reset = document.getElementById("reset-btn");
-
-            if (reset && reset.contains(e.target)) return;
-
-            // 修正ポイント：タッチ座標を渡してガード判定を行う
-            if (isGameRunning && !isPaused) {
-                if (isInBoostSafeArea(touch.clientX, touch.clientY)) {
-                    // ガード範囲内なら何もしない
-                    e.preventDefault();
-                    return;
-                }
-                shoot(e);
-                e.preventDefault();
-            }
-        }, { passive: false });
+        boostBtn.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isBoosting = true;
+        });
 
         boostBtn.addEventListener("touchend", (e) => {
             e.preventDefault();
