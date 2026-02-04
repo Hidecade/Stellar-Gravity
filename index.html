@@ -2139,7 +2139,7 @@
             // stage 3,4 -> 1
             // stage 5,6 -> 2
             // stage 7以上 -> 3
-            const bgmIndex = Math.min(Math.floor((stage / 2), 3);
+            const bgmIndex = Math.min(Math.floor((stage - 1) / 2), 3);
 
             // 2. 文字列に変換 ("00", "01", "02", "03")
             let bgmNum = bgmIndex.toString().padStart(2, '0');
