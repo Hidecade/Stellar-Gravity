@@ -24,8 +24,8 @@
 
     <style>
         /* =========================================================
-            Global / Layout
-            ========================================================= */
+         Global / Layout
+         ========================================================= */
         body {
             margin: 0;
             background: #000;
@@ -35,7 +35,7 @@
             justify-content: center;
             height: 100dvh;
             width: 100vw;
-            font-family: "Courier New", sans-serif;
+            font-family: Arial, sans-serif; /* 視認性向上のため基本をArialに */
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
@@ -56,73 +56,99 @@
         }
 
         /* =========================================================
-            HUD (Top Score / Next)
-            ========================================================= */
+         HUD (Top Score / Next)
+         ========================================================= */
         #ui-layer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            padding: 20px 10px 20px 20px;
+            padding: 20px 10px 20px 25px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             pointer-events: none;
             z-index: 10;
+            font-family: "Courier New", monospace;
         }
 
         .hud-item {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+        }
+
+        .hud-label {
+            font-size: 18px;
+            color: #aaa;
+            letter-spacing: 1px;
+            display: inline-block;
+            margin-bottom: 2px;
+            justify-content: space-between;
         }
 
         .score-num {
             font-size: 48px;
             font-weight: bold;
+            color: #fff;
             text-shadow: 0 0 15px #4facfe;
+            display: block;
             font-family: Arial, sans-serif;
         }
 
         .hi-score-num {
             font-size: 40px;
             color: #f1c40f;
+            font-weight: bold;
             text-shadow: 0 0 10px rgba(241,196,15,0.5);
             font-family: Arial, sans-serif;
         }
 
-        .hi-stage {
+        /* ハイスコア横の「STAGE」という文字と数字を含むエリア全体の調整 */
+        .hi-stage-text {
             margin-left: 12px;
             font-size: 18px;
             color: #aaa;
             letter-spacing: 1px;
+            font-weight: normal;
+            vertical-align: baseline; /* 数字を大きくした際のズレを防止 */
+        }
+
+        #hi-stage-val {
+            font-family: Arial, sans-serif;
+            font-size: 26px;
+            font-weight: bold;
+            color: #fff;
+            margin-left: 2px;
+            /* --- 追加部分 --- */
+            position: relative;
+            top: 2px; /* この数字を 3px, 4px と増やすほど下にずれます */
+            /* ---------------- */
         }
 
         #next-name {
-            margin-top: 2px;
+            margin-top: 5px;
             font-size: 15px;
             letter-spacing: 1px;
             font-weight: bold;
             line-height: 1.1;
-            opacity: 0.85;
+            opacity: 0.9;
             text-shadow: 0 0 6px rgba(255,255,255,0.4);
         }
 
         /* =========================================================
-            Overlay (Title / Result)
-            ========================================================= */
+         Overlay (Title / Result)
+         ========================================================= */
         #overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.7);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 1000;
             text-align: center;
-            opacity: 1;
             transition: opacity 0.5s;
-            pointer-events: auto;
         }
 
             #overlay.hide {
@@ -136,6 +162,7 @@
             line-height: 1.1;
             letter-spacing: 6px;
             font-weight: 300;
+            font-family: "Courier New", monospace;
         }
 
         .btn {
@@ -157,7 +184,7 @@
 
         .sub-btn {
             margin-top: 16px;
-            padding: 10px 36px;
+            padding: 10px 12px;
             font-size: 14px;
             letter-spacing: 3px;
             opacity: 0.75;
@@ -168,13 +195,13 @@
         }
 
         /* =========================================================
-            Bottom Left: BOOST
-            ========================================================= */
+         Bottom Left: BOOST
+         ========================================================= */
         #boost-btn {
             position: fixed;
-            bottom: 32px;
+            bottom: 70px; /* 固定 */
             left: 32px;
-            padding: 6px 16px;
+            padding: 10px 25px;
             font-size: 22px;
             letter-spacing: 2px;
             background: rgba(255,255,255,0.1);
@@ -190,23 +217,23 @@
             #boost-btn::before {
                 content: "";
                 position: absolute;
-                inset: -18px;
-                border-radius: 120px;
-                border: 4px solid rgba(79,172,254,0.9);
-                box-shadow: 0 0 30px rgba(79,172,254,0.6), 0 0 70px rgba(79,172,254,0.4);
+                inset: -15px;
+                border-radius: 100px;
+                border: 3px solid rgba(79,172,254,0.8);
+                box-shadow: 0 0 25px rgba(79,172,254,0.5);
                 pointer-events: none;
                 z-index: -1;
             }
 
         /* =========================================================
-            Bottom Right Area: Management (RESET/BGM) & Stage
-            ========================================================= */
+         Bottom Right Area: Management & Stage
+         ========================================================= */
         #bottom-right-ui {
             position: fixed;
             right: 24px;
-            bottom: 24px;
+            bottom: 60px; /* BOOSTボタンのbottomと同じ値にして下揃えに */
             display: flex;
-            align-items: flex-end;
+            align-items: flex-end; /* 下端で揃える */
             gap: 20px;
             pointer-events: none;
             z-index: 1000;
@@ -214,12 +241,13 @@
 
         #management-btn-area {
             position: relative;
-            width: 100px;
-            height: 40px;
+            width: 110px;
+            height: 45px; /* サイズは維持 */
             pointer-events: auto;
+            /* 下揃えを確実にするため、余計なmargin等がないか確認 */
+            margin-bottom: 0;
         }
 
-        /* RESETとBGMボタンを同じ場所に重ねる */
         #reset-btn, #bgm-control-pos {
             position: absolute;
             top: 0;
@@ -231,13 +259,11 @@
         #reset-btn, #bgm-toggle {
             width: 100%;
             height: 100%;
-            padding: 0;
-            margin: 0;
             background: rgba(0, 0, 0, 0.75);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.7);
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 12px;
             letter-spacing: 2px;
             cursor: pointer;
         }
@@ -245,7 +271,6 @@
         #reset-btn {
             display: none;
         }
-        /* JSで制御 */
 
         #stage-ui {
             text-align: right;
@@ -253,16 +278,16 @@
         }
 
         .stage-label {
-            font-size: 20px;
+            font-size: 18px;
             letter-spacing: 2px;
             color: #aaa;
+            font-family: "Courier New", monospace;
         }
 
         .stage-num {
             font-size: 36px;
             font-weight: bold;
             text-shadow: 0 0 12px rgba(255,255,255,0.6);
-            font-family: Arial, sans-serif;
         }
     </style>
 
@@ -286,12 +311,12 @@
     <div id="ui-layer" style="padding: 20px 10px 20px 20px;">
         <div style="text-align:left;">
             <div class="hud-item">
-                <span style="font-size:20px;color:#aaa;">HIGH SCORE</span><br />
+                <span class="hud-label">HIGH SCORE</span><br />
                 <span id="hi-score-val" class="hi-score-num">0</span>
-                <span class="hi-stage">STAGE <span id="hi-stage-val">1</span></span>
+                <span class="hi-stage-text">STAGE <span id="hi-stage-val">1</span></span>
             </div>
             <div class="hud-item">
-                <span style="font-size:20px;color:#aaa;">SCORE</span><br />
+                <span class="hud-label">SCORE</span><br />
                 <span id="score-val" class="score-num">0</span>
             </div>
         </div>
@@ -303,6 +328,7 @@
                 <div id="next-name" style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;"></div>
             </div>
         </div>
+
     </div>
 
     <!-- =========================================================
@@ -321,12 +347,12 @@
          ========================================================= -->
     <button id="boost-btn">BOOST</button>
 
-    <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 24px; display: flex; align-items: flex-end; gap: 20px; pointer-events: none; z-index: 1000;">
+    <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 60px; display: flex; align-items: flex-end; gap: 0px; pointer-events: none; z-index: 1000;">
 
-        <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 40px;">
+        <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 30px;">
             <button id="reset-btn">RESET</button>
             <div id="bgm-control-pos">
-                <button id="bgm-toggle" class="btn sub-btn">BGM ON</button>
+                <button id="bgm-toggle" class="btn sub-btn" style="margin-top: 0; width: 100%; height: 100%; padding: 0;">BGM ON</button>
             </div>
         </div>
 
@@ -1524,26 +1550,26 @@
         /* =========================================================
          * Clear
          * ========================================================= */
+
         function triggerGameClear() {
-            const clearedStage = stage;
+            const clearedStage = stage; // 現在のステージ番号を保持
 
             onClear();
 
-            stage++;
+            // ★ 修正: ここでの stage++ と localStorage への保存を削除
+            // (NEXTボタンを押した時に移動させます)
 
-            if (stage > hiStage) {
-                hiStage = stage;
-                document.getElementById("hi-stage-val").innerText = hiStage;
-                localStorage.setItem("stellarGravity_hiStage", hiStage);
-            }
+            // 表示はクリアしたステージのままにする
+            document.getElementById("stage-val").innerText = clearedStage;
 
-            document.getElementById("stage-val").innerText = stage;
             pendingCoreBoost = true;
             isContinue = true;
             isGameRunning = false;
+
+            // ボタンの切り替え（BGM表示へ）
             updateResetButtonVisibility();
 
-
+            // オーバーレイ表示
             document.getElementById("overlay").classList.remove("hide");
             bgmToggleBtn.style.pointerEvents = "auto";
             bgmToggleBtn.style.opacity = "0.75";
@@ -1551,19 +1577,11 @@
             document.querySelector("#overlay h1").innerHTML = "STAGE " + clearedStage + "<br>CLEAR";
             document.getElementById("start-btn").textContent = "NEXT";
 
-
             clearHiBtn.style.display = "none";
 
             const msg = document.getElementById("clear-message");
-
-
-            msg.innerHTML =
-                "The core has collapsed<br>into a Black Hole.<br><br>" +
-
-                "A new star system awaits.";
-
+            msg.innerHTML = "The core has collapsed<br>into a Black Hole.<br><br>A new star system awaits.";
             msg.style.display = "block";
-
 
             playClearBgm();
         }
@@ -1614,7 +1632,7 @@
             Body.setVelocity(b, { x: vx, y: vy });
             Composite.add(engine.world, b);
 
-            setTimeout(() => { isClickable = true; }, 600);
+            setTimeout(() => { isClickable = true; }, 200);
         }
 
         /* =========================================================
@@ -1629,53 +1647,43 @@
          * - rebuilds world and core
          * ========================================================= */
         document.getElementById("start-btn").addEventListener("click", (e) => {
-
             requestFullScreen();
-
-            /* START / NEXT ボタンクリック時の処理 */
-
-            // 1. 全てのBGMとフェード処理を完全に強制停止（最優先）
             forceStopBGM();
 
-            // 2. 状態の完全リセット
             if (isPaused) isPaused = false;
+            document.getElementById("clear-message").style.display = "none";
             isClearing = false;
             isBlackHoleCore = false;
-            document.getElementById("clear-message").style.display = "none";
 
-            // イベントの伝播防止
             e.preventDefault();
             e.stopPropagation();
 
-            // 3. 多重起動防止とオーディオコンテキストの復帰
             if (isGameRunning) return;
-            if (audioCtx.state === "suspended") audioCtx.resume();
 
-            // 4. UIの表示切り替え（BGMボタンからRESETボタンへ）
-            updateResetButtonVisibility();
+            const startBtn = document.getElementById("start-btn");
+            const isNext = startBtn.textContent === "NEXT";
 
-            // 5. 新しくBGMを再生（BGM設定がONの場合のみ）
-            if (isBgmEnabled) {
-                playBGM();
-            }
-
-            const isNext = document.getElementById("start-btn").textContent === "NEXT";
-
-            document.getElementById("overlay").classList.add("hide");
-            bgmToggleBtn.style.pointerEvents = "none";
-            bgmToggleBtn.style.opacity = "0.4";
-
-            if (!isNext) {
+            // ステージ進行ロジック
+            if (isNext) {
+                stage++;
+                if (stage > hiStage) {
+                    hiStage = stage;
+                    document.getElementById("hi-stage-val").innerText = hiStage;
+                    localStorage.setItem("stellarGravity_hiStage", hiStage);
+                }
+            } else {
                 stage = 1;
                 score = 0;
+                clearCount = 0;
+                difficulty = 1.0;
                 CORE_RADIUS = CORE_DEFAULT;
-                pendingCoreBoost = false;
-                isContinue = false;
-
-                document.getElementById("stage-val").innerText = stage;
                 document.getElementById("score-val").innerText = "0";
             }
 
+            document.getElementById("stage-val").innerText = stage;
+            document.getElementById("overlay").classList.add("hide");
+
+            // ワールド再構築
             Composite.clear(engine.world, false);
 
             if (isNext && pendingCoreBoost) {
@@ -1688,18 +1696,22 @@
                 render: { visible: false }
             }));
 
-            nextQueue = [
-                Math.floor(Math.random() * 4),
-                Math.floor(Math.random() * 4)
-            ];
+            // ★ 重要: キューを初期化した直後に名前と色を即時反映させる
+            nextQueue = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)];
+            const currentPlanet = PLANETS[nextQueue[1]];
+            const nameEl = document.getElementById("next-name");
+            if (nameEl) {
+                nameEl.textContent = currentPlanet.name;
+                nameEl.style.color = currentPlanet.color;
+            }
 
             gameOverTime = null;
             isClickable = true;
             isGameRunning = true;
 
             updateResetButtonVisibility();
+            playBGM();
         });
-
 
         /* =========================================================
          * UIの表示切り替え（BGM ↔ RESET）
@@ -1748,7 +1760,7 @@
 
         resetBtn.addEventListener("click", handleResetRequest);
 
-        resetBtn.addEventListener("touchend", handleResetRequest, { passive: false });
+        //resetBtn.addEventListener("touchend", handleResetRequest, { passive: false });
 
 
 
@@ -1770,11 +1782,11 @@
          * ========================================================= */
         function isInsideShootArea(clientX, clientY) {
             const boostRect = document.getElementById("boost-btn").getBoundingClientRect();
-            const resetRect = document.getElementById("reset-btn").getBoundingClientRect();
+            const resetAreaRect = document.getElementById("management-btn-area").getBoundingClientRect();
 
-            // 下部ボタンの中で、より「高い位置」にある方の数値を基準にする
-            // (余裕を持たせるためにボタンの 20px 上を境界線にする)
-            const deadLineTop = Math.min(boostRect.top, resetRect.top) - 20;
+            // 下部ボタンエリアの上端を取得
+            // ボタンが上に上がったので、その少し上(30px)を境界線にします
+            const deadLineTop = Math.min(boostRect.top, resetAreaRect.top) - 30;
 
             // Y座標が画面上端(0)から、ボタンの上端(deadLineTop)の間であれば発射許可
             return clientY > 0 && clientY < deadLineTop;
