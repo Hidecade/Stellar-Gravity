@@ -186,16 +186,22 @@
             }
 
         .sub-btn {
-            margin-top: 16px;
-            padding: 10px 12px;
-            font-size: 14px;
-            letter-spacing: 3px;
-            opacity: 0.75;
+            margin-top: 32px; /* 16px から 32px へ拡大 */
+            padding: 10px 16px;
+            font-size: 13px; /* 少しだけ小さくして控えめに */
+            letter-spacing: 2px;
+            opacity: 0.6; /* 通常時の透明度を下げて誤操作を誘発しにくく */
             background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
             color: white;
             border-radius: 20px;
+            transition: opacity 0.3s, background 0.3s;
         }
+
+            .sub-btn:hover {
+                opacity: 1.0;
+                background: rgba(255, 0, 0, 0.4); /* ホバー時は少し赤くして警告感を出す */
+            }
 
         /* =========================================================
          Bottom Left: BOOST
@@ -338,8 +344,9 @@
     <!-- =========================================================
          BGM (loop)
          ========================================================= -->
-    <audio id="bgm" src="audio/StellarGravity_01.mp3" loop preload="auto"></audio>
+    <audio id="game-bgm" loop preload="auto"></audio>
     <audio id="clear-bgm" src="audio/StellarGravity_Clear.mp3" preload="auto"></audio>
+    <audio id="title-bgm" src="audio/StellarGravity_Title.mp3" loop preload="auto"></audio>
 
 
     <!-- Matter.js canvas is injected here -->
@@ -441,8 +448,9 @@
         let isClearing = false;
         let isPaused = false;
 
-        const bgm = document.getElementById("bgm");
+        const gameBgmEl = document.getElementById("game-bgm"); // ゲーム中オーディオ要素
         const clearBgm = document.getElementById("clear-bgm");
+        const titleBgm = document.getElementById("title-bgm");
 
 
         /* =========================================================
@@ -602,23 +610,20 @@
 
 
         /* =========================================================
-         * ゲームタイトルに戻る
+         * ゲームタイトルに戻る (修正版)
          * ========================================================= */
         function returnToTitle() {
-
-            // 物理演算を完全停止
             Runner.stop(runner);
 
             isGameRunning = false;
             isPaused = false;
             isClickable = false;
 
-            stopBGM();
+            // 音の停止：フェードを待たずに強制停止したほうがRESETの反応が良く感じられます
+            forceStopBGM();
+            playTitleBGM();
 
-            // ワールドの完全クリア
             Composite.clear(engine.world, false);
-
-            // ★ ここが超重要：再スタート時にrunnerを再起動できるように
             Runner.run(runner, engine);
 
             const overlay = document.getElementById("overlay");
@@ -626,16 +631,16 @@
 
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
             document.getElementById("start-btn").textContent = "START";
-
             document.getElementById("clear-message").style.display = "none";
+
+            const clearHiBtn = document.getElementById("clear-hi-btn");
+            if (clearHiBtn) clearHiBtn.style.display = "";
 
             bgmToggleBtn.style.pointerEvents = "auto";
             bgmToggleBtn.style.opacity = "0.75";
 
             updateResetButtonVisibility();
         }
-
-
 
         /* =========================================================
          * Audio (WebAudio for SFX)
@@ -1593,8 +1598,8 @@
 
             // シンプルかつ洗練された2行構成
             comboEl.innerHTML = `
-        <div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>
-    `;
+                <div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>
+            `;
 
             // 基本スタイル（固定座標、中央揃え）
             comboEl.style.position = "fixed";
@@ -2104,37 +2109,48 @@
         }
 
 
-        /* ===== 強制停止 ===== */
+        /* ===== 強制停止 (すべてのオーディオに対応) ===== */
         function forceStopBGM() {
-            // フェード用インターバルをクリア
             if (bgmFadeInterval) {
                 clearInterval(bgmFadeInterval);
                 bgmFadeInterval = null;
             }
             isBgmFading = false;
 
-            // 全てのオーディオを強制停止・リセット
-            [bgm, clearBgm].forEach(a => {
-                a.pause();
-                a.currentTime = 0;
+            // gameBgmEl, clearBgm, titleBgm すべてを停止
+            [gameBgmEl, clearBgm, titleBgm].forEach(a => {
+                if (a) {
+                    a.pause();
+                    a.currentTime = 0;
+                    a.volume = 0.8;
+                }
             });
-
             currentAudio = null;
         }
 
-        /* ===== 通常BGM再生 ===== */
+        /* ===== 通常BGM再生（ステージ連動版） ===== */
         function playBGM() {
-
             if (!isBgmEnabled) return;
 
             forceStopBGM();
 
-            bgm.currentTime = 0;
-            bgm.volume = 0.8;
+            // 1. 計算式でインデックスを出す (0, 0, 1, 1, 2, 2, 3, 3, 3...)
+            // stage 1,2 -> 0
+            // stage 3,4 -> 1
+            // stage 5,6 -> 2
+            // stage 7以上 -> 3
+            const bgmIndex = Math.min(Math.floor((stage / 2), 3);
 
-            bgm.play().catch(() => { });
+            // 2. 文字列に変換 ("00", "01", "02", "03")
+            let bgmNum = bgmIndex.toString().padStart(2, '0');
 
-            currentAudio = bgm;
+
+            gameBgmEl.src = `audio/StellarGravity_${bgmNum}.mp3`;
+            gameBgmEl.currentTime = 0;
+            gameBgmEl.volume = 0.8;
+            gameBgmEl.play().catch(() => { });
+
+            currentAudio = gameBgmEl;
         }
 
         /* 修正箇所：scriptタグ内の上部、変数定義のあたりに追加 */
@@ -2142,26 +2158,27 @@
             if (audioCtx.state === "suspended") {
                 audioCtx.resume();
             }
-            // 空のバッファでアンロック
-            const buffer = audioCtx.createBuffer(1, 1, 22050);
-            const source = audioCtx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtx.destination);
-            source.start(0);
 
-            // HTMLAudio要素のアンロック：音量を0にしてから再生・即停止
-            [bgm, clearBgm].forEach(audio => {
-                const oldVol = audio.volume;
-                audio.volume = 0;
-                audio.play().then(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                    audio.volume = oldVol;
-                }).catch(() => { });
+            // アンロック対象を現在の変数名に合わせる
+            [gameBgmEl, clearBgm, titleBgm].forEach(audio => {
+                if (audio) {
+                    const oldVol = audio.volume;
+                    audio.volume = 0;
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        audio.volume = oldVol;
+                    }).catch(() => { });
+                }
             });
 
             window.removeEventListener('touchstart', unlockAudio);
             window.removeEventListener('mousedown', unlockAudio);
+
+            // 初回タップ時にタイトルBGMを開始する（iOS対策）
+            if (!isGameRunning && isBgmEnabled) {
+                playTitleBGM();
+            }
         }
 
         // 最初のタップ時にアンロックを実行
@@ -2201,7 +2218,13 @@
             }
         }
 
-
+        /* タイトルBGM再生用 */
+        function playTitleBGM() {
+            if (!isBgmEnabled) return;
+            forceStopBGM();
+            titleBgm.play().catch(() => { });
+            currentAudio = titleBgm;
+        }
 
 
     </script>
