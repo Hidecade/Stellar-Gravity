@@ -1362,8 +1362,6 @@
                      * =============================== */
                     playExplosionSound();
 
-                    triggerVibration('merge');
-
                     // 重力波: 周囲の惑星をわずかに弾き飛ばす
                     const allBodies = Composite.allBodies(engine.world);
                     allBodies.forEach(body => {
@@ -1557,15 +1555,12 @@
          * ========================================================= */
 
         function triggerGameClear() {
-            const clearedStage = stage;
+            const clearedStage = stage; // 現在のステージ番号を保持
 
             onClear();
 
-            // 1. 強烈な振動フィードバック
-            triggerVibration('clear');
-
-            // 2. 視覚演出：画面中央でスーパーノヴァ（超新星爆発）を発生
-            triggerSupernovaAt(CENTER.x, CENTER.y, "#ffffff");
+            // ★ 修正: ここでの stage++ と localStorage への保存を削除
+            // (NEXTボタンを押した時に移動させます)
 
             // 表示はクリアしたステージのままにする
             document.getElementById("stage-val").innerText = clearedStage;
@@ -1574,26 +1569,24 @@
             isContinue = true;
             isGameRunning = false;
 
-            // UIの切り替え
+            // ボタンの切り替え（BGM表示へ）
             updateResetButtonVisibility();
 
-            // オーバーレイ表示（少し遅らせて余韻を作る）
-            setTimeout(() => {
-                document.getElementById("overlay").classList.remove("hide");
+            // オーバーレイ表示
+            document.getElementById("overlay").classList.remove("hide");
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
 
-                // 称号やメッセージをArial太字で強調
-                const titleEl = document.querySelector("#overlay h1");
-                titleEl.innerHTML = `<span style="font-family: Arial; font-weight: 900; font-size: 50px; color: #f1c40f;">STAGE ${clearedStage}</span><br>COMPLETE`;
+            document.querySelector("#overlay h1").innerHTML = "STAGE " + clearedStage + "<br>CLEAR";
+            document.getElementById("start-btn").textContent = "NEXT";
 
-                document.getElementById("start-btn").textContent = "NEXT SYSTEM";
-                document.getElementById("clear-hi-btn").style.display = "none";
+            clearHiBtn.style.display = "none";
 
-                const msg = document.getElementById("clear-message");
-                msg.innerHTML = "The core has collapsed into a Black Hole.<br>A new star system awaits your arrival.";
-                msg.style.display = "block";
+            const msg = document.getElementById("clear-message");
+            msg.innerHTML = "The core has collapsed<br>into a Black Hole.<br><br>A new star system awaits.";
+            msg.style.display = "block";
 
-                playClearBgm();
-            }, 800);
+            playClearBgm();
         }
 
         /* =========================================================
@@ -1606,9 +1599,6 @@
 
             // ゲーム状態のチェック
             if (!isGameRunning || !isClickable || !document.getElementById("overlay").classList.contains("hide")) return;
-
-
-            triggerVibration('shoot');
 
             // 以前の isInBoostSafeArea などのガード判定は、
             // 呼び出し側のイベントリスナー（isInsideShootArea）で行うため、ここでは削除します。
@@ -1646,23 +1636,6 @@
             Composite.add(engine.world, b);
 
             setTimeout(() => { isClickable = true; }, 200);
-        }
-
-        // バイブレーションを制御する汎用関数
-        function triggerVibration(type) {
-            // navigator.vibrate がサポートされているか確認
-            if (!window.navigator || !window.navigator.vibrate) return;
-
-            if (type === 'shoot') {
-                // 発射時：短く軽い「トッ」という感触
-                navigator.vibrate(15);
-            } else if (type === 'merge') {
-                // 合体時：少し強めの「ズンッ」という感触
-                navigator.vibrate([30, 50, 20]);
-            } else if (type === 'clear') {
-                // クリア時：余韻のある振動
-                navigator.vibrate([100, 50, 100]);
-            }
         }
 
         /* =========================================================
