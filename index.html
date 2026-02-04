@@ -259,21 +259,35 @@
             height: 100%;
         }
 
+        /* BGMとReset共通の基本スタイル */
         #reset-btn, #bgm-toggle {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.75);
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.6); /* 境界線を少し太く */
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 14px; /* 少し大きく */
+            font-weight: bold;
             letter-spacing: 2px;
             cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent; /* タップ時の青い枠を消す */
+            transition: background 0.1s, transform 0.05s;
         }
 
+        /* Resetボタン専用：より目立たせ、押しやすくする */
         #reset-btn {
             display: none;
+            background: rgba(150, 0, 0, 0.7); /* 警告色として少し赤暗く */
+            border-color: rgba(255, 100, 100, 0.8);
         }
+
+            /* 押した瞬間のフィードバック（「効いてる」感） */
+            #reset-btn:active, #bgm-toggle:active {
+                transform: scale(0.95); /* 少しへこむ演出 */
+                background: rgba(255, 255, 255, 0.3);
+            }
 
         #stage-ui {
             text-align: right;
@@ -291,6 +305,29 @@
             font-size: 36px;
             font-weight: bold;
             text-shadow: 0 0 12px rgba(255,255,255,0.6);
+        }
+
+        /* スコアが加算された時のアニメーション修正 */
+        .score-bounce {
+            animation: score-bounce 0.5s ease-out;
+        }
+
+        @keyframes score-bounce {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            30% {
+                transform: scale(1.1);
+                opacity: 0.8;
+                text-shadow: 0 0 10px #fff;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 
@@ -1414,6 +1451,7 @@
                     const comboBonus = 1 + (comboCount * 0.2);
                     const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
                     updateScore(Math.floor(points * comboBonus));
+                    showComboText(mid.x, mid.y, comboCount);
 
                     /* ===============================
                      * 合体後の新天体生成
@@ -1522,6 +1560,47 @@
                 document.getElementById("hi-score-val").innerText = hiScore;
                 localStorage.setItem("stellarGravity_hiScore", hiScore);
             }
+        }
+
+
+        function showComboText(x, y, count, bonusScore) {
+            if (count < 1) return;
+            const comboEl = document.createElement("div");
+
+            // 内容を2行にする（HTMLを使用）
+            // 1行目：コンボ数
+            // 2行目：加算されたスコア（少し小さく）
+            comboEl.innerHTML = `
+        <div style="font-size: 18px; letter-spacing: 3px;">${count + 1} COMBO</div>
+        <div style="font-size: 12px; margin-top: 4px; opacity: 0.8;">+${bonusScore} pts</div>
+    `;
+
+            comboEl.style.position = "fixed";
+            comboEl.style.left = `${x}px`;
+            comboEl.style.top = `${y - 40}px`;
+            comboEl.style.textAlign = "center";
+
+            // スタイリッシュな白の設定
+            comboEl.style.color = "#ffffff";
+            comboEl.style.fontWeight = "300";
+            comboEl.style.fontFamily = "'Courier New', Courier, monospace";
+            comboEl.style.textShadow = "0 0 10px rgba(255,255,255,0.4)";
+
+            comboEl.style.pointerEvents = "none";
+            comboEl.style.zIndex = "2000";
+            comboEl.style.transform = "translateX(-50%)"; // 横中央揃え
+
+            // 真上にスッと消えるアニメーション
+            comboEl.style.transition = "all 1.2s cubic-bezier(0.22, 1, 0.36, 1)";
+            document.body.appendChild(comboEl);
+
+            setTimeout(() => {
+                // 真上に100px移動しながら消える
+                comboEl.style.transform = "translate(-50%, -100px)";
+                comboEl.style.opacity = "0";
+            }, 20);
+
+            setTimeout(() => comboEl.remove(), 1300);
         }
 
         /* =========================================================
