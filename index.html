@@ -1212,6 +1212,25 @@
                         ctx.fill();
                         ctx.restore();
 
+                    } else if (p.type === "combo-dust") {
+                        // --- 【追加】コンボ用：グロー付きの白い粒 ---
+                        ctx.save();
+                        ctx.shadowBlur = 10;           // 光の広がり
+                        ctx.shadowColor = "#ffffff";   // 光の色
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = "#ffffff";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // 中心に少し強い光を重ねる
+                        ctx.shadowBlur = 0;
+                        ctx.globalAlpha = p.life * 0.8;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+
                     } else {
                         // 通常のパーティクル
                         ctx.save();
@@ -1563,44 +1582,71 @@
         }
 
 
+        /* =========================================================
+        * showComboText: 洗練された白のグロー演出
+        * - 発生した瞬間にグロー付きパーティクルが弾ける
+        * - メッセージは2秒かけて優雅に真上に消える
+        * ========================================================= */
         function showComboText(x, y, count, bonusScore) {
             if (count < 1) return;
             const comboEl = document.createElement("div");
 
-            // 内容を2行にする（HTMLを使用）
-            // 1行目：コンボ数
-            // 2行目：加算されたスコア（少し小さく）
+            // シンプルかつ洗練された2行構成
             comboEl.innerHTML = `
-        <div style="font-size: 18px; letter-spacing: 3px;">${count + 1} COMBO</div>
-        <div style="font-size: 12px; margin-top: 4px; opacity: 0.8;">+${bonusScore} pts</div>
+        <div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>
     `;
 
+            // 基本スタイル（固定座標、中央揃え）
             comboEl.style.position = "fixed";
             comboEl.style.left = `${x}px`;
             comboEl.style.top = `${y - 40}px`;
             comboEl.style.textAlign = "center";
-
-            // スタイリッシュな白の設定
             comboEl.style.color = "#ffffff";
-            comboEl.style.fontWeight = "300";
-            comboEl.style.fontFamily = "'Courier New', Courier, monospace";
-            comboEl.style.textShadow = "0 0 10px rgba(255,255,255,0.4)";
+            comboEl.style.fontFamily = "-apple-system, 'Helvetica Neue', sans-serif";
+
+            // 二重のグローエフェクト（眩しすぎず、視認性を確保）
+            comboEl.style.textShadow = "0 0 12px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.3)";
 
             comboEl.style.pointerEvents = "none";
             comboEl.style.zIndex = "2000";
-            comboEl.style.transform = "translateX(-50%)"; // 横中央揃え
+            comboEl.style.transform = "translateX(-50%)";
 
-            // 真上にスッと消えるアニメーション
-            comboEl.style.transition = "all 1.2s cubic-bezier(0.22, 1, 0.36, 1)";
+            // 2秒間のフェードアウト・上昇アニメーション設定
+            comboEl.style.transition = "transform 2.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease-out";
+
             document.body.appendChild(comboEl);
 
+            // ==========================================
+            // 1. 即座にグローパーティクル（星屑）を発生
+            // ==========================================
+            if (Array.isArray(particles)) {
+                for (let i = 0; i < 25; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 4 + 2; // ほどよい飛び散り速度
+
+                    particles.push({
+                        x: x,
+                        y: y - 40,
+                        vx: Math.cos(ang) * sp,
+                        vy: Math.sin(ang) * sp,
+                        life: 1.0,
+                        color: "#ffffff",
+                        size: Math.random() * 2 + 1,
+                        type: "combo-dust" // afterRenderのif文で判定させる
+                    });
+                }
+            }
+
+            // ==========================================
+            // 2. メッセージを真上に移動させながら消す
+            // ==========================================
             setTimeout(() => {
-                // 真上に100px移動しながら消える
                 comboEl.style.transform = "translate(-50%, -100px)";
                 comboEl.style.opacity = "0";
             }, 20);
 
-            setTimeout(() => comboEl.remove(), 1300);
+            // 2秒後にHTML要素を削除（メモリ解放）
+            setTimeout(() => comboEl.remove(), 2100);
         }
 
         /* =========================================================
@@ -1840,9 +1886,14 @@
             }
         }
 
+        // PC・マウス用
         resetBtn.addEventListener("click", handleResetRequest);
 
-        //resetBtn.addEventListener("touchend", handleResetRequest, { passive: false });
+        // iPhone・スマホ専用（最速で反応させる設定）
+        resetBtn.addEventListener("touchstart", (e) => {
+            // ボタンに触れた瞬間にリセット処理を実行
+            handleResetRequest(e);
+        }, { passive: false });
 
 
 
