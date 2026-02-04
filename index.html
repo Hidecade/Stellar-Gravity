@@ -1632,27 +1632,32 @@
 
             requestFullScreen();
 
-            // クリア音を含め、今鳴っているすべての音を即座に消去
+            /* START / NEXT ボタンクリック時の処理 */
 
+            // 1. 全てのBGMとフェード処理を完全に強制停止（最優先）
             forceStopBGM();
 
-            if (isPaused) {
-                isPaused = false;
-            }
-
+            // 2. 状態の完全リセット
+            if (isPaused) isPaused = false;
+            isClearing = false;
+            isBlackHoleCore = false;
             document.getElementById("clear-message").style.display = "none";
 
-            isClearing = false;
-
-            isBlackHoleCore = false;
-
+            // イベントの伝播防止
             e.preventDefault();
             e.stopPropagation();
 
+            // 3. 多重起動防止とオーディオコンテキストの復帰
             if (isGameRunning) return;
             if (audioCtx.state === "suspended") audioCtx.resume();
 
-            playBGM();
+            // 4. UIの表示切り替え（BGMボタンからRESETボタンへ）
+            updateResetButtonVisibility();
+
+            // 5. 新しくBGMを再生（BGM設定がONの場合のみ）
+            if (isBgmEnabled) {
+                playBGM();
+            }
 
             const isNext = document.getElementById("start-btn").textContent === "NEXT";
 
@@ -1956,17 +1961,17 @@
 
         /* ===== 強制停止 ===== */
         function forceStopBGM() {
+            // フェード用インターバルをクリア
             if (bgmFadeInterval) {
                 clearInterval(bgmFadeInterval);
                 bgmFadeInterval = null;
             }
             isBgmFading = false;
 
-            // すべてのオーディオ要素を配列に入れて一括停止
+            // 全てのオーディオを強制停止・リセット
             [bgm, clearBgm].forEach(a => {
                 a.pause();
                 a.currentTime = 0;
-                a.volume = 0.8; // 次回再生用にデフォルトへ
             });
 
             currentAudio = null;
@@ -1992,18 +1997,24 @@
             if (audioCtx.state === "suspended") {
                 audioCtx.resume();
             }
-            // 空のバッファを再生してアンロック
+            // 空のバッファでアンロック
             const buffer = audioCtx.createBuffer(1, 1, 22050);
             const source = audioCtx.createBufferSource();
             source.buffer = buffer;
             source.connect(audioCtx.destination);
             source.start(0);
 
-            // HTMLAudio要素も一度 play -> pause してアンロック
-            bgm.play().then(() => { bgm.pause(); }).catch(() => { });
-            clearBgm.play().then(() => { clearBgm.pause(); }).catch(() => { });
+            // HTMLAudio要素のアンロック：音量を0にしてから再生・即停止
+            [bgm, clearBgm].forEach(audio => {
+                const oldVol = audio.volume;
+                audio.volume = 0;
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.volume = oldVol;
+                }).catch(() => { });
+            });
 
-            // 一度実行したらイベントを削除
             window.removeEventListener('touchstart', unlockAudio);
             window.removeEventListener('mousedown', unlockAudio);
         }
