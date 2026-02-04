@@ -24,8 +24,8 @@
 
     <style>
         /* =========================================================
-           Global / Layout
-           ========================================================= */
+            Global / Layout
+            ========================================================= */
         body {
             margin: 0;
             background: #000;
@@ -40,11 +40,10 @@
             user-select: none;
             -webkit-user-select: none;
             color: white;
-            position: fixed; /* スクロールによるガタつきを防止 */
+            position: fixed;
             overflow: hidden;
         }
 
-        /* Matter.js canvas (full-screen fixed) */
         canvas {
             position: absolute;
             top: 0;
@@ -53,21 +52,18 @@
             height: 100%;
             z-index: 0;
             display: block;
-            -webkit-touch-callout: none; /* 長押しによるメニュー（画像保存など）を禁止 */
+            -webkit-touch-callout: none;
         }
 
-
-
         /* =========================================================
-           HUD (score / next)
-           - pointer-events:none で操作を邪魔しない
-           ========================================================= */
+            HUD (Top Score / Next)
+            ========================================================= */
         #ui-layer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            padding: 20px;
+            padding: 20px 10px 20px 20px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
@@ -94,9 +90,26 @@
             font-family: Arial, sans-serif;
         }
 
+        .hi-stage {
+            margin-left: 12px;
+            font-size: 18px;
+            color: #aaa;
+            letter-spacing: 1px;
+        }
+
+        #next-name {
+            margin-top: 2px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            line-height: 1.1;
+            opacity: 0.85;
+            text-shadow: 0 0 6px rgba(255,255,255,0.4);
+        }
+
         /* =========================================================
-           Overlay (title / game over / clear)
-           ========================================================= */
+            Overlay (Title / Result)
+            ========================================================= */
         #overlay {
             position: fixed;
             inset: 0;
@@ -135,7 +148,6 @@
             border-radius: 50px;
             cursor: pointer;
             letter-spacing: 4px;
-            pointer-events: auto;
         }
 
             .btn:hover {
@@ -143,14 +155,25 @@
                 color: black;
             }
 
+        .sub-btn {
+            margin-top: 16px;
+            padding: 10px 36px;
+            font-size: 14px;
+            letter-spacing: 3px;
+            opacity: 0.75;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.5);
+            color: white;
+            border-radius: 20px;
+        }
+
         /* =========================================================
-           BOOST Button (visual / hit target)
-           ========================================================= */
+            Bottom Left: BOOST
+            ========================================================= */
         #boost-btn {
             position: fixed;
             bottom: 32px;
             left: 32px;
-            /* button body */
             padding: 6px 16px;
             font-size: 22px;
             letter-spacing: 2px;
@@ -160,15 +183,10 @@
             border-radius: 20px;
             cursor: pointer;
             z-index: 20;
-            user-select: none;
-            -webkit-user-select: none;
-            /* subtle inner glow */
             box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
             isolation: isolate;
-            cursor: pointer;
         }
 
-            /* Outer large frame (main highlight) */
             #boost-btn::before {
                 content: "";
                 position: absolute;
@@ -180,19 +198,57 @@
                 z-index: -1;
             }
 
-        .boosting {
-            box-shadow: 0 0 20px rgba(79,172,254,0.9);
-        }
-
         /* =========================================================
-           Stage UI (bottom-right)
-           ========================================================= */
-        #stage-ui {
+            Bottom Right Area: Management (RESET/BGM) & Stage
+            ========================================================= */
+        #bottom-right-ui {
             position: fixed;
             right: 24px;
             bottom: 24px;
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #management-btn-area {
+            position: relative;
+            width: 100px;
+            height: 40px;
+            pointer-events: auto;
+        }
+
+        /* RESETとBGMボタンを同じ場所に重ねる */
+        #reset-btn, #bgm-control-pos {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #reset-btn, #bgm-toggle {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            font-size: 14px;
+            letter-spacing: 2px;
+            cursor: pointer;
+        }
+
+        #reset-btn {
+            display: none;
+        }
+        /* JSで制御 */
+
+        #stage-ui {
             text-align: right;
-            z-index: 15;
             pointer-events: none;
         }
 
@@ -208,88 +264,6 @@
             text-shadow: 0 0 12px rgba(255,255,255,0.6);
             font-family: Arial, sans-serif;
         }
-
-        .hi-stage {
-            margin-left: 12px;
-            font-size: 18px;
-            color: #aaa;
-            letter-spacing: 1px;
-        }
-
-        /* NEXT label text (currently hidden) */
-        #next-name {
-            opacity: 0.85;
-            text-shadow: 0 0 6px rgba(255,255,255,0.4);
-            display: block;
-        }
-
-        /* Overlay sub buttons */
-        .sub-btn {
-            margin-top: 16px;
-            padding: 10px 36px;
-            font-size: 14px;
-            letter-spacing: 3px;
-            opacity: 0.75;
-            border-color: rgba(255,255,255,0.5);
-        }
-
-            .sub-btn:hover {
-                opacity: 1;
-                background: rgba(255,255,255,0.15);
-                color: white;
-            }
-
-        /* BGM toggle (title screen only; placed inside overlay) */
-        #bgm-toggle {
-            position: fixed;
-            left: 70%;
-            bottom: 18px;
-            transform: translateX(-50%);
-            z-index: 18;
-            padding: 6px 20px;
-            font-size: 12px;
-            letter-spacing: 2px;
-            background: rgba(0,0,0,0.45);
-            color: rgba(255,255,255,0.85);
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 999px;
-            opacity: 0.6;
-        }
-
-            #bgm-toggle:hover {
-                opacity: 1;
-            }
-
-        #reset-btn {
-            position: fixed;
-            top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 6px 16px;
-            min-width: 80px;
-            min-height: 36px;
-            background: rgba(0, 0, 0, 0.75);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 20px;
-            letter-spacing: 1px;
-            font-size: 12px;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-            z-index: 999999;
-            pointer-events: auto;
-            display: none;
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
-            transition: background 0.2s ease, transform 0.1s ease;
-        }
-
-            #reset-btn:active {
-                background: rgba(60, 60, 60, 0.9);
-                transform: translateX(-50%) scale(0.96);
-            }
     </style>
 
 </head>
@@ -325,12 +299,8 @@
         <div style="text-align: right; margin-right: -5px;">
             <div style="display: inline-flex; flex-direction: column; align-items: center; min-width: 100px;">
                 <span style="font-size:20px; color:#aaa; letter-spacing:2px; margin-bottom: 2px;">NEXT</span>
-
                 <div id="next-ui" style="height:55px; width:60px; margin: 0 auto;"></div>
-
-                <div id="next-name"
-                     style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;">
-                </div>
+                <div id="next-name" style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;"></div>
             </div>
         </div>
     </div>
@@ -341,46 +311,30 @@
          ========================================================= -->
     <div id="overlay">
         <h1 id="title-text">STELLAR<br />GRAVITY</h1>
-
         <button id="start-btn" class="btn">START</button>
-
-        <button id="clear-hi-btn" class="btn sub-btn">
-            CLEAR HIGH SCORE
-        </button>
-
-        <button id="bgm-toggle" class="btn sub-btn" style="margin-top:24px;">
-            BGM ON
-        </button>
-
-        <p id="clear-message"
-           style="
-     margin-top:20px;
-     font-size:16px;
-     letter-spacing:1px;
-     opacity:0.9;
-     display:none;
-   ">
-        </p>
-
+        <button id="clear-hi-btn" class="btn sub-btn">CLEAR HIGH SCORE</button>
+        <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
     </div>
 
     <!-- =========================================================
-         BOOST
+         BUTTON
          ========================================================= -->
-    <div style="margin-top: 12px; pointer-events: auto;">
-        <button id="boost-btn">
-            BOOST
-        </button>
+    <button id="boost-btn">BOOST</button>
+
+    <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 24px; display: flex; align-items: flex-end; gap: 20px; pointer-events: none; z-index: 1000;">
+
+        <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 40px;">
+            <button id="reset-btn">RESET</button>
+            <div id="bgm-control-pos">
+                <button id="bgm-toggle" class="btn sub-btn">BGM ON</button>
+            </div>
+        </div>
+
+        <div id="stage-ui" style="text-align: right; pointer-events: none;">
+            <div class="stage-label">STAGE</div>
+            <div id="stage-val" class="stage-num">1</div>
+        </div>
     </div>
-
-    <!-- Stage display (bottom-right) -->
-    <div id="stage-ui">
-        <div class="stage-label">STAGE</div>
-        <div id="stage-val" class="stage-num">1</div>
-    </div>
-
-    <button id="reset-btn">RESET</button>
-
 
 
     <script>
@@ -464,7 +418,7 @@
         const ROTATE_BASE_SPEED = 0.015;
         const ROTATE_BOOST_MULT = 3.5;
         const STAR_BOOST_MULT = 3.0;
-        const STAR_BASE_SPEED = 6.0; 
+        const STAR_BASE_SPEED = 6.0;
 
         let clearCount = 0;
         let difficulty = 1.0;
@@ -1491,14 +1445,15 @@
 
         boostBtn.addEventListener("touchstart", (e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation(); // 他のタッチ判定（window）に影響を与えない
             isBoosting = true;
-        });
+        }, { passive: false });
 
         boostBtn.addEventListener("touchend", (e) => {
             e.preventDefault();
+            e.stopPropagation();
             isBoosting = false;
-        });
+        }, { passive: false });
 
         boostBtn.addEventListener("touchcancel", () => {
             isBoosting = false;
@@ -1572,7 +1527,7 @@
         function triggerGameClear() {
             const clearedStage = stage;
 
-            onClear(); 
+            onClear();
 
             stage++;
 
@@ -1596,7 +1551,7 @@
             document.querySelector("#overlay h1").innerHTML = "STAGE " + clearedStage + "<br>CLEAR";
             document.getElementById("start-btn").textContent = "NEXT";
 
-            
+
             clearHiBtn.style.display = "none";
 
             const msg = document.getElementById("clear-message");
@@ -1619,19 +1574,13 @@
          * - sets initial velocity toward center (+ drift when boosting)
          * ========================================================= */
         function shoot(e) {
-
             if (isPaused) return;
 
-            const reset = document.getElementById("reset-btn");
-            if (e && reset && reset.contains(e.target)) return;
-
-
-            if (e && isInBoostSafeArea(e.clientX, e.clientY)) return;
-
-            if (e && document.getElementById("bgm-toggle")
-                .contains(e.target)) return;
-
+            // ゲーム状態のチェック
             if (!isGameRunning || !isClickable || !document.getElementById("overlay").classList.contains("hide")) return;
+
+            // 以前の isInBoostSafeArea などのガード判定は、
+            // 呼び出し側のイベントリスナー（isInsideShootArea）で行うため、ここでは削除します。
 
             isClickable = false;
 
@@ -1656,7 +1605,6 @@
 
             const vxC = -Math.cos(launcherAngle);
             const vyC = -Math.sin(launcherAngle);
-
             const vxT = -Math.sin(launcherAngle);
             const vyT = Math.cos(launcherAngle);
 
@@ -1664,7 +1612,6 @@
             const vy = (vyC + vyT * BOOST_DRIFT) * BASE_SPEED;
 
             Body.setVelocity(b, { x: vx, y: vy });
-
             Composite.add(engine.world, b);
 
             setTimeout(() => { isClickable = true; }, 600);
@@ -1750,26 +1697,33 @@
 
 
         /* =========================================================
-         * Reset Game Button
+         * UIの表示切り替え（BGM ↔ RESET）
          * ========================================================= */
-
         function updateResetButtonVisibility() {
-            const btn = document.getElementById("reset-btn");
+            const rBtn = document.getElementById("reset-btn");
+            const bPos = document.getElementById("bgm-control-pos");
 
-            if (!btn) return;
-
-            btn.style.display = isGameRunning ? "block" : "none";
+            if (isGameRunning) {
+                // ゲーム中：RESETを表示、BGMを隠す
+                if (rBtn) rBtn.style.display = "block";
+                if (bPos) bPos.style.display = "none";
+            } else {
+                // タイトル画面：RESETを隠す、BGMを表示
+                if (rBtn) rBtn.style.display = "none";
+                if (bPos) bPos.style.display = "block";
+            }
         }
-
 
         const resetBtn = document.getElementById("reset-btn");
 
+        /* --- handleResetRequest  --- */
         function handleResetRequest(e) {
             e.preventDefault();
             e.stopPropagation();
 
             if (!isGameRunning) return;
 
+            // 一旦物理演算を止める
             isPaused = true;
             Runner.stop(runner);
 
@@ -1777,13 +1731,14 @@
 
             if (ok) {
                 stopBGM();
-                returnToTitle();
-                return;
+                returnToTitle(); // タイトルに戻る（タイトル画面も全画面で表示）
+                requestFullScreen(); // ★ 全画面復帰
+            } else {
+                // キャンセル時のみ再開
+                isPaused = false;
+                Runner.run(runner, engine);
+                requestFullScreen(); // ★ キャンセルしてゲームに戻る際も全画面復帰
             }
-
-            // キャンセル時のみ再開
-            isPaused = false;
-            Runner.run(runner, engine);
         }
 
         resetBtn.addEventListener("click", handleResetRequest);
@@ -1805,26 +1760,55 @@
         });
 
         /* =========================================================
-         * Input
+         * SHOOT（発射）の有効範囲判定 (修正版)
+         * 画面上部から、下部ボタン（BOOST/RESET）の上端までを有効にする
          * ========================================================= */
-        window.addEventListener("mousedown", (e) => {
-            if (isGameRunning && !isPaused && e.button === 0) shoot(e);
-        });
+        function isInsideShootArea(clientX, clientY) {
+            const boostRect = document.getElementById("boost-btn").getBoundingClientRect();
+            const resetRect = document.getElementById("reset-btn").getBoundingClientRect();
 
+            // 下部ボタンの中で、より「高い位置」にある方の数値を基準にする
+            // (余裕を持たせるためにボタンの 20px 上を境界線にする)
+            const deadLineTop = Math.min(boostRect.top, resetRect.top) - 20;
+
+            // Y座標が画面上端(0)から、ボタンの上端(deadLineTop)の間であれば発射許可
+            return clientY > 0 && clientY < deadLineTop;
+        }
+
+        /* --- window の touchstart --- */
         window.addEventListener("touchstart", (e) => {
-
             const reset = document.getElementById("reset-btn");
+            const boost = document.getElementById("boost-btn");
 
-            if (reset && reset.contains(e.target)) {
-                return;   // RESETなら完全無視
-            }
+            // 触れた指すべてを確認
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
 
-            if (isGameRunning) {
-                shoot(e);
-                e.preventDefault();
+                // ボタンそのものを触っている指は無視
+                if (e.target === reset || e.target === boost) continue;
+
+                if (isGameRunning && !isPaused) {
+                    // 指定した矩形エリア内（RESET下〜BOOST上）なら発射
+                    if (isInsideShootArea(touch.clientX, touch.clientY)) {
+                        shoot(e);
+                        // 1本でも発射条件を満たせば終了
+                        break;
+                    }
+                }
             }
         }, { passive: false });
 
+        /* --- マウスクリック --- */
+        window.addEventListener("mousedown", (e) => {
+            if (isGameRunning && !isPaused && e.button === 0) {
+                // ボタンそのもののクリックではないことを確認
+                if (e.target.tagName === "BUTTON") return;
+
+                if (isInsideShootArea(e.clientX, e.clientY)) {
+                    shoot(e);
+                }
+            }
+        });
 
         /* =========================================================
          * Resize
@@ -1990,7 +1974,7 @@
 
         /* ===== 通常BGM再生 ===== */
         function playBGM() {
-            
+
             if (!isBgmEnabled) return;
 
             forceStopBGM();
