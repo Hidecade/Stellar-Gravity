@@ -313,6 +313,12 @@
             text-shadow: 0 0 12px rgba(255,255,255,0.6);
         }
 
+        /* タイトル時にSTAGEをグレーアウトさせるためのスタイル */
+        .ui-faded {
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+
         /* スコアが加算された時のアニメーション修正 */
         .score-bounce {
             animation: score-bounce 0.5s ease-out;
@@ -403,7 +409,7 @@
             </div>
         </div>
 
-        <div id="stage-ui" style="text-align: right; pointer-events: none;">
+        <div id="stage-ui" class="ui-faded" style="text-align: right; pointer-events: none;">
             <div class="stage-label">STAGE</div>
             <div id="stage-val" class="stage-num">1</div>
         </div>
@@ -1847,20 +1853,23 @@
         });
 
         /* =========================================================
-         * UIの表示切り替え（BGM ↔ RESET）
-         * ========================================================= */
+                 * UIの表示切り替え（BGM ↔ RESET ＆ STAGEのグレーアウト）
+                 * ========================================================= */
         function updateResetButtonVisibility() {
             const rBtn = document.getElementById("reset-btn");
             const bPos = document.getElementById("bgm-control-pos");
+            const stageUi = document.getElementById("stage-ui"); // STAGE表示エリア
 
             if (isGameRunning) {
-                // ゲーム中：RESETを表示、BGMを隠す
+                // ゲーム中：RESETを表示、BGMを隠す、STAGEをハッキリ
                 if (rBtn) rBtn.style.display = "block";
                 if (bPos) bPos.style.display = "none";
+                if (stageUi) stageUi.classList.remove("ui-faded");
             } else {
-                // タイトル画面：RESETを隠す、BGMを表示
+                // タイトル画面：RESETを隠す、BGMを表示、STAGEをグレーアウト
                 if (rBtn) rBtn.style.display = "none";
                 if (bPos) bPos.style.display = "block";
+                if (stageUi) stageUi.classList.add("ui-faded");
             }
         }
 
