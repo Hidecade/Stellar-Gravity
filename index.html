@@ -391,6 +391,8 @@
     <div id="overlay">
         <h1 id="title-text">STELLAR<br />GRAVITY</h1>
         <button id="start-btn" class="btn">START</button>
+        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 20px auto 0; opacity: 0.8;">EXIT GAME</button>
+
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR HIGH SCORE</button>
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
     </div>
@@ -625,9 +627,7 @@
             isPaused = false;
             isClickable = false;
 
-            // 音の停止：フェードを待たずに強制停止したほうがRESETの反応が良く感じられます
             forceStopBGM();
-            playTitleBGM();
 
             Composite.clear(engine.world, false);
             Runner.run(runner, engine);
@@ -1683,6 +1683,10 @@
 
             updateResetButtonVisibility();
 
+            // ★ ゲームオーバー時に Title BGM を流す
+            if (isBgmEnabled) {
+                playTitleBGM();
+            }
 
         }
 
@@ -2037,6 +2041,16 @@
             alert("HIGH SCORE をリセットしました");
         });
 
+
+        /* =========================================================
+         * 終了ボタンの処理
+         * ========================================================= */
+        document.getElementById("exit-btn").addEventListener("click", () => {
+            if (confirm("ゲームを終了しますか？")) {
+                // 任意のURLへ移動（閉じる動作の代わり）
+                window.location.href = "https://github.com/Hidecade/Stellar-Gravity";
+            }
+        });
         /* =========================================================
          * BGM Toggle (title screen only)
          * ========================================================= */
@@ -2200,15 +2214,6 @@
             // 3. リスナーを削除
             window.removeEventListener('touchstart', unlockAudio);
             window.removeEventListener('mousedown', unlockAudio);
-
-            // 4. タイトル画面であれば、その場でBGMを開始（ユーザー操作内なので100%鳴る）
-            if (!isGameRunning && isBgmEnabled) {
-                forceStopBGM();
-                titleBgm.volume = 0.8;
-                titleBgm.play().then(() => {
-                    currentAudio = titleBgm;
-                }).catch(err => console.log("Final play blocked"));
-            }
         }
 
         // 最初のタップ時にアンロックを実行
