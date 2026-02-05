@@ -17,6 +17,7 @@
     <link rel="apple-touch-icon" href="img/StellarGravity.png">
     <link rel="icon" type="image/png" sizes="192x192" href="img/StellarGravity.png">
     <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
 
     <!-- =========================================================
@@ -38,13 +39,18 @@
             justify-content: center;
             height: 100dvh;
             width: 100vw;
-            font-family: Arial, sans-serif; /* 視認性向上のため基本をArialに */
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
             color: white;
             position: fixed;
             overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 200 !important;
+        }
+
+        .btn {
+            font-family: 'Orbitron', sans-serif;
         }
 
         canvas {
@@ -73,7 +79,7 @@
             align-items: flex-start;
             pointer-events: none;
             z-index: 10;
-            font-family: "Courier New", monospace;
+            font-weight: normal;
         }
 
         .hud-item {
@@ -91,19 +97,17 @@
 
         .score-num {
             font-size: 48px;
-            font-weight: bold;
             color: #fff;
             text-shadow: 0 0 15px #4facfe;
             display: block;
-            font-family: Arial, sans-serif;
+            font-weight: normal;
         }
 
         .hi-score-num {
             font-size: 40px;
             color: #f1c40f;
-            font-weight: bold;
             text-shadow: 0 0 10px rgba(241,196,15,0.5);
-            font-family: Arial, sans-serif;
+            font-weight: normal;
         }
 
         /* ハイスコア横の「STAGE」という文字と数字を含むエリア全体の調整 */
@@ -117,22 +121,18 @@
         }
 
         #hi-stage-val {
-            font-family: Arial, sans-serif;
             font-size: 26px;
-            font-weight: bold;
             color: #fff;
             margin-left: 2px;
-            /* --- 追加部分 --- */
             position: relative;
-            top: 2px; /* この数字を 3px, 4px と増やすほど下にずれます */
-            /* ---------------- */
+            top: 2px; 
+            font-weight: bold;
         }
 
         #next-name {
             margin-top: 5px;
             font-size: 15px;
             letter-spacing: 1px;
-            font-weight: bold;
             line-height: 1.1;
             opacity: 0.9;
             text-shadow: 0 0 6px rgba(255,255,255,0.4);
@@ -161,11 +161,10 @@
 
         h1 {
             margin: 0;
-            font-size: 42px;
+            font-size: 50px;
             line-height: 1.1;
             letter-spacing: 6px;
-            font-weight: 300;
-            font-family: "Courier New", monospace;
+            font-weight: 200;
         }
 
         .btn {
@@ -221,6 +220,8 @@
             z-index: 20;
             box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
             isolation: isolate;
+            font-family: 'Orbitron', sans-serif;
+            font-weight:bold;
         }
 
             #boost-btn::before {
@@ -263,6 +264,7 @@
             left: 0;
             width: 100%;
             height: 100%;
+            font-family: 'Orbitron', sans-serif;
         }
 
         /* BGMとReset共通の基本スタイル */
@@ -274,7 +276,6 @@
             border: 2px solid rgba(255, 255, 255, 0.6); /* 境界線を少し太く */
             border-radius: 20px;
             font-size: 14px; /* 少し大きく */
-            font-weight: bold;
             letter-spacing: 2px;
             cursor: pointer;
             outline: none;
@@ -285,7 +286,7 @@
         /* Resetボタン専用：より目立たせ、押しやすくする */
         #reset-btn {
             display: none;
-            background: rgba(150, 0, 0, 0.7); /* 警告色として少し赤暗く */
+            background: rgba(150, 0, 0, 0.7); /* 警告色として少し赤暗く */ 
             border-color: rgba(255, 100, 100, 0.8);
         }
 
@@ -310,7 +311,6 @@
             font-size: 18px;
             letter-spacing: 2px;
             color: #aaa;
-            font-family: "Courier New", monospace;
         }
 
         .stage-num {
@@ -328,6 +328,12 @@
         /* スコアが加算された時のアニメーション修正 */
         .score-bounce {
             animation: score-bounce 0.5s ease-out;
+        }
+
+        /* その他UI共通 */
+        #controls-hint {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
         }
 
         @keyframes score-bounce {
@@ -397,7 +403,7 @@
     <div id="overlay">
         <h1 id="title-text">STELLAR<br />GRAVITY</h1>
 
-        <div id="controls-hint" style="margin-top: 25px; font-size: 13px; letter-spacing: 2px; color: #888; font-family: 'Courier New', monospace; line-height: 1.6;">
+        <div id="controls-hint" style="margin-top: 25px; font-size: 13px; letter-spacing: 2px; color: #888; line-height: 1.6;">
             [PC] ENTER / UP : SHOOT | SPACE : BOOST<br>
             [TOUCH] TAP SCREEN : SHOOT
         </div>
@@ -1688,7 +1694,8 @@
             comboEl.style.top = `${y - 40}px`;
             comboEl.style.textAlign = "center";
             comboEl.style.color = "#ffffff";
-            comboEl.style.fontFamily = "-apple-system, 'Helvetica Neue', sans-serif";
+            // ★ ここを修正：フォントを Orbitron に統一
+            comboEl.style.fontFamily = "'Orbitron', sans-serif";
 
             // 二重のグローエフェクト（眩しすぎず、視認性を確保）
             comboEl.style.textShadow = "0 0 12px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.3)";
