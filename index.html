@@ -1720,38 +1720,43 @@
          * ========================================================= */
 
         function triggerGameClear() {
-            const clearedStage = stage; // 現在のステージ番号を保持
-
+            // 1. すべての進行中フラグを整理
             onClear();
+            isClearing = true; // クリア演出中
+            isGameRunning = false; // ゲームループ上の判定は停止
+            isContinue = true; // 「続きから」の状態をON
+            pendingCoreBoost = true; // 次回コアを大きくする予約
 
-            // ★ 修正: ここでの stage++ と localStorage への保存を削除
-            // (NEXTボタンを押した時に移動させます)
+            // 2. 演出が終わるのを待ってからオーバーレイを表示
+            // SUPERNOVA_END_DELAY（約1.1秒）に合わせて実行
+            setTimeout(() => {
+                const overlay = document.getElementById("overlay");
+                const titleH1 = document.querySelector("#overlay h1");
+                const startBtn = document.getElementById("start-btn");
+                const clearMsg = document.getElementById("clear-message");
 
-            // 表示はクリアしたステージのままにする
-            document.getElementById("stage-val").innerText = clearedStage;
+                if (overlay) {
+                    overlay.classList.remove("hide"); // オーバーレイを表示
 
-            pendingCoreBoost = true;
-            isContinue = true;
-            isGameRunning = false;
+                    // タイトルを「STAGE X CLEAR」に書き換え
+                    titleH1.innerHTML = "STAGE " + stage + "<br>CLEAR";
 
-            // ボタンの切り替え（BGM表示へ）
-            updateResetButtonVisibility();
+                    // ボタンを「NEXT」に変更
+                    startBtn.textContent = "NEXT";
 
-            // オーバーレイ表示
-            document.getElementById("overlay").classList.remove("hide");
-            bgmToggleBtn.style.pointerEvents = "auto";
-            bgmToggleBtn.style.opacity = "0.75";
+                    // メッセージを表示
+                    if (clearMsg) {
+                        clearMsg.innerHTML = "The core has collapsed<br>into a Black Hole.<br><br>A new star system awaits.";
+                        clearMsg.style.display = "block";
+                    }
 
-            document.querySelector("#overlay h1").innerHTML = "STAGE " + clearedStage + "<br>CLEAR";
-            document.getElementById("start-btn").textContent = "NEXT";
+                    // CREDITボタンや操作説明を隠す（続きプレイのため）
+                    updateResetButtonVisibility();
 
-            clearHiBtn.style.display = "none";
-
-            const msg = document.getElementById("clear-message");
-            msg.innerHTML = "The core has collapsed<br>into a Black Hole.<br><br>A new star system awaits.";
-            msg.style.display = "block";
-
-            playClearBgm();
+                    // クリア用BGMを再生
+                    playClearBgm();
+                }
+            }, SUPERNOVA_END_DELAY);
         }
 
         /* =========================================================
@@ -1815,25 +1820,29 @@
          * - rebuilds world and core
          * ========================================================= */
         document.getElementById("start-btn").addEventListener("click", (e) => {
-
             e.preventDefault();
             e.stopPropagation();
 
             requestFullScreen();
             forceStopBGM();
 
+            // 1. Runnerの再始動（物理演算ループの復旧）
+            if (runner) {
+                Runner.stop(runner);
+                Runner.run(runner, engine);
+            }
+
+            // 2. 状態フラグの初期化（ここでの return は削除）
             if (isPaused) isPaused = false;
             document.getElementById("clear-message").style.display = "none";
             isClearing = false;
             isBlackHoleCore = false;
-
-
-            if (isGameRunning) return;
+            gameOverTime = null;
 
             const startBtn = document.getElementById("start-btn");
             const isNext = startBtn.textContent === "NEXT";
 
-            // ステージ進行ロジック
+            // 3. ステージ進行ロジック
             if (isNext) {
                 stage++;
                 if (stage > hiStage) {
@@ -1853,8 +1862,10 @@
             document.getElementById("stage-val").innerText = stage;
             document.getElementById("overlay").classList.add("hide");
 
-            // ワールド再構築
+            // 4. ワールド再構築（ここが確実に実行されることが重要）
             Composite.clear(engine.world, false);
+            // エンジン内部の衝突キャッシュもクリアするとより安定します
+            if (engine) Engine.clear(engine);
 
             if (isNext && pendingCoreBoost) {
                 CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
@@ -1866,7 +1877,7 @@
                 render: { visible: false }
             }));
 
-            // ★ 重要: キューを初期化した直後に名前と色を即時反映させる
+            // 5. キューの初期化とUI反映
             nextQueue = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)];
             const currentPlanet = PLANETS[nextQueue[1]];
             const nameEl = document.getElementById("next-name");
@@ -1875,7 +1886,7 @@
                 nameEl.style.color = currentPlanet.color;
             }
 
-            gameOverTime = null;
+            // 6. 最後にゲーム開始フラグを立てる
             isClickable = true;
             isGameRunning = true;
 
