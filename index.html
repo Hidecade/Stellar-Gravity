@@ -53,7 +53,7 @@
             font-family: 'Orbitron', sans-serif;
         }
 
-   
+
 
         canvas {
             position: absolute;
@@ -127,7 +127,7 @@
             color: #fff;
             margin-left: 2px;
             position: relative;
-            top: 2px; 
+            top: 2px;
             font-weight: bold;
         }
 
@@ -223,7 +223,7 @@
             box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
             isolation: isolate;
             font-family: 'Orbitron', sans-serif;
-            font-weight:bold;
+            font-weight: bold;
         }
 
             #boost-btn::before {
@@ -288,7 +288,7 @@
         /* Resetボタン専用：より目立たせ、押しやすくする */
         #reset-btn {
             display: none;
-            background: rgba(150, 0, 0, 0.7); /* 警告色として少し赤暗く */ 
+            background: rgba(150, 0, 0, 0.7); /* 警告色として少し赤暗く */
             border-color: rgba(255, 100, 100, 0.8);
         }
 
@@ -391,7 +391,13 @@
         <div style="text-align: right; margin-right: -5px;">
             <div style="display: inline-flex; flex-direction: column; align-items: center; min-width: 100px;">
                 <span style="font-size:20px; color:#aaa; letter-spacing:2px; margin-bottom: 2px;">NEXT</span>
+
                 <div id="next-ui" style="height:55px; width:60px; margin: 0 auto;"></div>
+
+                <div id="timer-bar-container" style="width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin-top: 8px; display: none; overflow: hidden;">
+                    <div id="timer-bar-fill" style="width: 100%; height: 100%; background: #ff3c3c; box-shadow: 0 0 10px #ff0000;"></div>
+                </div>
+
                 <div id="next-name" style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;"></div>
             </div>
         </div>
@@ -527,6 +533,22 @@
 
         const DIFF_STEP = 0.12;   // 1クリアごとの上昇量
         const DIFF_MAX = 3.0;    // 上限
+
+        /* =========================================================
+         * 10面以降のショット制限タイマー設定
+         * ========================================================= */
+        let shotTimer = null;
+        let shotTimeLimit = 0; // 現在の制限時間（秒）
+
+        /* --- タイマー設定の書き換え --- */
+        const TIMER_START_STAGE = 1;      // 1面からタイマーを作動させる
+        const TIMER_MAX_SEC = 30.0;       // 1面の秒数
+        const TIMER_MID_SEC = 10.0;       // 6面の秒数
+        const TIMER_MIN_SEC = 2.0;        // 最短の秒数
+
+        let barAnimId = null;
+        let timerStartTime = 0;
+
         /* =========================================================
          * Stage / Hi-Stage
          * ========================================================= */
@@ -622,6 +644,83 @@
             return Math.min(max, Math.max(min, v));
         }
 
+        /* =========================================================
+         * Shootタイマー
+         * ========================================================= */
+        function startShotTimer() {
+            const container = document.getElementById("timer-bar-container");
+            const fill = document.getElementById("timer-bar-fill");
+
+            if (!container || !fill) return;
+
+            if (shotTimer) {
+                clearTimeout(shotTimer);
+                shotTimer = null;
+            }
+            if (barAnimId) {
+                cancelAnimationFrame(barAnimId);
+                barAnimId = null;
+            }
+
+            if (!isGameRunning || isPaused) {
+                container.style.display = "none";
+                return;
+            }
+
+            // 秒数計算ロジック
+            if (stage <= 6) {
+                shotTimeLimit = TIMER_MAX_SEC - (stage - 1) * 4.0;
+            } else {
+                shotTimeLimit = Math.max(TIMER_MIN_SEC, TIMER_MID_SEC - (stage - 6) * 1.0);
+            }
+
+            // --- ★ここを修正: [1] にすることで「NEXT」の色を取得 ---
+            // nextQueue[1] が存在しない場合の安全策として [0] も参照
+            const nextPlanetIndex = nextQueue.length > 1 ? nextQueue[1] : nextQueue[0];
+            const nextPlanetColor = PLANETS[nextPlanetIndex].color;
+
+            container.style.display = "block";
+            fill.style.width = "100%";
+            fill.style.opacity = "1";
+            fill.style.background = nextPlanetColor;
+            fill.style.boxShadow = `0 0 10px ${nextPlanetColor}`;
+
+            timerStartTime = Date.now();
+
+            shotTimer = setTimeout(() => {
+                if (isGameRunning && isClickable && !isPaused) {
+                    shoot();
+                }
+            }, shotTimeLimit * 1000);
+
+            function updateBar() {
+                if (!isGameRunning || isPaused) return;
+
+                const elapsed = (Date.now() - timerStartTime) / 1000;
+                const remainingRatio = Math.max(0, 1 - (elapsed / shotTimeLimit));
+                const remainingSec = shotTimeLimit * remainingRatio;
+
+                fill.style.width = (remainingRatio * 100) + "%";
+
+                // 短くなったら赤の点滅
+                if (remainingRatio < 0.25 || remainingSec < 3.0) {
+                    const blink = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
+                    fill.style.background = "#ff0000";
+                    fill.style.boxShadow = `0 0 15px #ff0000`;
+                    fill.style.opacity = blink;
+                } else {
+                    // 通常時は「次の星」の色を維持
+                    fill.style.background = nextPlanetColor;
+                    fill.style.boxShadow = `0 0 10px ${nextPlanetColor}`;
+                    fill.style.opacity = "1";
+                }
+
+                if (remainingRatio > 0) {
+                    barAnimId = requestAnimationFrame(updateBar);
+                }
+            }
+            barAnimId = requestAnimationFrame(updateBar);
+        }
 
         /* =========================================================
          * requestFullScreen
@@ -1687,8 +1786,8 @@
 
             // シンプルかつ洗練された2行構成
             comboEl.innerHTML = `
-                <div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>
-            `;
+                    <div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>
+                `;
 
             // 基本スタイル（固定座標、中央揃え）
             comboEl.style.position = "fixed";
@@ -1866,6 +1965,8 @@
             Composite.add(engine.world, b);
 
             setTimeout(() => { isClickable = true; }, 200);
+
+            startShotTimer();
         }
 
         /* =========================================================
@@ -1952,6 +2053,8 @@
 
             updateResetButtonVisibility();
             playBGM();
+
+            startShotTimer();
         });
 
         /* =========================================================
