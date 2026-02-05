@@ -295,6 +295,12 @@
                 background: rgba(255, 255, 255, 0.3);
             }
 
+        #exit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            opacity: 1.0;
+        }
+
         #stage-ui {
             text-align: right;
             pointer-events: none;
@@ -390,8 +396,14 @@
          ========================================================= -->
     <div id="overlay">
         <h1 id="title-text">STELLAR<br />GRAVITY</h1>
+
+        <div id="controls-hint" style="margin-top: 25px; font-size: 13px; letter-spacing: 2px; color: #888; font-family: 'Courier New', monospace; line-height: 1.6;">
+            [PC] ENTER / UP : SHOOT | SPACE : BOOST<br>
+            [TOUCH] TAP SCREEN : SHOOT
+        </div>
+
         <button id="start-btn" class="btn">START</button>
-        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 20px auto 0; opacity: 0.8;">EXIT GAME</button>
+        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 20px auto 0; opacity: 0.8;">CREDITS</button>
 
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR HIGH SCORE</button>
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
@@ -484,7 +496,7 @@
 
         /* Core growth on stage clear */
         const CORE_DEFAULT = 25;
-        const CORE_MAX = 70;
+        const CORE_MAX = 85;
         const CORE_GROW = 10;
         let CORE_RADIUS = CORE_DEFAULT;
 
@@ -1557,9 +1569,21 @@
         });
 
         window.addEventListener("keydown", (e) => {
+            if (isPaused) return;
+
+            // --- BOOST (Spaceキー) ---
             if (e.code === "Space") {
                 e.preventDefault();
                 isBoosting = true;
+            }
+
+            // --- SHOOT (Enterキー または 上矢印キー) ---
+            if (e.code === "Enter" || e.code === "ArrowUp") {
+                e.preventDefault();
+                // ゲーム実行中かつオーバーレイが隠れている時のみ発射
+                if (isGameRunning && document.getElementById("overlay").classList.contains("hide")) {
+                    shoot(e);
+                }
             }
         });
 
@@ -1669,8 +1693,9 @@
             document.getElementById("clear-message").style.display = "none";
 
             isGameRunning = false;
-            document.getElementById("stage-val").innerText = stage;
             isContinue = false;
+
+            document.getElementById("stage-val").innerText = stage;
 
             document.getElementById("overlay").classList.remove("hide");
             bgmToggleBtn.style.pointerEvents = "auto";
@@ -1790,6 +1815,10 @@
          * - rebuilds world and core
          * ========================================================= */
         document.getElementById("start-btn").addEventListener("click", (e) => {
+
+            e.preventDefault();
+            e.stopPropagation();
+
             requestFullScreen();
             forceStopBGM();
 
@@ -1798,8 +1827,6 @@
             isClearing = false;
             isBlackHoleCore = false;
 
-            e.preventDefault();
-            e.stopPropagation();
 
             if (isGameRunning) return;
 
@@ -1857,23 +1884,35 @@
         });
 
         /* =========================================================
-                 * UIの表示切り替え（BGM ↔ RESET ＆ STAGEのグレーアウト）
+                 * UIの表示切り替え（BGM ↔ RESET ＆ STAGEグレーアウト ＆ EXIT制御）
                  * ========================================================= */
         function updateResetButtonVisibility() {
             const rBtn = document.getElementById("reset-btn");
             const bPos = document.getElementById("bgm-control-pos");
-            const stageUi = document.getElementById("stage-ui"); // STAGE表示エリア
+            const stageUi = document.getElementById("stage-ui");
+            const exitBtn = document.getElementById("exit-btn"); // EXITボタン
 
             if (isGameRunning) {
-                // ゲーム中：RESETを表示、BGMを隠す、STAGEをハッキリ
+                // ゲーム中
                 if (rBtn) rBtn.style.display = "block";
                 if (bPos) bPos.style.display = "none";
                 if (stageUi) stageUi.classList.remove("ui-faded");
             } else {
-                // タイトル画面：RESETを隠す、BGMを表示、STAGEをグレーアウト
+                // タイトル画面（オーバーレイ表示中）
                 if (rBtn) rBtn.style.display = "none";
                 if (bPos) bPos.style.display = "block";
                 if (stageUi) stageUi.classList.add("ui-faded");
+
+                // --- EXITボタンの表示制御 ---
+                if (exitBtn) {
+                    // ステージクリア後の継続状態（isContinue）なら非表示、それ以外（GameOverやReset）なら表示
+                    exitBtn.style.display = isContinue ? "none" : "block";
+                }
+                // --- 操作説明の表示制御 ---
+                if (controlsHint) {
+                    // 続き（NEXT）のときは隠し、新規スタート（START）のときだけ出す
+                    controlsHint.style.display = isContinue ? "none" : "block";
+                }
             }
         }
 
