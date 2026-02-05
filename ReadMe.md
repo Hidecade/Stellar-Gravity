@@ -1,8 +1,10 @@
-# Stellar Gravity
+# Stellar Gravity 🪐
 
 **Stellar Gravity** は、重力と天体の進化をテーマにした、Matter.js 物理エンジン搭載のスタイリッシュ・グラビティパズルです。
 
 宇宙の静寂を感じさせるミニマルなデザインと、心地よい物理挙動をブラウザでそのまま体験できます。
+
+
 
 ---
 
@@ -19,12 +21,13 @@
 ## 🕹 操作方法
 
 ### 惑星の射出
-* **画面上部をクリック / タップ**: 待機中の天体をセンターへ射出します。
+* **PC**: `ENTER` または `↑ (上矢印)` キー、もしくは画面をクリック
+* **Mobile**: 画面をタップ
 
 ### BOOST（加速・偏向）
-* **BOOST ボタンをホールド**
-* **スペースキー（PC）**
-回転速度が劇的にアップし、射出時に強力な横方向のドリフト（遠心力）を加えることができます。
+* **PC**: `SPACE` キーをホールド
+* **Mobile**: 画面左下の **BOOST** ボタンをホールド
+* 回転速度が劇的にアップし、射出時に強力な横方向のドリフト（遠心力）を加えることができます。
 
 ### ユーティリティ
 * **RESET**: ゲーム中、いつでも即座にタイトルへ戻れます。iPhone Safari 等のモバイル端末でも一撃で反応するレスポンス設計になっています。
@@ -40,14 +43,30 @@
 ---
 
 ## 🔊 サウンドについて
+
 * 没入感を高めるアンビエントなBGMと、重厚な合体効果音。
 * タイトル画面で **BGM ON / OFF** の切替が可能（設定はブラウザに保存）。
 * **⚠ iPhone / Safari ユーザーの方へ**: 最初の「START」タップ時にオーディオが自動的にアンロックされます。
 
 ---
 
-## 📱 対応環境・プレイ
+## 🚀 対応環境・プレイ
 
 * **PC**: Chrome / Edge / Firefox
 * **スマートフォン**: iOS Safari / Android Chrome（全画面表示対応）
-* **GitHub Pages**: [https://hidecade.github.io/Stellar-Gravity/](https://hidecade.github.io/Stellar-Gravity/)
+* **Live Demo**: [https://hidecade.github.io/Stellar-Gravity/](https://hidecade.github.io/Stellar-Gravity/)
+
+---
+
+## 🛠 技術スタック
+
+* **Engine**: Matter.js (Physics)
+* **Language**: HTML5 / CSS3 / JavaScript (Vanilla JS)
+* **Audio**: Web Audio API / HTML5 Audio
+
+---
+
+## 📄 ライセンス
+
+Copyright (c) 2026 Hidecade.  
+このプロジェクトは MIT License のもとで公開されています。
