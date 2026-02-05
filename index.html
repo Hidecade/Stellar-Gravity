@@ -562,6 +562,10 @@
         let particles = [];
         let bgStars = [];
 
+        let implosionScale = 1.0; // 恒星の伸縮倍率
+        let implosionAlpha = 1.0; // 恒星の透明度
+        let isImploding = false;  // 爆縮アニメーション中か
+
 
         // ★ デバッグ用：どの惑星でクリアするか
         const DEBUG_CLEAR_INDEX = 3; // Earth
@@ -1070,8 +1074,51 @@
                 ctx.save();
                 ctx.translate(CENTER.x, CENTER.y);
 
-                if (!isBlackHoleCore) {
-                    // ===== 通常の恒星 =====
+                const currentRadius = CORE_RADIUS * implosionScale;
+
+                if (isImploding) {
+                    // ===== アニメーション中：爆縮する恒星 =====
+                    ctx.globalAlpha = implosionAlpha;
+                    const gR = currentRadius * 3;
+                    const grad = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+                else if (isBlackHoleCore) {
+                    // ===== 爆縮後：完成したブラックホール =====
+                    const t2 = performance.now() * 0.002;
+                    // 外側フレア
+                    for (let i = 0; i < 6; i++) {
+                        const r = CORE_RADIUS * (1.8 + i * 0.25);
+                        const a = 0.15 + Math.sin(t2 + i) * 0.1;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,80,40,${a})`;
+                        ctx.lineWidth = 6;
+                        ctx.stroke();
+                    }
+                    // イベントホライズン
+                    const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
+                    holeGrad.addColorStop(0, "rgba(0,0,0,1)");
+                    holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
+                    holeGrad.addColorStop(1, "rgba(0,0,0,1)");
+                    ctx.fillStyle = holeGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                else {
+                    // ===== 通常時：恒星 =====
                     const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
                     const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
                     grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
@@ -1084,33 +1131,6 @@
                     ctx.beginPath();
                     ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
                     ctx.fillStyle = "#fff700";
-                    ctx.fill();
-                } else {
-                    // ===== ブラックホール =====
-
-                    const t2 = performance.now() * 0.002;
-
-                    // 外側フレア（赤）
-                    for (let i = 0; i < 6; i++) {
-                        const r = CORE_RADIUS * (1.8 + i * 0.25);
-                        const a = 0.15 + Math.sin(t2 + i) * 0.1;
-
-                        ctx.beginPath();
-                        ctx.arc(0, 0, r, 0, Math.PI * 2);
-                        ctx.strokeStyle = `rgba(255,80,40,${a})`;
-                        ctx.lineWidth = 6;
-                        ctx.stroke();
-                    }
-
-                    // 内部グラデーション（暗赤 → 黒）
-                    const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
-                    holeGrad.addColorStop(0, "rgba(0,0,0,1)");
-                    holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
-                    holeGrad.addColorStop(1, "rgba(0,0,0,1)");
-
-                    ctx.fillStyle = holeGrad;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
                     ctx.fill();
                 }
 
@@ -1316,6 +1336,36 @@
              * Supernova effect (BlackHole clear)
              * ===================================================== */
             function triggerSupernovaAt(x, y, color = "#ffffff") {
+
+                isImploding = true; // 爆縮開始
+                implosionScale = 1.0;
+                implosionAlpha = 1.0;
+
+                let startTime = performance.now();
+
+                const animateImplosion = (now) => {
+                    const elapsed = now - startTime;
+
+                    if (elapsed < 300) {
+                        // 1. 膨張 (予兆)
+                        implosionScale = 1.0 + (elapsed / 300) * 0.5;
+                    } else if (elapsed < 900) {
+                        // 2. 爆縮 (一気に収縮)
+                        const p = (elapsed - 300) / 600;
+                        implosionScale = 1.5 * (1 - p);
+                        implosionAlpha = 1 - p;
+                    } else {
+                        // 3. 終了
+                        isImploding = false; // ここで描画をブラックホールモードに完全移行
+                        implosionScale = 0;
+                        return;
+                    }
+                    requestAnimationFrame(animateImplosion);
+                };
+                requestAnimationFrame(animateImplosion);
+
+                // フラッシュなどの演出は既存のまま
+                particles.push({ type: "flash", life: 1.0, color: "rgba(255,255,255,1)" });
 
                 particles.push({ type: "flash", life: 1.0, color: "rgba(255,255,255,1)" });
                 setTimeout(() => {
