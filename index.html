@@ -2047,6 +2047,15 @@
                 "stellarGravity_bgm",
                 isBgmEnabled ? "on" : "off"
             );
+
+            // ★ リアルタイム再生・停止処理
+            if (isBgmEnabled) {
+                // ONにしたとき：タイトルBGMを再生
+                playTitleBGM();
+            } else {
+                // OFFにしたとき：すべてのBGMを強制停止
+                forceStopBGM();
+            }
         });
 
         /* Load initial BGM setting */
