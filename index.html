@@ -2162,37 +2162,49 @@
             currentAudio = gameBgmEl;
         }
 
-        /* 修正箇所：scriptタグ内の上部、変数定義のあたりに追加 */
+        /* =========================================================
+         * 修正版：iOS & PC Audio Unlock Logic
+         * ========================================================= */
         function unlockAudio() {
+            // 1. Web Audio API (効果音用) の再開
             if (audioCtx.state === "suspended") {
                 audioCtx.resume();
             }
 
-            // アンロック対象を現在の変数名に合わせる
-            [gameBgmEl, clearBgm, titleBgm].forEach(audio => {
+            // 2. すべてのHTMLAudio要素を「ユーザー操作内」で一度再生して許可を得る
+            const audios = [gameBgmEl, clearBgm, titleBgm];
+
+            audios.forEach(audio => {
                 if (audio) {
-                    const oldVol = audio.volume;
-                    audio.volume = 0;
+                    // PC/iOS両対応：音量はそのままで、一瞬再生して即停止
+                    // 以前の muted = true は削除しました
                     audio.play().then(() => {
                         audio.pause();
                         audio.currentTime = 0;
-                        audio.volume = oldVol;
-                    }).catch(() => { });
+                    }).catch(e => {
+                        // 初回クリック前などはエラーが出るが無視してOK
+                        console.log("Audio unlock interaction pending...");
+                    });
                 }
             });
 
+            // 3. リスナーを削除
             window.removeEventListener('touchstart', unlockAudio);
             window.removeEventListener('mousedown', unlockAudio);
 
-            // 初回タップ時にタイトルBGMを開始する（iOS対策）
+            // 4. タイトル画面であれば、その場でBGMを開始（ユーザー操作内なので100%鳴る）
             if (!isGameRunning && isBgmEnabled) {
-                playTitleBGM();
+                forceStopBGM();
+                titleBgm.volume = 0.8;
+                titleBgm.play().then(() => {
+                    currentAudio = titleBgm;
+                }).catch(err => console.log("Final play blocked"));
             }
         }
 
         // 最初のタップ時にアンロックを実行
-        window.addEventListener('touchstart', unlockAudio);
-        window.addEventListener('mousedown', unlockAudio);
+        window.addEventListener('touchstart', unlockAudio, { once: false });
+        window.addEventListener('mousedown', unlockAudio, { once: false });
 
         /* 修正箇所：playClearBgm 関数を差し替え */
         function playClearBgm() {
