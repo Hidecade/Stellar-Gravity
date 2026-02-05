@@ -638,6 +638,7 @@
             isGameRunning = false;
             isPaused = false;
             isClickable = false;
+            isContinue = false;
 
             forceStopBGM();
 
@@ -1901,7 +1902,9 @@
             const rBtn = document.getElementById("reset-btn");
             const bPos = document.getElementById("bgm-control-pos");
             const stageUi = document.getElementById("stage-ui");
-            const exitBtn = document.getElementById("exit-btn"); // EXITボタン
+            const exitBtn = document.getElementById("exit-btn");
+            const clearHiBtn = document.getElementById("clear-hi-btn"); // 追加：ハイスコアリセットボタン
+            const hint = document.getElementById("controls-hint"); // 操作説明
 
             if (isGameRunning) {
                 // ゲーム中
@@ -1914,16 +1917,13 @@
                 if (bPos) bPos.style.display = "block";
                 if (stageUi) stageUi.classList.add("ui-faded");
 
-                // --- EXITボタンの表示制御 ---
-                if (exitBtn) {
-                    // ステージクリア後の継続状態（isContinue）なら非表示、それ以外（GameOverやReset）なら表示
-                    exitBtn.style.display = isContinue ? "none" : "block";
-                }
-                // --- 操作説明の表示制御 ---
-                if (controlsHint) {
-                    // 続き（NEXT）のときは隠し、新規スタート（START）のときだけ出す
-                    controlsHint.style.display = isContinue ? "none" : "block";
-                }
+                // --- 各種ボタン・説明の表示制御 ---
+                // ステージクリア後の継続状態（isContinue）なら非表示、それ以外なら表示
+                const displayStyle = isContinue ? "none" : "block";
+
+                if (exitBtn) exitBtn.style.display = displayStyle;
+                if (clearHiBtn) clearHiBtn.style.display = displayStyle; // ★ここ：クリア時は非表示に
+                if (hint) hint.style.display = displayStyle;
             }
         }
 
