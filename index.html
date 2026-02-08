@@ -1552,8 +1552,11 @@
             }
             document.getElementById("stage-val").innerText = stage;
             document.getElementById("overlay").classList.add("hide");
+            
+            // 安全なリセット処理
             Composite.clear(engine.world, false);
-            if (engine) Engine.clear(engine);
+            // Engine.clear(engine)は削除
+            
             if (isNext && pendingCoreBoost) {
                 CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
                 pendingCoreBoost = false;
