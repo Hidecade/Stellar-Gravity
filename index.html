@@ -148,7 +148,7 @@
             }
 
         /* =========================================================
-         Pause Overlay (New)
+         Pause Overlay
          ========================================================= */
         #pause-overlay {
             position: fixed;
@@ -156,11 +156,11 @@
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
-            display: none; /* 初期状態は非表示 */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 2000; /* 通常オーバーレイより上 */
+            z-index: 2000;
             text-align: center;
             cursor: pointer;
         }
@@ -183,7 +183,6 @@
             50% { opacity: 1; }
             100% { opacity: 0.5; }
         }
-
 
         h1 {
             margin: 0;
@@ -748,42 +747,97 @@
             noise.stop(t + 0.5);
         }
 
+        /* ---------------------------------------------------------
+         * Helper: Distortion Curve
+         * --------------------------------------------------------- */
+        function makeDistortionCurve(amount) {
+            const k = typeof amount === 'number' ? amount : 50;
+            const n_samples = 44100;
+            const curve = new Float32Array(n_samples);
+            const deg = Math.PI / 180;
+            for (let i = 0; i < n_samples; ++i) {
+                const x = (i * 2) / n_samples - 1;
+                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            }
+            return curve;
+        }
+
+        /* ---------------------------------------------------------
+         * SFX: Black Hole (Heavy Version)
+         * --------------------------------------------------------- */
         function playBlackHoleSound() {
             if (audioCtx.state === "suspended") audioCtx.resume();
             const t = audioCtx.currentTime;
-            const osc1 = audioCtx.createOscillator();
-            osc1.type = "triangle";
-            osc1.frequency.setValueAtTime(42, t + 0.3);
-            osc1.frequency.exponentialRampToValueAtTime(18, t + 2.2);
-            const gain1 = audioCtx.createGain();
-            gain1.gain.setValueAtTime(0.0001, t);
-            gain1.gain.exponentialRampToValueAtTime(0.45, t + 0.6);
-            gain1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+
+            // 1. Distortion Node (音を歪ませて激しさを出す)
+            const shaper = audioCtx.createWaveShaper();
+            shaper.curve = makeDistortionCurve(400); // 400 = 結構激しい歪み
+            shaper.oversample = '4x';
+            shaper.connect(sfxMasterGain);
+
+            // 2. Heavy Impact (Sub-bass Drop) - ズドン！
+            const subOsc = audioCtx.createOscillator();
+            subOsc.type = "sine"; 
+            subOsc.frequency.setValueAtTime(150, t);
+            subOsc.frequency.exponentialRampToValueAtTime(30, t + 0.6); 
+            
+            const subGain = audioCtx.createGain();
+            subGain.gain.setValueAtTime(1.5, t); 
+            subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+            
+            subOsc.connect(subGain);
+            subGain.connect(shaper); // 歪ませる
+
+            // 3. Roaring Noise (Explosion) - バリバリ音
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
+            
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = "lowpass";
+            noiseFilter.frequency.setValueAtTime(1000, t); 
+            noiseFilter.frequency.linearRampToValueAtTime(100, t + 1.5); 
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(1.2, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(shaper); // ノイズも歪ませる
+
+            // 4. Eerie Screech (Sci-Fi effect) - キュイイイイン...
+            const highOsc = audioCtx.createOscillator();
+            highOsc.type = "sawtooth";
+            highOsc.frequency.setValueAtTime(800, t);
+            highOsc.frequency.exponentialRampToValueAtTime(100, t + 2.0);
+
+            // LFOで震わせる
             const lfo = audioCtx.createOscillator();
-            lfo.type = "sine";
-            lfo.frequency.setValueAtTime(6, t);
+            lfo.type = "square";
+            lfo.frequency.value = 80; 
             const lfoGain = audioCtx.createGain();
-            lfoGain.gain.setValueAtTime(14, t);
+            lfoGain.gain.value = 1000; // 強烈な変調
             lfo.connect(lfoGain);
-            lfoGain.connect(osc1.frequency);
-            const boom = audioCtx.createOscillator();
-            boom.type = "sine";
-            boom.frequency.setValueAtTime(60, t + 2.3);
-            boom.frequency.exponentialRampToValueAtTime(28, t + 2.55);
-            const boomGain = audioCtx.createGain();
-            boomGain.gain.setValueAtTime(0.0001, t + 2.25);
-            boomGain.gain.exponentialRampToValueAtTime(1.0, t + 2.35);
-            boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
-            osc1.connect(gain1);
-            gain1.connect(sfxMasterGain);
-            boom.connect(boomGain);
-            boomGain.connect(sfxMasterGain);
-            osc1.start(t + 0.3);
-            osc1.stop(t + 2.5);
+            lfoGain.connect(highOsc.frequency);
+
+            const highGain = audioCtx.createGain();
+            highGain.gain.setValueAtTime(0.2, t);
+            highGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+
+            highOsc.connect(highGain);
+            highGain.connect(sfxMasterGain); // 高音は歪ませずクリアに通す
+
+            // Start
+            subOsc.start(t);
+            subOsc.stop(t + 1.2);
+            
+            noise.start(t);
+            noise.stop(t + 1.0);
+
             lfo.start(t);
             lfo.stop(t + 2.5);
-            boom.start(t + 2.25);
-            boom.stop(t + 3.0);
+            highOsc.start(t);
+            highOsc.stop(t + 2.5);
         }
 
         /* Drawing Logic */
@@ -1514,81 +1568,42 @@
         }
 
         /* =========================================================
-         * PAUSE LOGIC (NEW)
+         * PAUSE LOGIC
          * ========================================================= */
         const pauseOverlay = document.getElementById("pause-overlay");
 
         function togglePause(shouldPause) {
-            // ゲーム中でなければ無視
             if (!isGameRunning || isClearing) return;
-
-            // 状態が同じなら何もしない
             if (isPaused === shouldPause) return;
 
             isPaused = shouldPause;
 
             if (isPaused) {
-                // --- PAUSE ---
-                Runner.stop(runner); // 物理演算停止
-                
-                // BGM一時停止
-                if (currentAudio) {
-                    currentAudio.pause();
-                }
-
-                // UI表示
+                Runner.stop(runner); 
+                if (currentAudio) currentAudio.pause();
                 pauseOverlay.style.display = "flex";
-                
             } else {
-                // --- RESUME ---
-                Runner.run(runner, engine); // 物理演算再開
-                
-                // BGM再開（許可設定の場合のみ）
+                Runner.run(runner, engine);
                 if (isBgmEnabled && currentAudio) {
                     currentAudio.play().catch(e => console.log("BGM resume blocked:", e));
                 }
-
-                // UI非表示
                 pauseOverlay.style.display = "none";
-
-                // タイマーバーアニメーション再開（時間は飛ぶが、バーの見た目を更新）
-                // barAnimIdが止まっているので、startShotTimer内のupdateBarは回っていない。
-                // 簡易的に再描画リクエストを送る必要があるが、startShotTimerはsetTimeoutを使っているため、
-                // ポーズ中も内部時間は進んでしまう。厳密な時間管理には改修が必要だが、
-                // 既存ロジック(setTimeout)を活かすため、ここでは「時間は進んだもの」として処理を継続させる。
-                // updateBar関数はrequestAnimationFrameで回っているため、isPausedフラグがfalseになれば自動で動き出す。
-                // ただしupdateBar内で `if(isPaused) return` してループを抜けてしまっている場合は再起が必要。
-                // 上記コードでは `barAnimId` がキャンセルされていない限り `requestAnimationFrame` は呼ばれ続けるか、
-                // `return` で止まるか。
-                // 今回の `updateBar` 実装では `if (!isGameRunning || isPaused) return;` で止まるため、再始動が必要。
-                // startShotTimerを再度呼ぶとタイマーが二重になるので、updateBarだけキックする。
-                // 簡易実装として、startShotTimer内で定義された関数を外から呼ぶのは難しいため、
-                // ここでは「見た目のバー更新が再開される」ことよりも「ゲーム進行が戻る」ことを優先する。
-                // ※ 本格修正するなら startShotTimer 全体を書き換える必要があるが、
-                //   今回のスコープでは「shoot可能状態」は維持されているので、次のショットまではバーが止まったままでも許容範囲。
-                //   (次のショットを撃てば新しいタイマーが走る)
             }
         }
 
-        // 1. タブ切り替え / アプリバックグラウンド化
         document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                // 非表示になったらポーズ
-                togglePause(true);
-            }
+            if (document.hidden) togglePause(true);
         });
 
-        // 2. ウィンドウのフォーカス外れ (PCで別ウィンドウをクリックした時など)
         window.addEventListener("blur", () => {
             togglePause(true);
         });
 
-        // 3. クリック/タップで再開 (オーバーレイを押した時)
         pauseOverlay.addEventListener("click", () => {
             togglePause(false);
         });
         pauseOverlay.addEventListener("touchstart", (e) => {
-            e.preventDefault(); // クリック透過防止
+            e.preventDefault(); 
             togglePause(false);
         });
 
@@ -1604,7 +1619,6 @@
             if (!isGameRunning) return;
             isPaused = true;
             Runner.stop(runner);
-            // ポーズUIが出るかもしれないので、念のため非表示にしておく（ダイアログ優先）
             pauseOverlay.style.display = "none"; 
 
             const ok = confirm("ゲームを中断してタイトルに戻りますか？");
@@ -1616,7 +1630,6 @@
                 isPaused = false;
                 Runner.run(runner, engine);
                 requestFullScreen();
-                // BGM再開
                 if (isBgmEnabled && currentAudio) {
                     currentAudio.play().catch(()=>{});
                 }
@@ -1635,7 +1648,7 @@
         }
 
         window.addEventListener("pointerdown", (e) => {
-            if (e.target.tagName === "BUTTON" || isPaused) return; // ポーズ中は反応させない
+            if (e.target.tagName === "BUTTON" || isPaused) return; 
             if (isGameRunning && !isPaused) {
                 if (e.button !== 0) return;
                 if (isInsideShootArea(e.clientX, e.clientY)) {
