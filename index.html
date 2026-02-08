@@ -828,8 +828,8 @@
         const distCurve400 = createDistortionCurve(400);
 
         /* ---------------------------------------------------------
-         * SFX: Black Hole (Heavy & Low-Pass Version)
-         * - 高音をカットし、サブベースと歪みを強調
+         * SFX: Black Hole (Heavy & Noisy Version)
+         * - サブベースの重低音＋高域を開放したバリバリノイズ
          * --------------------------------------------------------- */
         function playBlackHoleSound() {
             if (audioCtx.state === "suspended") audioCtx.resume();
@@ -840,70 +840,68 @@
             shaper.curve = distCurve400; // キャッシュしたカーブを使用
             shaper.oversample = '4x';
             
-            // 全体をマイルドにするローパスフィルタ（バリバリ感を少し抑える）
+            // 全体をマイルドにするローパスフィルタ（超高周波のみカット）
             const masterFilter = audioCtx.createBiquadFilter();
             masterFilter.type = 'lowpass';
-            masterFilter.frequency.value = 1200; // 高周波ノイズをカット
+            masterFilter.frequency.value = 2500; // ノイズ感を通すため少し開く
 
             shaper.connect(masterFilter);
             masterFilter.connect(sfxMasterGain);
 
-            // 2. Heavy Sub-bass (Sine Wave Drop)
-            // 150Hz -> 20Hz の急降下で「ズゥゥン」感を出す
+            // 2. Heavy Sub-bass (Sine Wave Drop) - ズズズ……
             const subOsc = audioCtx.createOscillator();
             subOsc.type = "sine"; 
             subOsc.frequency.setValueAtTime(150, t);
             subOsc.frequency.exponentialRampToValueAtTime(20, t + 1.5); 
             
             const subGain = audioCtx.createGain();
-            subGain.gain.setValueAtTime(2.0, t); // 音量大きめ
+            subGain.gain.setValueAtTime(2.0, t); 
             subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.8);
             
             subOsc.connect(subGain);
             subGain.connect(shaper);
 
-            // 3. Low Rumble Noise
-            // 低めのノイズで爆発感を足す
+            // 3. Noisy Impact (Explosion) - バリバリ、ザザザ
             const noise = audioCtx.createBufferSource();
             noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
             
             const noiseFilter = audioCtx.createBiquadFilter();
             noiseFilter.type = "lowpass";
-            noiseFilter.frequency.setValueAtTime(400, t); // こもり気味に
-            noiseFilter.frequency.linearRampToValueAtTime(50, t + 1.5); 
+            // 高域を開放してノイズ感を強調
+            noiseFilter.frequency.setValueAtTime(2000, t); 
+            noiseFilter.frequency.exponentialRampToValueAtTime(200, t + 1.2); 
 
             const noiseGain = audioCtx.createGain();
-            noiseGain.gain.setValueAtTime(1.5, t);
+            noiseGain.gain.setValueAtTime(2.5, t); // 音量も上げて強調
             noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
 
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
-            noiseGain.connect(shaper);
+            noiseGain.connect(shaper); // 歪ませる
 
-            // 4. Subtle High Element (Triangle)
-            // 「キュイイ」音は控えめにし、フィルターをかける
+            // 4. Subtle High Element (Triangle) - 控えめな金属音
             const highOsc = audioCtx.createOscillator();
-            highOsc.type = "triangle"; // Sawtoothより丸い音
+            highOsc.type = "triangle";
             highOsc.frequency.setValueAtTime(600, t);
             highOsc.frequency.exponentialRampToValueAtTime(100, t + 2.0);
 
             const highFilter = audioCtx.createBiquadFilter();
             highFilter.type = 'lowpass';
-            highFilter.frequency.value = 800; // キンキンする成分をカット
+            highFilter.frequency.value = 800; 
 
             const highGain = audioCtx.createGain();
-            highGain.gain.setValueAtTime(0.15, t); // 音量控えめ
+            highGain.gain.setValueAtTime(0.1, t); 
             highGain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
 
             highOsc.connect(highFilter);
             highFilter.connect(highGain);
-            highGain.connect(sfxMasterGain); // 歪みを通さずクリアに混ぜる
+            highGain.connect(sfxMasterGain);
 
             // Start
             subOsc.start(t);
             subOsc.stop(t + 2.0);
             noise.start(t);
-            noise.stop(t + 1.5);
+            noise.stop(t + 1.2);
             highOsc.start(t);
             highOsc.stop(t + 2.0);
         }
