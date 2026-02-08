@@ -148,6 +148,59 @@
             }
 
         /* =========================================================
+         Soundtrack Overlay
+         ========================================================= */
+        #soundtrack-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: none; /* 初期非表示 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            text-align: center;
+        }
+
+        .track-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            width: 80%;
+            max-width: 400px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .track-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .track-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .track-item.active {
+            border-color: #4facfe;
+            background: rgba(79,172,254,0.2);
+            color: #fff;
+            text-shadow: 0 0 8px rgba(79,172,254,0.8);
+        }
+        .track-icon {
+            font-size: 12px;
+        }
+
+        /* =========================================================
          Pause Overlay
          ========================================================= */
         #pause-overlay {
@@ -193,7 +246,7 @@
         }
 
         .btn {
-            margin-top: 40px;
+            margin-top: 30px; /* 少し間隔調整 */
             padding: 15px 50px;
             font-size: 18px;
             background: transparent;
@@ -210,7 +263,7 @@
             }
 
         .sub-btn {
-            margin-top: 32px;
+            margin-top: 20px; /* 間隔調整 */
             padding: 10px 16px;
             font-size: 13px;
             letter-spacing: 2px;
@@ -412,10 +465,19 @@
         </div>
 
         <button id="start-btn" class="btn">START</button>
-        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 20px auto 0; opacity: 0.8;">CREDITS</button>
+        
+        <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 20px;">SOUNDTRACK</button>
+        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 15px auto 0; opacity: 0.8;">CREDITS</button>
 
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR HIGH SCORE</button>
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
+    </div>
+
+    <div id="soundtrack-overlay">
+        <h2 style="font-size:24px; letter-spacing:4px; margin-bottom:10px;">SOUNDTRACK</h2>
+        <ul class="track-list" id="track-list-container">
+            </ul>
+        <button id="soundtrack-back-btn" class="btn sub-btn">BACK</button>
     </div>
 
     <div id="pause-overlay">
@@ -748,9 +810,10 @@
         }
 
         /* ---------------------------------------------------------
-         * Helper: Distortion Curve
+         * Helper: Distortion Curve (Pre-calculated)
+         * - 軽量化のため、グローバルで一度だけ計算
          * --------------------------------------------------------- */
-        function makeDistortionCurve(amount) {
+        function createDistortionCurve(amount) {
             const k = typeof amount === 'number' ? amount : 50;
             const n_samples = 44100;
             const curve = new Float32Array(n_samples);
@@ -761,83 +824,88 @@
             }
             return curve;
         }
+        // 事前に生成しておく
+        const distCurve400 = createDistortionCurve(400);
 
         /* ---------------------------------------------------------
-         * SFX: Black Hole (Heavy Version)
+         * SFX: Black Hole (Heavy & Low-Pass Version)
+         * - 高音をカットし、サブベースと歪みを強調
          * --------------------------------------------------------- */
         function playBlackHoleSound() {
             if (audioCtx.state === "suspended") audioCtx.resume();
             const t = audioCtx.currentTime;
 
-            // 1. Distortion Node (音を歪ませて激しさを出す)
+            // 1. Distortion Chain
             const shaper = audioCtx.createWaveShaper();
-            shaper.curve = makeDistortionCurve(400); // 400 = 結構激しい歪み
+            shaper.curve = distCurve400; // キャッシュしたカーブを使用
             shaper.oversample = '4x';
-            shaper.connect(sfxMasterGain);
+            
+            // 全体をマイルドにするローパスフィルタ（バリバリ感を少し抑える）
+            const masterFilter = audioCtx.createBiquadFilter();
+            masterFilter.type = 'lowpass';
+            masterFilter.frequency.value = 1200; // 高周波ノイズをカット
 
-            // 2. Heavy Impact (Sub-bass Drop) - ズドン！
+            shaper.connect(masterFilter);
+            masterFilter.connect(sfxMasterGain);
+
+            // 2. Heavy Sub-bass (Sine Wave Drop)
+            // 150Hz -> 20Hz の急降下で「ズゥゥン」感を出す
             const subOsc = audioCtx.createOscillator();
             subOsc.type = "sine"; 
             subOsc.frequency.setValueAtTime(150, t);
-            subOsc.frequency.exponentialRampToValueAtTime(30, t + 0.6); 
+            subOsc.frequency.exponentialRampToValueAtTime(20, t + 1.5); 
             
             const subGain = audioCtx.createGain();
-            subGain.gain.setValueAtTime(1.5, t); 
-            subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+            subGain.gain.setValueAtTime(2.0, t); // 音量大きめ
+            subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.8);
             
             subOsc.connect(subGain);
-            subGain.connect(shaper); // 歪ませる
+            subGain.connect(shaper);
 
-            // 3. Roaring Noise (Explosion) - バリバリ音
+            // 3. Low Rumble Noise
+            // 低めのノイズで爆発感を足す
             const noise = audioCtx.createBufferSource();
             noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
             
             const noiseFilter = audioCtx.createBiquadFilter();
             noiseFilter.type = "lowpass";
-            noiseFilter.frequency.setValueAtTime(1000, t); 
-            noiseFilter.frequency.linearRampToValueAtTime(100, t + 1.5); 
+            noiseFilter.frequency.setValueAtTime(400, t); // こもり気味に
+            noiseFilter.frequency.linearRampToValueAtTime(50, t + 1.5); 
 
             const noiseGain = audioCtx.createGain();
-            noiseGain.gain.setValueAtTime(1.2, t);
-            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+            noiseGain.gain.setValueAtTime(1.5, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
 
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
-            noiseGain.connect(shaper); // ノイズも歪ませる
+            noiseGain.connect(shaper);
 
-            // 4. Eerie Screech (Sci-Fi effect) - キュイイイイン...
+            // 4. Subtle High Element (Triangle)
+            // 「キュイイ」音は控えめにし、フィルターをかける
             const highOsc = audioCtx.createOscillator();
-            highOsc.type = "sawtooth";
-            highOsc.frequency.setValueAtTime(800, t);
+            highOsc.type = "triangle"; // Sawtoothより丸い音
+            highOsc.frequency.setValueAtTime(600, t);
             highOsc.frequency.exponentialRampToValueAtTime(100, t + 2.0);
 
-            // LFOで震わせる
-            const lfo = audioCtx.createOscillator();
-            lfo.type = "square";
-            lfo.frequency.value = 80; 
-            const lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = 1000; // 強烈な変調
-            lfo.connect(lfoGain);
-            lfoGain.connect(highOsc.frequency);
+            const highFilter = audioCtx.createBiquadFilter();
+            highFilter.type = 'lowpass';
+            highFilter.frequency.value = 800; // キンキンする成分をカット
 
             const highGain = audioCtx.createGain();
-            highGain.gain.setValueAtTime(0.2, t);
-            highGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+            highGain.gain.setValueAtTime(0.15, t); // 音量控えめ
+            highGain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
 
-            highOsc.connect(highGain);
-            highGain.connect(sfxMasterGain); // 高音は歪ませずクリアに通す
+            highOsc.connect(highFilter);
+            highFilter.connect(highGain);
+            highGain.connect(sfxMasterGain); // 歪みを通さずクリアに混ぜる
 
             // Start
             subOsc.start(t);
-            subOsc.stop(t + 1.2);
-            
+            subOsc.stop(t + 2.0);
             noise.start(t);
-            noise.stop(t + 1.0);
-
-            lfo.start(t);
-            lfo.stop(t + 2.5);
+            noise.stop(t + 1.5);
             highOsc.start(t);
-            highOsc.stop(t + 2.5);
+            highOsc.stop(t + 2.0);
         }
 
         /* Drawing Logic */
@@ -1257,7 +1325,8 @@
                     }, i * 80);
                 });
 
-                for (let i = 0; i < 260; i++) {
+                // 軽量化: パーティクル数を 260 -> 160 に削減
+                for (let i = 0; i < 160; i++) {
                     const ang = Math.random() * Math.PI * 2;
                     const sp = Math.random() * 14 + 4;
                     particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1.2, color, size: Math.random() * 3.2 + 1.2 });
@@ -1266,7 +1335,8 @@
                 setTimeout(() => {
                     particles.push({ type: "flash", life: 0.9, color: "rgba(0,0,0,0.85)" });
                     particles.push({ type: "shockwave", x, y, radius: Math.max(WIDTH, HEIGHT), speed: -10, life: 1.4 });
-                    for (let i = 0; i < 180; i++) {
+                    // 軽量化: 180 -> 120
+                    for (let i = 0; i < 120; i++) {
                         const ang = Math.random() * Math.PI * 2;
                         const r = Math.random() * 260 + 60;
                         const sp = Math.random() * 6 + 3;
@@ -1433,7 +1503,11 @@
             document.querySelector("#overlay h1").innerHTML = "GAME OVER";
             document.getElementById("start-btn").textContent = "START";
             clearHiBtn.style.display = "";
+            
+            // サウンドトラックボタン等も再表示
             updateResetButtonVisibility();
+            document.getElementById("soundtrack-btn").style.display = "block";
+
             if (isBgmEnabled) playTitleBGM();
         }
 
@@ -1550,6 +1624,7 @@
             const stageUi = document.getElementById("stage-ui");
             const exitBtn = document.getElementById("exit-btn");
             const clearHiBtn = document.getElementById("clear-hi-btn");
+            const soundtrackBtn = document.getElementById("soundtrack-btn");
             const hint = document.getElementById("controls-hint");
 
             if (isGameRunning) {
@@ -1563,6 +1638,7 @@
                 const displayStyle = isContinue ? "none" : "block";
                 if (exitBtn) exitBtn.style.display = displayStyle;
                 if (clearHiBtn) clearHiBtn.style.display = displayStyle;
+                if (soundtrackBtn) soundtrackBtn.style.display = displayStyle;
                 if (hint) hint.style.display = displayStyle;
             }
         }
@@ -1819,6 +1895,92 @@
             titleBgm.play().catch(() => { });
             currentAudio = titleBgm;
         }
+
+        /* =========================================================
+         * SOUNDTRACK MODE (New)
+         * ========================================================= */
+        const trackData = [
+            { name: "TITLE THEME", file: "audio/StellarGravity_Title.mp3", id: "title-bgm" },
+            { name: "NEBULA (Stage 1-2)", file: "audio/StellarGravity_00.mp3" },
+            { name: "PROTOSTAR (Stage 3-4)", file: "audio/StellarGravity_01.mp3" },
+            { name: "RED GIANT (Stage 5-6)", file: "audio/StellarGravity_02.mp3" },
+            { name: "SUPERNOVA (Stage 7+)", file: "audio/StellarGravity_03.mp3" },
+            { name: "EVENT HORIZON (Clear)", file: "audio/StellarGravity_Clear.mp3", id: "clear-bgm" }
+        ];
+
+        const soundtrackBtn = document.getElementById("soundtrack-btn");
+        const soundtrackOverlay = document.getElementById("soundtrack-overlay");
+        const trackListContainer = document.getElementById("track-list-container");
+        const soundtrackBackBtn = document.getElementById("soundtrack-back-btn");
+        let activeTrackItem = null;
+
+        // リスト生成
+        trackData.forEach((track, index) => {
+            const li = document.createElement("li");
+            li.className = "track-item";
+            li.innerHTML = `<span>${track.name}</span> <span class="track-icon">▶</span>`;
+            li.addEventListener("click", () => {
+                playTrack(track, li);
+            });
+            trackListContainer.appendChild(li);
+        });
+
+        // サウンドトラック画面を開く
+        soundtrackBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            stopBGM(); // タイトルBGM停止
+            soundtrackOverlay.style.display = "flex";
+        });
+
+        // 戻るボタン
+        soundtrackBackBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            forceStopBGM(); // 試聴中の曲を停止
+            if(activeTrackItem) {
+                activeTrackItem.classList.remove("active");
+                activeTrackItem.querySelector(".track-icon").textContent = "▶";
+                activeTrackItem = null;
+            }
+            soundtrackOverlay.style.display = "none";
+            if (isBgmEnabled) playTitleBGM(); // タイトルBGM再開
+        });
+
+        // 曲再生ロジック
+        function playTrack(track, listItem) {
+            // 前の曲を停止
+            forceStopBGM();
+
+            // UI更新
+            if (activeTrackItem) {
+                activeTrackItem.classList.remove("active");
+                activeTrackItem.querySelector(".track-icon").textContent = "▶";
+            }
+
+            // 同じ曲をクリックした場合（停止のみ）
+            if (activeTrackItem === listItem) {
+                activeTrackItem = null;
+                return;
+            }
+
+            activeTrackItem = listItem;
+            activeTrackItem.classList.add("active");
+            activeTrackItem.querySelector(".track-icon").textContent = "■";
+
+            // 再生
+            // 既存のHTML要素があればそれを使う、なければGameBGM用要素を流用
+            let audioEl = gameBgmEl;
+            if (track.id && document.getElementById(track.id)) {
+                audioEl = document.getElementById(track.id);
+            } else {
+                audioEl.src = track.file;
+            }
+            
+            audioEl.currentTime = 0;
+            audioEl.volume = 0.8;
+            audioEl.play().catch(e => console.log(e));
+            currentAudio = audioEl;
+        }
+
     </script>
 </body>
 </html>
