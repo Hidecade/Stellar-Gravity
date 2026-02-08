@@ -810,100 +810,57 @@
         }
 
         /* ---------------------------------------------------------
-         * Helper: Distortion Curve (Pre-calculated)
-         * - 軽量化のため、グローバルで一度だけ計算
-         * --------------------------------------------------------- */
-        function createDistortionCurve(amount) {
-            const k = typeof amount === 'number' ? amount : 50;
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
-            const deg = Math.PI / 180;
-            for (let i = 0; i < n_samples; ++i) {
-                const x = (i * 2) / n_samples - 1;
-                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
-            }
-            return curve;
-        }
-        // 事前に生成しておく
-        const distCurve400 = createDistortionCurve(400);
-
-        /* ---------------------------------------------------------
-         * SFX: Black Hole (Heavy & Noisy Version)
-         * - サブベースの重低音＋高域を開放したバリバリノイズ
+         * SFX: Black Hole (Original Version)
+         * - LFO modulated Triangle + Sine boom
          * --------------------------------------------------------- */
         function playBlackHoleSound() {
             if (audioCtx.state === "suspended") audioCtx.resume();
             const t = audioCtx.currentTime;
 
-            // 1. Distortion Chain
-            const shaper = audioCtx.createWaveShaper();
-            shaper.curve = distCurve400; // キャッシュしたカーブを使用
-            shaper.oversample = '4x';
-            
-            // 全体をマイルドにするローパスフィルタ（超高周波のみカット）
-            const masterFilter = audioCtx.createBiquadFilter();
-            masterFilter.type = 'lowpass';
-            masterFilter.frequency.value = 2500; // ノイズ感を通すため少し開く
+            const osc1 = audioCtx.createOscillator();
+            osc1.type = "triangle";
+            osc1.frequency.setValueAtTime(42, t + 0.3);
+            osc1.frequency.exponentialRampToValueAtTime(18, t + 2.2);
 
-            shaper.connect(masterFilter);
-            masterFilter.connect(sfxMasterGain);
+            const gain1 = audioCtx.createGain();
+            gain1.gain.setValueAtTime(0.0001, t);
+            gain1.gain.exponentialRampToValueAtTime(0.45, t + 0.6);
+            gain1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
 
-            // 2. Heavy Sub-bass (Sine Wave Drop) - ズズズ……
-            const subOsc = audioCtx.createOscillator();
-            subOsc.type = "sine"; 
-            subOsc.frequency.setValueAtTime(150, t);
-            subOsc.frequency.exponentialRampToValueAtTime(20, t + 1.5); 
-            
-            const subGain = audioCtx.createGain();
-            subGain.gain.setValueAtTime(2.0, t); 
-            subGain.gain.exponentialRampToValueAtTime(0.01, t + 1.8);
-            
-            subOsc.connect(subGain);
-            subGain.connect(shaper);
+            const lfo = audioCtx.createOscillator();
+            lfo.type = "sine";
+            lfo.frequency.setValueAtTime(6, t);
 
-            // 3. Noisy Impact (Explosion) - バリバリ、ザザザ
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
-            
-            const noiseFilter = audioCtx.createBiquadFilter();
-            noiseFilter.type = "lowpass";
-            // 高域を開放してノイズ感を強調
-            noiseFilter.frequency.setValueAtTime(2000, t); 
-            noiseFilter.frequency.exponentialRampToValueAtTime(200, t + 1.2); 
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.setValueAtTime(14, t);
 
-            const noiseGain = audioCtx.createGain();
-            noiseGain.gain.setValueAtTime(2.5, t); // 音量も上げて強調
-            noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc1.frequency);
 
-            noise.connect(noiseFilter);
-            noiseFilter.connect(noiseGain);
-            noiseGain.connect(shaper); // 歪ませる
+            const boom = audioCtx.createOscillator();
+            boom.type = "sine";
+            boom.frequency.setValueAtTime(60, t + 2.3);
+            boom.frequency.exponentialRampToValueAtTime(28, t + 2.55);
 
-            // 4. Subtle High Element (Triangle) - 控えめな金属音
-            const highOsc = audioCtx.createOscillator();
-            highOsc.type = "triangle";
-            highOsc.frequency.setValueAtTime(600, t);
-            highOsc.frequency.exponentialRampToValueAtTime(100, t + 2.0);
+            const boomGain = audioCtx.createGain();
+            boomGain.gain.setValueAtTime(0.0001, t + 2.25);
+            boomGain.gain.exponentialRampToValueAtTime(1.0, t + 2.35);
+            boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
 
-            const highFilter = audioCtx.createBiquadFilter();
-            highFilter.type = 'lowpass';
-            highFilter.frequency.value = 800; 
+            osc1.connect(gain1);
+            gain1.connect(sfxMasterGain);
 
-            const highGain = audioCtx.createGain();
-            highGain.gain.setValueAtTime(0.1, t); 
-            highGain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+            boom.connect(boomGain);
+            boomGain.connect(sfxMasterGain);
 
-            highOsc.connect(highFilter);
-            highFilter.connect(highGain);
-            highGain.connect(sfxMasterGain);
+            osc1.start(t + 0.3);
+            osc1.stop(t + 2.5);
 
-            // Start
-            subOsc.start(t);
-            subOsc.stop(t + 2.0);
-            noise.start(t);
-            noise.stop(t + 1.2);
-            highOsc.start(t);
-            highOsc.stop(t + 2.0);
+            lfo.start(t);
+            lfo.stop(t + 2.5);
+
+            boom.start(t + 2.25);
+            boom.stop(t + 3.0);
         }
 
         /* Drawing Logic */
@@ -1647,21 +1604,24 @@
         const pauseOverlay = document.getElementById("pause-overlay");
 
         function togglePause(shouldPause) {
-            if (!isGameRunning || isClearing) return;
+            // 状態が同じなら何もしない
             if (isPaused === shouldPause) return;
 
             isPaused = shouldPause;
 
             if (isPaused) {
-                Runner.stop(runner); 
-                if (currentAudio) currentAudio.pause();
-                pauseOverlay.style.display = "flex";
+                // --- PAUSE ---
+                if (runner) Runner.stop(runner); // Stop physics
+                if (currentAudio) currentAudio.pause(); // Stop audio
+                pauseOverlay.style.display = "flex"; // Show overlay
             } else {
-                Runner.run(runner, engine);
+                // --- RESUME ---
+                if (runner) Runner.run(runner, engine); // Resume physics
                 if (isBgmEnabled && currentAudio) {
+                    // Resume audio if allowed
                     currentAudio.play().catch(e => console.log("BGM resume blocked:", e));
                 }
-                pauseOverlay.style.display = "none";
+                pauseOverlay.style.display = "none"; // Hide overlay
             }
         }
 
