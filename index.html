@@ -1743,6 +1743,2305 @@
             const stageUi = document.getElementById("stage-ui");
             const clearHiBtn = document.getElementById("clear-hi-btn");
             const soundtrackBtn = document.getElementById("soundtrack-btn");
+            const showRankingBtn = document.getElementById("show-ranking-btn");
+            const hint = document.getElementById("controls-hint");
+
+            if (isGameRunning) {
+                if (rBtn) rBtn.style.display = "block";
+                if (bPos) bPos.style.display = "none";
+                if (stageUi) stageUi.classList.remove("ui-faded");
+            } else {
+                if (rBtn) rBtn.style.display = "none";
+                if (bPos) bPos.style.display = "block";
+                if (stageUi) stageUi.classList.add("ui-faded");
+
+                // タイトル画面の要素（クリア時は非表示にするもの）
+                const titleElementsStyle = isContinue ? "none" : "block";
+
+                if (clearHiBtn) clearHiBtn.style.display = titleElementsStyle;
+                if (soundtrackBtn) soundtrackBtn.style.display = titleElementsStyle;
+                if (hint) hint.style.display = titleElementsStyle;
+
+                // 【ここが重要】ランキングボタンもクリア時は非表示にする
+                if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
+
+                // ゲームクリア・ゲームオーバー時以外は名前入力欄を隠す
+                const nameArea = document.getElementById("name-input-area");
+                if (nameArea && !isContinue && isGameRunning === false) {
+                    nameArea.style.display = "none";
+                }
+            }
+        }
+
+        /* =========================================================
+         * PAUSE LOGIC (Modified)
+         * ========================================================= */
+
+        function togglePause(shouldPause) {
+            // 状態が変わらない場合は何もしない
+            if (isPaused === shouldPause) return;
+
+            isPaused = shouldPause;
+
+            if (isPaused) {
+                // --- PAUSE ---
+                if (runner) Runner.stop(runner);
+                if (currentAudio) currentAudio.pause();
+
+                // ゲーム実行中のみポーズ画面を出す
+                if (isGameRunning) {
+                    pauseOverlay.style.display = "flex";
+                }
+            } else {
+                // --- RESUME ---
+                if (isGameRunning) {
+                    if (runner) Runner.run(runner, engine);
+                    pauseOverlay.style.display = "none";
+                }
+
+                // BGMの再開：設定がONで、かつ何らかのオーディオがセットされている場合のみ
+                if (isBgmEnabled && currentAudio && currentAudio.paused) {
+                    currentAudio.play().catch(e => {
+                        console.log("BGM resume blocked by browser policy");
+                        // ユーザーが画面を触るまで待機するため、ここでは何もしない
+                    });
+                }
+            }
+        }
+
+        // 複数のイベントが競合しないよう、visibilitychange を優先
+        document.addEventListener("visibilitychange", () => {
+            togglePause(document.hidden);
+        });
+
+        // window の blur/focus は OSレベルの中断に対応するために残すが、
+        // visibilitychange との二重動作を防ぐため、実際の状態をチェックする
+        window.addEventListener("blur", () => {
+            togglePause(true);
+        });
+
+        window.addEventListener("focus", () => {
+            // ページが見えている状態ならポーズ解除を試みる
+            if (!document.hidden) {
+                togglePause(false);
+            }
+        });
+
+        // ポーズ画面タップで復帰
+        pauseOverlay.addEventListener("click", (e) => {
+            e.stopPropagation();
+            togglePause(false);
+        });
+
+        pauseOverlay.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            togglePause(false);
+        });
+
+        /* =========================================================
+         * RESET / BGM FUNCTIONS (Final Adjustments)
+         * ========================================================= */
+
+        function handleResetRequest(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!isGameRunning) return;
+
+            // 確認ダイアログを出す前に、確実に一時停止させる
+            togglePause(true);
+            pauseOverlay.style.display = "none"; // confirmパネルの邪魔にならないように
+
+            // confirm はブロッキング処理なので、この間 JS は止まる
+            const ok = confirm("ゲームを中断してタイトルに戻りますか？");
+
+            if (ok) {
+                // タイトルに戻るための完全なクリーンアップ
+                isPaused = false; // フラグを先に折る
+                isGameRunning = false;
+                stopBGM(() => {
+                    returnToTitle();
+                    // タイトルBGMが必要ならここで再生
+                    if (isBgmEnabled) playTitleBGM();
+                });
+            } else {
+                // キャンセルした場合はゲームを再開
+                togglePause(false);
+            }
+        }
+
+        resetBtn.addEventListener("click", handleResetRequest);
+        resetBtn.addEventListener("touchstart", (e) => { handleResetRequest(e); }, { passive: false });
+        resetBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+
+        function isInsideShootArea(clientX, clientY) {
+            const boostRect = document.getElementById("boost-btn").getBoundingClientRect();
+            const resetAreaRect = document.getElementById("management-btn-area").getBoundingClientRect();
+            const deadLineTop = Math.min(boostRect.top, resetAreaRect.top) - 30;
+            return clientY > 0 && clientY < deadLineTop;
+        }
+
+        window.addEventListener("pointerdown", (e) => {
+            if (e.target.tagName === "BUTTON" || isPaused) return;
+            if (isGameRunning && !isPaused) {
+                if (e.button !== 0) return;
+                if (isInsideShootArea(e.clientX, e.clientY)) {
+                    shoot(e);
+                }
+            }
+        }, { passive: false });
+
+        let resizeTimeout;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const dpr = window.devicePixelRatio || 1;
+                const newWidth = window.innerWidth;
+                const newHeight = window.innerHeight;
+                if (Math.abs(newWidth - WIDTH) < 5 && Math.abs(newHeight - HEIGHT) < 5) return;
+                const oldCenter = { ...CENTER };
+                WIDTH = newWidth;
+                HEIGHT = newHeight;
+                CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
+                const dx = CENTER.x - oldCenter.x;
+                const dy = CENTER.y - oldCenter.y;
+                render.canvas.width = WIDTH * dpr;
+                render.canvas.height = HEIGHT * dpr;
+                render.canvas.style.width = WIDTH + "px";
+                render.canvas.style.height = HEIGHT + "px";
+                render.options.width = WIDTH;
+                render.options.height = HEIGHT;
+                render.context.setTransform(dpr, 0, 0, dpr, 0, 0);
+                const allBodies = Matter.Composite.allBodies(engine.world);
+                allBodies.forEach(b => {
+                    Matter.Body.setPosition(b, { x: b.position.x + dx, y: b.position.y + dy });
+                });
+                particles.forEach(p => {
+                    p.x += dx; p.y += dy;
+                    if (p.px !== undefined) { p.px += dx; p.py += dy; }
+                });
+            }, 100);
+        });
+
+        document.getElementById("clear-hi-btn").addEventListener("click", (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const overlay = document.getElementById("overlay");
+            if (overlay.classList.contains("hide")) return;
+            if (!confirm("HIGH SCORE と STAGE をリセットしますか？")) return;
+            hiScore = 0;
+            hiStage = 1;
+            localStorage.setItem("stellarGravity_hiScore", 0);
+            localStorage.setItem("stellarGravity_hiStage", 1);
+            document.getElementById("hi-score-val").innerText = "0";
+            document.getElementById("hi-stage-val").innerText = "1";
+            alert("HIGH SCORE をリセットしました");
+        });
+
+        let isBgmEnabled = true;
+        const bgmToggleBtn = document.getElementById("bgm-toggle");
+        bgmToggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (isGameRunning) return;
+            isBgmEnabled = !isBgmEnabled;
+            bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
+            localStorage.setItem("stellarGravity_bgm", isBgmEnabled ? "on" : "off");
+            if (isBgmEnabled) {
+                playTitleBGM();
+            } else {
+                forceStopBGM();
+            }
+        });
+
+        isBgmEnabled = localStorage.getItem("stellarGravity_bgm") !== "off";
+        bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
+
+        let bgmFadeInterval = null;
+        let currentAudio = null;
+        let isBgmFading = false;
+
+        function fadeOut(audio, callback) {
+            if (!audio) { if (callback) callback(); return; }
+            if (bgmFadeInterval) { clearInterval(bgmFadeInterval); bgmFadeInterval = null; }
+            isBgmFading = true;
+            let vol = audio.volume;
+            bgmFadeInterval = setInterval(() => {
+                vol -= 0.05;
+                if (vol > 0.05) {
+                    audio.volume = vol;
+                } else {
+                    clearInterval(bgmFadeInterval);
+                    bgmFadeInterval = null;
+                    audio.pause();
+                    audio.volume = 0;
+                    audio.currentTime = 0;
+                    isBgmFading = false;
+                    if (callback) callback();
+                }
+            }, 30);
+        }
+
+        function stopBGM(callback = null) {
+            if (!currentAudio) { if (callback) callback(); return; }
+            fadeOut(currentAudio, () => {
+                currentAudio = null;
+                if (callback) callback();
+            });
+        }
+
+        function forceStopBGM() {
+            if (bgmFadeInterval) { clearInterval(bgmFadeInterval); bgmFadeInterval = null; }
+            isBgmFading = false;
+            [gameBgmEl, clearBgm, titleBgm].forEach(a => {
+                if (a) { a.pause(); a.currentTime = 0; a.volume = 0.8; }
+            });
+            currentAudio = null;
+        }
+
+        // BGM再生関数にポーズチェックを追加
+        function playBGM() {
+            if (!isBgmEnabled || isPaused) return; // ポーズ中は再生予約のみ
+            forceStopBGM();
+            const bgmIndex = Math.min(Math.floor((stage - 1) / 2), 3);
+            let bgmNum = bgmIndex.toString().padStart(2, '0');
+            gameBgmEl.src = `audio/StellarGravity_${bgmNum}.mp3`;
+            gameBgmEl.volume = 0.8;
+            gameBgmEl.play().catch(() => { });
+            currentAudio = gameBgmEl;
+        }
+
+        function unlockAudio() {
+            if (audioCtx.state === "suspended") { audioCtx.resume(); }
+            const audios = [gameBgmEl, clearBgm, titleBgm];
+            audios.forEach(audio => {
+                if (audio) {
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }).catch(e => { });
+                }
+            });
+            window.removeEventListener('touchstart', unlockAudio);
+            window.removeEventListener('mousedown', unlockAudio);
+        }
+        window.addEventListener('touchstart', unlockAudio, { once: false });
+        window.addEventListener('mousedown', unlockAudio, { once: false });
+
+        function playClearBgm() {
+            if (!isBgmEnabled) return;
+            forceStopBGM();
+            if (audioCtx.state === "suspended") { audioCtx.resume(); }
+            clearBgm.currentTime = 0;
+            clearBgm.volume = 0.3;
+            const playPromise = clearBgm.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => { currentAudio = clearBgm; }).catch(err => {
+                    const retryPlay = () => { clearBgm.play(); currentAudio = clearBgm; window.removeEventListener('touchstart', retryPlay); };
+                    window.addEventListener('touchstart', retryPlay);
+                });
+            }
+        }
+
+        function playTitleBGM() {
+            if (!isBgmEnabled || isPaused) return;
+            forceStopBGM();
+            titleBgm.play().catch(() => { });
+            currentAudio = titleBgm;
+        }
+
+        /* =========================================================
+         * SOUNDTRACK MODE (New)
+         * ========================================================= */
+        const trackData = [
+            { name: "TITLE THEME", file: "audio/StellarGravity_Title.mp3", id: "title-bgm" },
+            { name: "NEBULA (Stage 1-2)", file: "audio/StellarGravity_00.mp3" },
+            { name: "PROTOSTAR (Stage 3-4)", file: "audio/StellarGravity_01.mp3" },
+            { name: "RED GIANT (Stage 5-6)", file: "audio/StellarGravity_02.mp3" },
+            { name: "SUPERNOVA (Stage 7+)", file: "audio/StellarGravity_03.mp3" },
+            { name: "EVENT HORIZON (Clear)", file: "audio/StellarGravity_Clear.mp3", id: "clear-bgm" }
+        ];
+
+        const soundtrackBtn = document.getElementById("soundtrack-btn");
+        const soundtrackOverlay = document.getElementById("soundtrack-overlay");
+        const trackListContainer = document.getElementById("track-list-container");
+        const soundtrackBackBtn = document.getElementById("soundtrack-back-btn");
+        let activeTrackItem = null;
+
+        // リスト生成
+        trackData.forEach((track, index) => {
+            const li = document.createElement("li");
+            li.className = "track-item";
+            li.innerHTML = `<span>${track.name}</span> <span class="track-icon">▶</span>`;
+            li.addEventListener("click", () => {
+                playTrack(track, li);
+            });
+            trackListContainer.appendChild(li);
+        });
+
+        // サウンドトラック画面を開く
+        soundtrackBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            stopBGM(); // タイトルBGM停止
+            soundtrackOverlay.style.display = "flex";
+        });
+
+        // 戻るボタン
+        soundtrackBackBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            forceStopBGM(); // 試聴中の曲を停止
+            if (activeTrackItem) {
+                activeTrackItem.classList.remove("active");
+                activeTrackItem.querySelector(".track-icon").textContent = "▶";
+                activeTrackItem = null;
+            }
+            soundtrackOverlay.style.display = "none";
+            if (isBgmEnabled) playTitleBGM(); // タイトルBGM再開
+        });
+
+        // 曲再生ロジック
+        function playTrack(track, listItem) {
+            // 前の曲を停止
+            forceStopBGM();
+
+            // UI更新
+            if (activeTrackItem) {
+                activeTrackItem.classList.remove("active");
+                activeTrackItem.querySelector(".track-icon").textContent = "▶";
+            }
+
+            // 同じ曲をクリックした場合（停止のみ）
+            if (activeTrackItem === listItem) {
+                activeTrackItem = null;
+                return;
+            }
+
+            activeTrackItem = listItem;
+            activeTrackItem.classList.add("active");
+            activeTrackItem.querySelector(".track-icon").textContent = "■";
+
+            // 再生
+            // 既存のHTML要素があればそれを使う、なければGameBGM用要素を流用
+            let audioEl = gameBgmEl;
+            if (track.id && document.getElementById(track.id)) {
+                audioEl = document.getElementById(track.id);
+            } else {
+                audioEl.src = track.file;
+            }
+
+            audioEl.currentTime = 0;
+            audioEl.volume = 0.8;
+            audioEl.play().catch(e => console.log(e));
+            currentAudio = audioEl;
+        }
+
+    </script>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // ▼▼▼ あなたのFirebase設定に書き換えてください ▼▼▼
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRjHe893FZopPErdjtgX8KJ8KPT_rmgnI",
+            authDomain: "stellar-gravity.firebaseapp.com",
+            projectId: "stellar-gravity",
+            storageBucket: "stellar-gravity.firebasestorage.app",
+            messagingSenderId: "936422140891",
+            appId: "1:936422140891:web:d4e55c30507570602515fe",
+            measurementId: "G-0FWP5X8T2T"
+        };
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const SCORES_COLLECTION = "stellar_gravity_scores"; // コレクション名
+
+        // DOM Elements
+        const rankingOverlay = document.getElementById("ranking-overlay");
+        const showRankingBtn = document.getElementById("show-ranking-btn");
+        const closeRankingBtn = document.getElementById("close-ranking-btn");
+        const rankingBody = document.getElementById("ranking-list-body");
+        const loadingEl = document.getElementById("loading-ranking");
+        const tableEl = document.getElementById("ranking-table");
+
+        const nameInputArea = document.getElementById("name-input-area");
+        const nameInput = document.getElementById("player-name-input");
+        const submitBtn = document.getElementById("submit-score-btn");
+
+        // --- ランキング取得・表示関数 ---
+        async function fetchAndShowRanking() {
+            rankingOverlay.style.display = "flex";
+            loadingEl.style.display = "block";
+            tableEl.style.display = "none";
+            rankingBody.innerHTML = "";
+
+            try {
+                const q = query(
+                    collection(db, SCORES_COLLECTION),
+                    orderBy("score", "desc"),
+                    limit(10)
+                );
+                const querySnapshot = await getDocs(q);
+
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const tr = document.createElement("tr");
+
+                    // Rank Styling
+                    let rankClass = "";
+                    if (rank === 1) rankClass = "rank-1";
+                    else if (rank === 2) rankClass = "rank-2";
+                    else if (rank === 3) rankClass = "rank-3";
+
+                    tr.innerHTML = `
+                        <td class="${rankClass}">${rank}</td>
+                        <td style="text-align:left; padding-left:20px;">${escapeHtml(data.name)}</td>
+                        <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                    `;
+                    rankingBody.appendChild(tr);
+                    rank++;
+                });
+
+                loadingEl.style.display = "none";
+                tableEl.style.display = "table";
+
+            } catch (e) {
+                console.error("Error fetching ranking: ", e);
+                loadingEl.textContent = "FAILED TO LOAD";
+            }
+        }
+
+        // --- スコア送信関数 ---
+        window.submitMyScore = async function (score) {
+            const name = nameInput.value.trim() || "UNKNOWN";
+
+            // ボタンを無効化（連打防止）
+            submitBtn.disabled = true;
+            submitBtn.textContent = "SENDING...";
+
+            try {
+                await addDoc(collection(db, SCORES_COLLECTION), {
+                    name: name,
+                    score: score,
+                    timestamp: serverTimestamp()
+                });
+
+                // 送信完了後、入力欄を隠してランキングを表示
+                nameInputArea.style.display = "none";
+                fetchAndShowRanking();
+
+                // 送信済みフラグを立てる（任意）
+                localStorage.setItem("stellarGravity_last_name", name);
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert("送信に失敗しました。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "SUBMIT SCORE";
+            }
+        };
+
+        // --- Event Listeners ---
+        showRankingBtn.addEventListener("click", (e) => {
+            e.stopPropagation(); // ゲーム開始を防ぐ
+            fetchAndShowRanking();
+        });
+
+        closeRankingBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            rankingOverlay.style.display = "none";
+            // もしゲームオーバー画面から開いていた場合、ボタンを戻すなどの処理が必要ならここに
+
+            // 名前送信後の場合、タイトルに戻る動作を模倣（簡易的）
+            if (nameInputArea.style.display === "none" && !document.getElementById("overlay").classList.contains("hide")) {
+                // 特に何もしなくてもOK、オーバーレイが残っているため
+            }
+        });
+
+        submitBtn.addEventListener("click", () => {
+            // グローバルスコープのscore変数を参照するため、既存スクリプト側で値を渡すか、グローバル変数を読む
+            // ここでは既存のグローバル変数 score を読み取ることを想定
+            // ※type="module"からはグローバル変数に直接アクセス可能ですが、念のためwindow経由で関数を公開して既存JSから呼び出す方式が安全です
+            // 今回は「ボタンクリック」で発火するので、その時点でグローバルscoreを参照します。
+
+            // ただし、module内スコープのため、既存の global score変数が見えない可能性があります。
+            // 安全策として、window.currentScore という変数を既存JS側で更新してもらうか、
+            // 既存JS側で `score` 変数が `window.score` になっているか確認が必要です。
+            // 既存コードを見ると `let score = 0;` なので、moduleからは直接見えません。
+
+            // ★ 解決策: 既存JSの `triggerGameOver` 内で `window.finalScore = score;` のように値を露出させる必要があります。
+            const finalScore = window.finalScore || 0;
+            window.submitMyScore(finalScore);
+        });
+
+        // XSS対策
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/[&<>"']/g, function (match) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[match];
+            });
+        }
+
+        // 前回の名前を復元
+        const lastName = localStorage.getItem("stellarGravity_last_name");
+        if (lastName) nameInput.value = lastName;
+
+    </script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Stellar Gravity</title>
+    <meta name="apple-mobile-web-app-title" content="StellarGrav">
+
+    <link rel="icon" href="img/StellarGravity.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="img/StellarGravity.png">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <style>
+        /* =========================================================
+         Global / Layout
+         ========================================================= */
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            width: 100vw;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            color: white;
+            position: fixed;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 200 !important;
+        }
+
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+            -webkit-touch-callout: none;
+        }
+
+        /* =========================================================
+         HUD (Top Score / Next)
+         ========================================================= */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px 10px 20px 25px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+            font-weight: normal;
+        }
+
+        .hud-item {
+            margin-bottom: 12px;
+        }
+
+        .hud-label {
+            font-size: 18px;
+            color: #aaa;
+            letter-spacing: 1px;
+            display: inline-block;
+            margin-bottom: 2px;
+            justify-content: space-between;
+        }
+
+        .score-num {
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 0 0 15px #4facfe;
+            display: block;
+            font-weight: normal;
+        }
+
+        .hi-score-num {
+            font-size: 32px;
+            color: #f1c40f;
+            text-shadow: 0 0 10px rgba(241,196,15,0.5);
+            font-weight: normal;
+        }
+
+        .hi-stage-text {
+            margin-left: 12px;
+            font-size: 12px;
+            color: #aaa;
+            letter-spacing: 1px;
+            font-weight: normal;
+            vertical-align: baseline;
+        }
+
+        #hi-stage-val {
+            font-size: 26px;
+            color: #fff;
+            margin-left: 2px;
+            position: relative;
+            top: 2px;
+            font-weight: bold;
+        }
+
+        #next-name {
+            margin-top: 5px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            line-height: 1.1;
+            opacity: 0.9;
+            text-shadow: 0 0 6px rgba(255,255,255,0.4);
+        }
+
+        /* =========================================================
+         Overlay (Title / Result)
+         ========================================================= */
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+
+            #overlay.hide {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+        /* =========================================================
+         Soundtrack Overlay
+         ========================================================= */
+        #soundtrack-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: none; /* 初期非表示 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            text-align: center;
+        }
+
+        .track-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            width: 80%;
+            max-width: 400px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .track-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+            letter-spacing: 2px;
+            color: #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .track-item:hover {
+                background: rgba(255,255,255,0.1);
+                color: white;
+            }
+
+            .track-item.active {
+                border-color: #4facfe;
+                background: rgba(79,172,254,0.2);
+                color: #fff;
+                text-shadow: 0 0 8px rgba(79,172,254,0.8);
+            }
+
+        .track-icon {
+            font-size: 12px;
+        }
+
+        /* =========================================================
+         Pause Overlay
+         ========================================================= */
+        #pause-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .pause-text {
+            font-size: 42px;
+            letter-spacing: 8px;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+        }
+
+        .pause-sub {
+            font-size: 14px;
+            letter-spacing: 4px;
+            color: #ccc;
+            animation: pulse-text 2s infinite;
+        }
+
+        @keyframes pulse-text {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1.1;
+            letter-spacing: 6px;
+            font-weight: 200;
+        }
+
+        .btn {
+            margin-top: 30px; /* 少し間隔調整 */
+            padding: 15px 50px;
+            font-size: 18px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.8);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 4px;
+        }
+
+            .btn:hover {
+                background: white;
+                color: black;
+            }
+
+        .sub-btn {
+            margin-top: 20px; /* 間隔調整 */
+            padding: 10px 16px;
+            font-size: 13px;
+            letter-spacing: 2px;
+            opacity: 0.6;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 20px;
+            transition: opacity 0.3s, background 0.3s;
+        }
+
+            .sub-btn:hover {
+                opacity: 1.0;
+                background: rgba(255, 0, 0, 0.4);
+            }
+
+        /* =========================================================
+         Bottom Left: BOOST
+         ========================================================= */
+        #boost-btn {
+            position: fixed;
+            bottom: 70px;
+            left: 32px;
+            padding: 10px 25px;
+            font-size: 20px;
+            letter-spacing: 2px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
+            isolation: isolate;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+        }
+
+            #boost-btn::before {
+                content: "";
+                position: absolute;
+                inset: -15px;
+                border-radius: 100px;
+                border: 3px solid rgba(79,172,254,0.8);
+                box-shadow: 0 0 25px rgba(79,172,254,0.5);
+                pointer-events: none;
+                z-index: -1;
+            }
+
+        /* =========================================================
+         Bottom Right Area: Management & Stage
+         ========================================================= */
+        #bottom-right-ui {
+            position: fixed;
+            right: 24px;
+            bottom: 60px;
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #management-btn-area {
+            position: relative;
+            width: 110px;
+            height: 45px;
+            pointer-events: auto;
+            margin-bottom: 0;
+        }
+
+        #reset-btn, #bgm-control-pos {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* BGMとReset共通の基本スタイル */
+        #reset-btn, #bgm-toggle {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s, transform 0.05s;
+        }
+
+        /* Resetボタン専用 */
+        #reset-btn {
+            display: none;
+            background: rgba(150, 0, 0, 0.7);
+            border-color: rgba(255, 100, 100, 0.8);
+        }
+
+            #reset-btn:active, #bgm-toggle:active {
+                transform: scale(0.95);
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+ 
+        #stage-ui {
+            text-align: right;
+            pointer-events: none;
+        }
+
+        .stage-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #aaa;
+        }
+
+        .stage-num {
+            font-size: 36px;
+            font-weight: bold;
+            text-shadow: 0 0 12px rgba(255,255,255,0.6);
+        }
+
+        .ui-faded {
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+
+        .score-bounce {
+            animation: score-bounce 0.5s ease-out;
+        }
+
+        #controls-hint {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+        }
+
+        @keyframes score-bounce {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            30% {
+                transform: scale(1.1);
+                opacity: 0.8;
+                text-shadow: 0 0 10px #fff;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+
+
+        /* =========================================================
+   Ranking UI
+   ========================================================= */
+        #ranking-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: none; /* 初期非表示 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .ranking-table {
+            width: 90%;
+            max-width: 500px;
+            border-collapse: collapse;
+            color: #fff;
+            margin: 20px 0;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+
+            .ranking-table th, .ranking-table td {
+                padding: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                text-align: center;
+            }
+
+            .ranking-table th {
+                color: #4facfe;
+                font-size: 14px;
+                letter-spacing: 3px;
+            }
+
+        .rank-1 {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            font-weight: bold;
+        }
+
+        .rank-2 {
+            color: #c0c0c0;
+            text-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
+            font-weight: bold;
+        }
+
+        .rank-3 {
+            color: #cd7f32;
+            text-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
+            font-weight: bold;
+        }
+
+        /* Name Input Area (Game Over) */
+        #name-input-area {
+            margin-top: 15px;
+            display: none; /* ゲームオーバー時に表示 */
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #player-name-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #4facfe;
+            color: white;
+            padding: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            text-align: center;
+            width: 200px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #submit-score-btn {
+            background: #4facfe;
+            color: #000;
+            border: none;
+            padding: 10px 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 20px;
+            letter-spacing: 2px;
+        }
+
+            #submit-score-btn:disabled {
+                background: #555;
+                cursor: not-allowed;
+            }
+    </style>
+
+</head>
+
+<body>
+
+    <audio id="game-bgm" loop preload="auto"></audio>
+    <audio id="clear-bgm" src="audio/StellarGravity_Clear.mp3" preload="auto"></audio>
+    <audio id="title-bgm" src="audio/StellarGravity_Title.mp3" loop preload="auto"></audio>
+
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer" style="padding: 20px 10px 20px 20px;">
+        <div style="text-align:left;">
+            <div class="hud-item">
+                <span class="hud-label">HIGH SCORE</span><br />
+                <span id="hi-score-val" class="hi-score-num">0</span>
+                <span class="hi-stage-text">STAGE <span id="hi-stage-val">1</span></span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">SCORE</span><br />
+                <span id="score-val" class="score-num">0</span>
+            </div>
+        </div>
+
+        <div style="text-align: right; margin-right: -5px;">
+            <div style="display: inline-flex; flex-direction: column; align-items: center; min-width: 100px;">
+                <span style="font-size:20px; color:#aaa; letter-spacing:2px; margin-bottom: 2px;">NEXT</span>
+
+                <div id="next-ui" style="height:55px; width:60px; margin: 0 auto;"></div>
+
+                <div id="timer-bar-container" style="width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin-top: 8px; display: none; overflow: hidden;">
+                    <div id="timer-bar-fill" style="width: 100%; height: 100%; background: #ff3c3c; box-shadow: 0 0 10px #ff0000;"></div>
+                </div>
+
+                <div id="next-name" style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="overlay">
+        <h1 id="title-text">STELLAR<br />GRAVITY</h1>
+
+        <div id="controls-hint" style="margin-top: 25px; font-size: 10px; letter-spacing: 2px; color: #888; line-height: 1.6;">
+            [PC] ENTER / UP : SHOOT | SPACE : BOOST<br>
+            [TOUCH] TAP SCREEN : SHOOT
+        </div>
+
+        <button id="start-btn" class="btn">START</button>
+
+        <button id="show-ranking-btn" class="btn sub-btn" style="margin-top: 20px;">WORLD RANKING</button>
+
+        <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 15px;">SOUNDTRACK</button>
+
+
+        <div id="name-input-area">
+            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ENTER YOUR NAME</div>
+            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA">
+            <button id="submit-score-btn">SUBMIT SCORE</button>
+        </div>
+
+        <button id="clear-hi-btn" class="btn sub-btn">CLEAR MY HIGH SCORE</button>
+        <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
+    </div>
+
+    <div id="ranking-overlay">
+        <h2 style="font-size:24px; letter-spacing:2px; color:#fff; margin-bottom:10px; text-shadow: 0 0 15px #4facfe;">WORLD RANKING</h2>
+        <div id="loading-ranking" style="color:#aaa; letter-spacing:2px;">LOADING...</div>
+        <table class="ranking-table" id="ranking-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th width="15%">RANK</th>
+                    <th width="50%">NAME</th>
+                    <th width="35%">SCORE</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-list-body">
+            </tbody>
+        </table>
+        <button id="close-ranking-btn" class="btn sub-btn">CLOSE</button>
+    </div>
+
+    <div id="soundtrack-overlay">
+        <h2 style="font-size:24px; letter-spacing:4px; margin-bottom:10px;">SOUNDTRACK</h2>
+        <ul class="track-list" id="track-list-container">
+        </ul>
+        <button id="soundtrack-back-btn" class="btn sub-btn">BACK</button>
+    </div>
+
+    <div id="pause-overlay">
+        <div class="pause-text">PAUSED</div>
+        <div class="pause-sub">TAP TO RESUME</div>
+    </div>
+
+
+    <button id="boost-btn">BOOST</button>
+
+    <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 60px; display: flex; align-items: flex-end; gap: 0px; pointer-events: none; z-index: 1000;">
+
+        <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 30px;">
+            <button id="reset-btn">RESET</button>
+            <div id="bgm-control-pos">
+                <button id="bgm-toggle" class="btn sub-btn" style="margin-top: 0; width: 100%; height: 100%; padding: 0;">BGM ON</button>
+            </div>
+        </div>
+
+        <div id="stage-ui" class="ui-faded" style="text-align: right; pointer-events: none;">
+            <div class="stage-label">STAGE</div>
+            <div id="stage-val" class="stage-num">1</div>
+        </div>
+    </div>
+
+
+    <script>
+        /* =========================================================
+         * Stellar Gravity
+         * ========================================================= */
+        const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+        const SUPERNOVA_BONUS = 3000;
+        const SUPERNOVA_CLEAR_DELAY = 450;
+        const SUPERNOVA_END_DELAY = 1100;
+
+        const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+        const gameBgmEl = document.getElementById("game-bgm");
+        const clearBgm = document.getElementById("clear-bgm");
+        const titleBgm = document.getElementById("title-bgm");
+        const resetBtn = document.getElementById("reset-btn"); // ここへ移動
+        const pauseOverlay = document.getElementById("pause-overlay");
+
+        /* Game State */
+        let isClearing = false;
+        let isPaused = false;
+
+
+        let WIDTH = window.innerWidth;
+        let HEIGHT = window.innerHeight;
+        let CENTER = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+        const DEADLINE_RADIUS = 180;
+        const SPAWN_RADIUS = 220;
+
+        const REDZONE_ROT_SPEED = 0.0015;
+        const REDZONE_SPARK_RATE = 0.12;
+
+        const CORE_DEFAULT = 45;
+        const CORE_MAX = 85;
+        const CORE_GROW = 10;
+        let CORE_RADIUS = CORE_DEFAULT;
+
+        let pendingCoreBoost = false;
+        let isContinue = false;
+
+        let isBoosting = false;
+        const ROTATE_BASE_SPEED = 0.015;
+        const ROTATE_BOOST_MULT = 3.5;
+        const STAR_BOOST_MULT = 3.0;
+        const STAR_BASE_SPEED = 6.0;
+
+        let clearCount = 0;
+        let difficulty = 1.0;
+        const DIFF_STEP = 0.12;
+        const DIFF_MAX = 3.0;
+
+        let shotTimer = null;
+        let shotTimeLimit = 0;
+        const TIMER_START_STAGE = 1;
+        const TIMER_MAX_SEC = 30.0;
+        const TIMER_MID_SEC = 10.0;
+        const TIMER_MIN_SEC = 2.0;
+
+        let barAnimId = null;
+        let timerStartTime = 0;
+
+        let stage = 1;
+        document.getElementById("stage-val").innerText = stage;
+
+        let hiStage = localStorage.getItem("stellarGravity_hiStage") || 1;
+        document.getElementById("hi-stage-val").innerText = hiStage;
+
+        const PLANETS = [
+            { name: "W.Dwarf", radius: 10, color: "#aab7b8", score: 1 },
+            { name: "Sirius.B", radius: 16, color: "#dfe6e9", score: 2 },
+            { name: "B.Star", radius: 22, color: "#ff7675", score: 4 },
+            { name: "Vega", radius: 30, color: "#74b9ff", score: 8 },
+            { name: "Capella", radius: 38, color: "#a29bfe", score: 16 },
+            { name: "Procyon", radius: 48, color: "#ffeaa7", score: 32 },
+            { name: "Arcturus", radius: 58, color: "#fab1a0", score: 64 },
+            { name: "Antares", radius: 70, color: "#ff9f43", score: 128 },
+            { name: "BlackHole", radius: 85, color: "#ffffff", score: 256 }
+        ];
+
+        let engine, render, runner;
+
+        let score = 0;
+        let hiScore = localStorage.getItem("stellarGravity_hiScore") || 0;
+
+        let isGameRunning = false;
+        let isClickable = true;
+        let nextQueue = [];
+        let launcherAngle = -Math.PI / 2;
+
+        let gameOverTime = null;
+        let particles = [];
+        let bgStars = [];
+        let starCanvas = null;
+        let staticStarAngle = 0;
+
+        let implosionScale = 1.0;
+        let implosionAlpha = 1.0;
+        let isImploding = false;
+
+        const CLEAR_INDEX = PLANETS.length - 1;
+        let isBlackHoleCore = false;
+
+        let lastMergeTime = 0;
+        let comboCount = 0;
+
+        function onClear() {
+            clearCount++;
+            difficulty = Math.min(DIFF_MAX, 1.0 + clearCount * DIFF_STEP);
+        }
+
+        /* Shot Timer */
+        function startShotTimer() {
+            const container = document.getElementById("timer-bar-container");
+            const fill = document.getElementById("timer-bar-fill");
+
+            if (!container || !fill) return;
+
+            if (shotTimer) {
+                clearTimeout(shotTimer);
+                shotTimer = null;
+            }
+            if (barAnimId) {
+                cancelAnimationFrame(barAnimId);
+                barAnimId = null;
+            }
+
+            if (!isGameRunning || isPaused) {
+                container.style.display = "none";
+                return;
+            }
+
+            if (stage <= 6) {
+                shotTimeLimit = TIMER_MAX_SEC - (stage - 1) * 4.0;
+            } else {
+                shotTimeLimit = Math.max(TIMER_MIN_SEC, TIMER_MID_SEC - (stage - 6) * 1.0);
+            }
+
+            const nextPlanetIndex = nextQueue.length > 1 ? nextQueue[1] : nextQueue[0];
+            const nextPlanetColor = PLANETS[nextPlanetIndex].color;
+
+            container.style.display = "block";
+            fill.style.width = "100%";
+            fill.style.opacity = "1";
+            fill.style.background = nextPlanetColor;
+            fill.style.boxShadow = `0 0 10px ${nextPlanetColor}`;
+
+            timerStartTime = Date.now();
+
+            shotTimer = setTimeout(() => {
+                if (isGameRunning && isClickable && !isPaused) {
+                    shoot();
+                }
+            }, shotTimeLimit * 1000);
+
+            function updateBar() {
+                if (!isGameRunning || isPaused) return;
+
+                const elapsed = (Date.now() - timerStartTime) / 1000;
+                const remainingRatio = Math.max(0, 1 - (elapsed / shotTimeLimit));
+                const remainingSec = shotTimeLimit * remainingRatio;
+
+                fill.style.width = (remainingRatio * 100) + "%";
+
+                if (remainingRatio < 0.25 || remainingSec < 3.0) {
+                    const blink = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
+                    fill.style.background = "#ff0000";
+                    fill.style.boxShadow = `0 0 15px #ff0000`;
+                    fill.style.opacity = blink;
+                } else {
+                    fill.style.background = nextPlanetColor;
+                    fill.style.boxShadow = `0 0 10px ${nextPlanetColor}`;
+                    fill.style.opacity = "1";
+                }
+
+                if (remainingRatio > 0) {
+                    barAnimId = requestAnimationFrame(updateBar);
+                }
+            }
+            barAnimId = requestAnimationFrame(updateBar);
+        }
+
+        function requestFullScreen() {
+            const el = document.documentElement;
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            } else if (isIOS) {
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function returnToTitle() {
+            Runner.stop(runner);
+
+            isGameRunning = false;
+            isPaused = false;
+            isClickable = false;
+            isContinue = false;
+
+            forceStopBGM();
+
+            Composite.clear(engine.world, false);
+            Runner.run(runner, engine);
+
+            const overlay = document.getElementById("overlay");
+            overlay.classList.remove("hide");
+
+            document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
+            document.getElementById("start-btn").textContent = "START";
+            document.getElementById("clear-message").style.display = "none";
+
+            const clearHiBtn = document.getElementById("clear-hi-btn");
+            if (clearHiBtn) clearHiBtn.style.display = "";
+
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
+
+            updateResetButtonVisibility();
+        }
+
+        /* Audio Setup */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let noiseBuffer = null;
+        document.getElementById("hi-score-val").innerText = hiScore;
+        const sfxMasterGain = audioCtx.createGain();
+        sfxMasterGain.gain.value = 1.8;
+        sfxMasterGain.connect(audioCtx.destination);
+
+        function createNoiseBuffer() {
+            const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            return buffer;
+        }
+
+        /* SFX Functions */
+        function playSuctionSound() {
+            if (isPaused) return; // Pause中は音を鳴らさない
+            const t = audioCtx.currentTime;
+            const drum = audioCtx.createOscillator(), g = audioCtx.createGain();
+            drum.type = 'sine';
+            drum.frequency.setValueAtTime(140, t);
+            drum.frequency.exponentialRampToValueAtTime(45, t + 1.5);
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.6, t + 0.1);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+            drum.connect(g);
+            g.connect(sfxMasterGain);
+            drum.start(t);
+            drum.stop(t + 1.8);
+
+            if (!noiseBuffer) noiseBuffer = createNoiseBuffer();
+            const burst = audioCtx.createBufferSource();
+            burst.buffer = noiseBuffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(220, t);
+            const nG = audioCtx.createGain();
+            nG.gain.setValueAtTime(0.12, t);
+            nG.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+            burst.connect(filter);
+            filter.connect(nG);
+            nG.connect(sfxMasterGain);
+            burst.start(t);
+            burst.stop(t + 1.2);
+        }
+
+        function playExplosionSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(180, t);
+            osc.frequency.exponentialRampToValueAtTime(60, t + 0.45);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer || (noiseBuffer = createNoiseBuffer());
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = "lowpass";
+            noiseFilter.frequency.setValueAtTime(400, t);
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.15, t);
+            noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+            const delay = audioCtx.createDelay(0.6);
+            delay.delayTime.setValueAtTime(0.12, t);
+            const feedback = audioCtx.createGain();
+            feedback.gain.setValueAtTime(0.25, t);
+            delay.connect(feedback);
+            feedback.connect(delay);
+            osc.connect(gain);
+            gain.connect(sfxMasterGain);
+            gain.connect(delay);
+            delay.connect(sfxMasterGain);
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(sfxMasterGain);
+            osc.start(t);
+            osc.stop(t + 0.8);
+            noise.start(t);
+            noise.stop(t + 0.5);
+        }
+
+        /* ---------------------------------------------------------
+         * SFX: Black Hole (Original Version)
+         * - LFO modulated Triangle + Sine boom
+         * --------------------------------------------------------- */
+        function playBlackHoleSound() {
+            if (audioCtx.state === "suspended") audioCtx.resume();
+            const t = audioCtx.currentTime;
+
+            const osc1 = audioCtx.createOscillator();
+            osc1.type = "triangle";
+            osc1.frequency.setValueAtTime(42, t + 0.3);
+            osc1.frequency.exponentialRampToValueAtTime(18, t + 2.2);
+
+            const gain1 = audioCtx.createGain();
+            gain1.gain.setValueAtTime(0.0001, t);
+            gain1.gain.exponentialRampToValueAtTime(0.45, t + 0.6);
+            gain1.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+
+            const lfo = audioCtx.createOscillator();
+            lfo.type = "sine";
+            lfo.frequency.setValueAtTime(6, t);
+
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.setValueAtTime(14, t);
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc1.frequency);
+
+            const boom = audioCtx.createOscillator();
+            boom.type = "sine";
+            boom.frequency.setValueAtTime(60, t + 2.3);
+            boom.frequency.exponentialRampToValueAtTime(28, t + 2.55);
+
+            const boomGain = audioCtx.createGain();
+            boomGain.gain.setValueAtTime(0.0001, t + 2.25);
+            boomGain.gain.exponentialRampToValueAtTime(1.0, t + 2.35);
+            boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 2.9);
+
+            osc1.connect(gain1);
+            gain1.connect(sfxMasterGain);
+
+            boom.connect(boomGain);
+            boomGain.connect(sfxMasterGain);
+
+            osc1.start(t + 0.3);
+            osc1.stop(t + 2.5);
+
+            lfo.start(t);
+            lfo.stop(t + 2.5);
+
+            boom.start(t + 2.25);
+            boom.stop(t + 3.0);
+        }
+
+        /* Drawing Logic */
+        function drawPlanet(ctx, x, y, r, color, time, bodyId) {
+            ctx.save();
+            ctx.translate(x, y);
+            const pulse = Math.sin(time * 0.003 + bodyId) * 0.05 + 0.95;
+            const curR = r * pulse;
+            for (let i = 0; i < 3; i++) {
+                const shift = Math.sin(time * 0.002 + (i * 2) + bodyId) * (r * 0.15);
+                ctx.beginPath();
+                ctx.arc(0, 0, curR + shift + (i * 2), 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.35 - (i * 0.1);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+            ctx.beginPath();
+            ctx.arc(0, 0, curR, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = curR * 1.5;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        const STAR_COUNT = Math.floor(80 * 1.5);
+        const STAR_SIZE_MIN = 0.4;
+        const STAR_SIZE_MAX = 3.0;
+
+        function generateStars() {
+            bgStars = [];
+            const maxDimension = Math.max(WIDTH, HEIGHT) * 1.5;
+            for (let i = 0; i < STAR_COUNT; i++) {
+                const rand = Math.random();
+                let color;
+                if (rand < 0.6) color = `rgba(255, 255, 255, `;
+                else if (rand < 0.8) color = `rgba(180, 220, 255, `;
+                else if (rand < 0.95) color = `rgba(255, 255, 200, `;
+                else color = `rgba(255, 180, 180, `;
+                const alpha = 0.2 + Math.random() * 0.6;
+                bgStars.push({
+                    r: Math.random() * maxDimension,
+                    angle: Math.random() * Math.PI * 2,
+                    size: STAR_SIZE_MIN + Math.random() * (STAR_SIZE_MAX - STAR_SIZE_MIN),
+                    color: color + alpha + ")"
+                });
+            }
+            starCanvas = document.createElement('canvas');
+            const size = maxDimension * 2;
+            starCanvas.width = size;
+            starCanvas.height = size;
+            const sCtx = starCanvas.getContext('2d');
+            bgStars.forEach(s => {
+                sCtx.fillStyle = s.color;
+                if (s.size > 2.0) {
+                    sCtx.shadowBlur = 4;
+                    sCtx.shadowColor = s.color;
+                }
+                sCtx.beginPath();
+                sCtx.arc(size / 2 + Math.cos(s.angle) * s.r, size / 2 + Math.sin(s.angle) * s.r, s.size, 0, Math.PI * 2);
+                sCtx.fill();
+                sCtx.shadowBlur = 0;
+            });
+        }
+
+        /* Initialize World */
+        function preInit() {
+            generateStars();
+
+            engine = Engine.create({
+                gravity: { x: 0, y: 0, scale: 0 },
+                enableSleeping: false
+            });
+
+            render = Render.create({
+                element: document.getElementById("canvas-container"),
+                engine: engine,
+                options: {
+                    width: WIDTH,
+                    height: HEIGHT,
+                    wireframes: false,
+                    background: "transparent"
+                }
+            });
+
+            Render.run(render);
+            runner = Runner.create({
+                isFixed: true,
+                delta: 1000 / 60
+            });
+            Runner.run(runner, engine);
+
+            Events.on(render, "afterRender", () => {
+                const ctx = render.context;
+                const now = Date.now();
+
+                // ポーズ中は描画更新をスキップするか、静止画のままにする
+                // ここでは背景や惑星はそのまま描画され続けるが、Runnerが止まっているので動きは止まる
+
+                if (isGameRunning && !isPaused) {
+                    const base = ROTATE_BASE_SPEED * difficulty;
+                    const speed = isBoosting ? base * ROTATE_BOOST_MULT : base;
+                    launcherAngle += speed;
+                }
+
+                if (nextQueue.length >= 2) {
+                    const nextPlanet = PLANETS[nextQueue[1]];
+                    document.getElementById("next-name").textContent = nextPlanet.name;
+                    document.getElementById("next-name").style.color = nextPlanet.color;
+                }
+
+                /* Draw Stars */
+                if (starCanvas) {
+                    const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
+                    if (!isPaused) staticStarAngle -= 0.0025 * mult;
+                    ctx.save();
+                    ctx.translate(CENTER.x, CENTER.y);
+                    ctx.rotate(staticStarAngle);
+                    ctx.drawImage(starCanvas, -starCanvas.width / 2, -starCanvas.height / 2);
+                    ctx.restore();
+                }
+
+                ctx.globalAlpha = 1;
+
+                /* RedZone */
+                const t = performance.now();
+                const isWarning = gameOverTime !== null;
+
+                ctx.save();
+                ctx.translate(CENTER.x, CENTER.y);
+                ctx.beginPath();
+                ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
+                ctx.setLineDash([10, 14]);
+                ctx.lineDashOffset = -(t * 0.02) % 1000;
+
+                const blinkBase = isWarning ? 0.7 : 0.3;
+                const blinkFreq = isWarning ? 0.015 : 0.006;
+                const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
+
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
+                ctx.lineWidth = isWarning ? 4 : 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.setLineDash([]);
+                ctx.arc(0, 0, DEADLINE_RADIUS + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink * 0.5})` : "rgba(255, 80, 80, 0.25)";
+                ctx.lineWidth = isWarning ? 10 : 6;
+                ctx.stroke();
+                ctx.restore();
+
+                /* Sparks */
+                if (!isPaused) { // ポーズ中はパーティクル生成を停止
+                    const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
+                    const SPARK_MAX = 220;
+                    if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
+                    if (Math.random() < SPARK_RATE) {
+                        const burst = 2 + (isBoosting ? 4 : 2);
+                        for (let k = 0; k < burst; k++) {
+                            const ang = Math.random() * Math.PI * 2;
+                            const r = DEADLINE_RADIUS + (Math.random() * 10 - 5);
+                            const x = CENTER.x + Math.cos(ang) * r;
+                            const y = CENTER.y + Math.sin(ang) * r;
+                            const sp = (isBoosting ? 5.0 : 3.2) * (0.6 + Math.random() * 0.8);
+                            const ox = Math.cos(ang) * sp + (Math.random() - 0.5) * 1.0;
+                            const oy = Math.sin(ang) * sp + (Math.random() - 0.5) * 1.0;
+                            particles.push({
+                                type: "spark",
+                                x, y, px: x, py: y, vx: ox, vy: oy,
+                                life: 1.0,
+                                size: 1.5 + Math.random() * 2.5,
+                                color: isWarning ? "rgba(255, 255, 255, 1)" : "rgba(255,60,60,1)"
+                            });
+                        }
+                    }
+                }
+
+                /* Core */
+                ctx.save();
+                ctx.translate(CENTER.x, CENTER.y);
+                const currentRadius = CORE_RADIUS * implosionScale;
+                if (isImploding) {
+                    ctx.globalAlpha = implosionAlpha;
+                    const gR = currentRadius * 3;
+                    const grad = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                } else if (isBlackHoleCore) {
+                    const t2 = performance.now() * 0.002;
+                    for (let i = 0; i < 6; i++) {
+                        const r = CORE_RADIUS * (1.8 + i * 0.25);
+                        const a = 0.15 + Math.sin(t2 + i) * 0.1;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,80,40,${a})`;
+                        ctx.lineWidth = 6;
+                        ctx.stroke();
+                    }
+                    const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
+                    holeGrad.addColorStop(0, "rgba(0,0,0,1)");
+                    holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
+                    holeGrad.addColorStop(1, "rgba(0,0,0,1)");
+                    ctx.fillStyle = holeGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
+                    const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                /* Planets */
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (!b.isStatic && b.index !== undefined) {
+                        drawPlanet(ctx, b.position.x, b.position.y, b.circleRadius, PLANETS[b.index].color, now, b.id);
+                    }
+                });
+
+                /* Launcher */
+                if (isGameRunning) {
+                    if (isClickable) {
+                        const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+                        const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([4, 6]);
+                        ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(sX, sY);
+                        ctx.lineTo(CENTER.x, CENTER.y);
+                        ctx.stroke();
+                        ctx.restore();
+                        drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+                    }
+                    if (nextQueue.length >= 2) {
+                        const nextPlanet = PLANETS[nextQueue[1]];
+                        const nextUiEl = document.getElementById("next-ui");
+                        if (nextUiEl) {
+                            const rect = nextUiEl.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            ctx.save();
+                            ctx.translate(centerX, centerY);
+                            drawPlanet(ctx, 0, 0, nextPlanet.radius * 0.7, nextPlanet.color, now, 1);
+                            ctx.restore();
+                        }
+                    }
+                }
+
+                /* Particles */
+                const MAX_PARTICLES = isIOS ? 150 : 300;
+                if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    if (!isPaused) { // ポーズ中は寿命を減らさない
+                        if (p.type === "flash") p.life -= 0.07;
+                        else if (p.type === "spark") p.life -= 0.04;
+                        else p.life -= 0.02;
+                    }
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    if (!isPaused) { // ポーズ中は移動しない
+                        p.px = p.x; p.py = p.y;
+                        p.x += (p.vx || 0);
+                        p.y += (p.vy || 0);
+                        if (p.type === "shockwave") p.radius += (p.speed || 0) * 0.5;
+                    }
+
+                    if (p.type === "shockwave") {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,255,255,${p.life})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.restore();
+                    } else if (p.type === "flash") {
+                        ctx.save();
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = p.color || "rgba(255,255,255,1)";
+                        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                        ctx.restore();
+                    } else if (p.type === "spark") {
+                        ctx.save();
+                        ctx.globalCompositeOperation = "lighter";
+                        ctx.globalAlpha = p.life;
+                        ctx.strokeStyle = p.color || "rgba(255,60,60,1)";
+                        ctx.lineWidth = 2.2;
+                        ctx.beginPath();
+                        ctx.moveTo(p.px, p.py);
+                        ctx.lineTo(p.x, p.y);
+                        ctx.stroke();
+                        ctx.fillStyle = "rgba(255,120,120,1)";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    } else if (p.type === "combo-dust") {
+                        ctx.save();
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = "#ffffff";
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = "#ffffff";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        ctx.globalAlpha = p.life * 0.8;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    } else {
+                        ctx.save();
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+
+                /* Game Over Check */
+                if (isGameRunning && !isPaused) {
+                    let isOut = false;
+                    Composite.allBodies(engine.world).forEach(b => {
+                        if (!b.isStatic && b.index !== undefined) {
+                            const d = Math.sqrt((b.position.x - CENTER.x) ** 2 + (b.position.y - CENTER.y) ** 2);
+                            if (d > DEADLINE_RADIUS) isOut = true;
+                        }
+                    });
+                    if (isOut) {
+                        if (!gameOverTime) gameOverTime = now;
+                        if (now - gameOverTime > 3000) triggerGameOver();
+                    } else {
+                        gameOverTime = null;
+                    }
+                }
+            });
+
+            Events.on(engine, "beforeUpdate", () => {
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (b.isStatic) return;
+                    if (Math.abs(b.position.x - CENTER.x) > WIDTH || Math.abs(b.position.y - CENTER.y) > HEIGHT) {
+                        Composite.remove(engine.world, b);
+                        return;
+                    }
+                    const dx = CENTER.x - b.position.x;
+                    const dy = CENTER.y - b.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const force = 0.0028 * b.mass;
+                    Body.applyForce(b, b.position, { x: (dx / dist) * force, y: (dy / dist) * force });
+                });
+            });
+
+            function removeAllDynamicBodies() {
+                const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
+                if (bodies.length) Composite.remove(engine.world, bodies);
+            }
+
+            function triggerSupernovaAt(x, y, color = "#ffffff") {
+                isImploding = true;
+                implosionScale = 1.0;
+                implosionAlpha = 1.0;
+                let startTime = performance.now();
+                const animateImplosion = (now) => {
+                    const elapsed = now - startTime;
+                    if (elapsed < 300) {
+                        implosionScale = 1.0 + (elapsed / 300) * 0.5;
+                    } else if (elapsed < 900) {
+                        const p = (elapsed - 300) / 600;
+                        implosionScale = 1.5 * (1 - p);
+                        implosionAlpha = 1 - p;
+                    } else {
+                        isImploding = false;
+                        implosionScale = 0;
+                        return;
+                    }
+                    requestAnimationFrame(animateImplosion);
+                };
+                requestAnimationFrame(animateImplosion);
+
+                particles.push({ type: "flash", life: 1.0, color: "rgba(255,255,255,1)" });
+                setTimeout(() => { particles.push({ type: "flash", life: 0.6, color: "rgba(255,200,150,0.8)" }); }, 120);
+                setTimeout(() => { particles.push({ type: "flash", life: 0.35, color: "rgba(255,120,80,0.6)" }); }, 300);
+
+                const waves = [{ r: 10, sp: 10, life: 1.2 }, { r: 40, sp: 8, life: 1.1 }, { r: 90, sp: 6, life: 1.0 }, { r: 160, sp: 4, life: 0.9 }, { r: 240, sp: 2.5, life: 0.8 }];
+                waves.forEach((w, i) => {
+                    setTimeout(() => {
+                        particles.push({ type: "shockwave", x, y, radius: w.r, speed: w.sp, life: w.life });
+                    }, i * 80);
+                });
+
+                // 軽量化: パーティクル数を 260 -> 160 に削減
+                for (let i = 0; i < 160; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 14 + 4;
+                    particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1.2, color, size: Math.random() * 3.2 + 1.2 });
+                }
+
+                setTimeout(() => {
+                    particles.push({ type: "flash", life: 0.9, color: "rgba(0,0,0,0.85)" });
+                    particles.push({ type: "shockwave", x, y, radius: Math.max(WIDTH, HEIGHT), speed: -10, life: 1.4 });
+                    // 軽量化: 180 -> 120
+                    for (let i = 0; i < 120; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const r = Math.random() * 260 + 60;
+                        const sp = Math.random() * 6 + 3;
+                        particles.push({ x: x + Math.cos(ang) * r, y: y + Math.sin(ang) * r, vx: -Math.cos(ang + Math.PI / 6) * sp, vy: -Math.sin(ang + Math.PI / 6) * sp, life: 1.3, color: "#ffffff", size: Math.random() * 2.2 + 0.8 });
+                    }
+                    if (typeof playBlackHoleSound === "function") playBlackHoleSound();
+                }, 520);
+                playExplosionSound();
+                setTimeout(playExplosionSound, 180);
+                setTimeout(playExplosionSound, 420);
+            }
+
+            Events.on(engine, "collisionStart", (e) => {
+                if (!isGameRunning || isClearing) return;
+                e.pairs.forEach(p => {
+                    const a = p.bodyA;
+                    const b = p.bodyB;
+                    if (a.index === undefined || b.index === undefined || a.isMerging || b.isMerging) return;
+                    if (a.index !== b.index || a.index >= PLANETS.length - 1) return;
+
+                    a.isMerging = true;
+                    b.isMerging = true;
+                    const mid = { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 };
+                    const nI = a.index + 1;
+                    const nP = PLANETS[nI];
+                    Composite.remove(engine.world, [a, b]);
+
+                    playExplosionSound();
+                    const allBodies = Composite.allBodies(engine.world);
+                    allBodies.forEach(body => {
+                        if (body.isStatic || body.isMerging) return;
+                        const dx = body.position.x - mid.x;
+                        const dy = body.position.y - mid.y;
+                        const distSq = dx * dx + dy * dy;
+                        const forceRadius = 150;
+                        if (distSq < forceRadius * forceRadius) {
+                            const dist = Math.sqrt(distSq);
+                            const forceMagnitude = 0.003 * body.mass;
+                            Body.applyForce(body, body.position, { x: (dx / dist) * forceMagnitude, y: (dy / dist) * forceMagnitude });
+                        }
+                    });
+
+                    particles.push({ type: "shockwave", x: mid.x, y: mid.y, radius: 10, speed: 5, life: 1 });
+                    for (let i = 0; i < 12; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const s = Math.random() * 4 + 2;
+                        particles.push({ x: mid.x, y: mid.y, vx: Math.cos(ang) * s, vy: Math.sin(ang) * s, life: 1, color: nP.color, size: 3 });
+                    }
+
+                    const now = Date.now();
+                    if (now - lastMergeTime < 800) comboCount++;
+                    else comboCount = 0;
+                    lastMergeTime = now;
+                    const comboBonus = 1 + (comboCount * 0.2);
+                    const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
+                    updateScore(Math.floor(points * comboBonus));
+                    showComboText(mid.x, mid.y, comboCount);
+
+                    setTimeout(() => {
+                        if (nI === CLEAR_INDEX) {
+                            if (isClearing) return;
+                            isClearing = true;
+                            isBlackHoleCore = true;
+                            isGameRunning = false;
+                            isClickable = false;
+                            triggerSupernovaAt(mid.x, mid.y, "#ffffff");
+                            setTimeout(removeAllDynamicBodies, SUPERNOVA_CLEAR_DELAY);
+                            setTimeout(triggerGameClear, SUPERNOVA_END_DELAY);
+                        } else {
+                            const nb = Bodies.circle(mid.x, mid.y, nP.radius, {
+                                index: nI,
+                                restitution: 0.4,
+                                friction: 0.8,
+                                frictionAir: 0.02,
+                                render: { visible: false }
+                            });
+                            Composite.add(engine.world, nb);
+                        }
+                    }, 40);
+                });
+            });
+        }
+
+        /* Controls */
+        const boostBtn = document.getElementById("boost-btn");
+        const clearHiBtn = document.getElementById("clear-hi-btn");
+
+        boostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
+        boostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
+        boostBtn.addEventListener("mouseleave", () => { isBoosting = false; });
+        boostBtn.addEventListener("touchstart", (e) => { e.preventDefault(); e.stopPropagation(); isBoosting = true; }, { passive: false });
+        boostBtn.addEventListener("touchend", (e) => { e.preventDefault(); e.stopPropagation(); isBoosting = false; }, { passive: false });
+        boostBtn.addEventListener("touchcancel", () => { isBoosting = false; });
+
+        window.addEventListener("keydown", (e) => {
+            if (isPaused) return;
+            if (e.code === "Space") { e.preventDefault(); isBoosting = true; }
+            if (e.code === "Enter" || e.code === "ArrowUp") {
+                e.preventDefault();
+                if (isGameRunning && document.getElementById("overlay").classList.contains("hide")) {
+                    shoot(e);
+                }
+            }
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "Space") isBoosting = false;
+        });
+
+        setInterval(() => {
+            boostBtn.style.boxShadow = isBoosting ? "0 0 20px rgba(79,172,254,0.9)" : "none";
+        }, 50);
+
+        function updateScore(points) {
+            score += points;
+            document.getElementById("score-val").innerText = score;
+            if (score > hiScore) {
+                hiScore = score;
+                document.getElementById("hi-score-val").innerText = hiScore;
+                localStorage.setItem("stellarGravity_hiScore", hiScore);
+            }
+        }
+
+        function showComboText(x, y, count) {
+            if (count < 1) return;
+            const comboEl = document.createElement("div");
+            comboEl.innerHTML = `<div style="font-size: 18px; letter-spacing: 5px; font-weight: 200;">COMBO +${count + 1}</div>`;
+            comboEl.style.position = "fixed";
+            comboEl.style.left = `${x}px`;
+            comboEl.style.top = `${y - 40}px`;
+            comboEl.style.textAlign = "center";
+            comboEl.style.color = "#ffffff";
+            comboEl.style.fontFamily = "'Orbitron', sans-serif";
+            comboEl.style.fontWeight = "bold";
+            comboEl.style.textShadow = "0 0 12px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.3)";
+            comboEl.style.pointerEvents = "none";
+            comboEl.style.zIndex = "2000";
+            comboEl.style.transform = "translateX(-50%)";
+            comboEl.style.transition = "transform 2.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease-out";
+            document.body.appendChild(comboEl);
+            if (Array.isArray(particles)) {
+                for (let i = 0; i < 25; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 4 + 2;
+                    particles.push({ x, y: y - 40, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1.0, color: "#ffffff", size: Math.random() * 2 + 1, type: "combo-dust" });
+                }
+            }
+            setTimeout(() => {
+                comboEl.style.transform = "translate(-50%, -100px)";
+                comboEl.style.opacity = "0";
+            }, 20);
+            setTimeout(() => comboEl.remove(), 2100);
+        }
+
+        function triggerGameOver() {
+            stopBGM();
+            document.getElementById("clear-message").style.display = "none";
+            isGameRunning = false;
+            isContinue = false;
+            document.getElementById("stage-val").innerText = stage;
+            document.getElementById("overlay").classList.remove("hide");
+            bgmToggleBtn.style.pointerEvents = "auto";
+            bgmToggleBtn.style.opacity = "0.75";
+            document.querySelector("#overlay h1").innerHTML = "GAME OVER";
+            document.getElementById("start-btn").textContent = "START";
+            clearHiBtn.style.display = "";
+
+            // サウンドトラックボタン等も再表示
+            updateResetButtonVisibility();
+            document.getElementById("soundtrack-btn").style.display = "block";
+
+            // ▼▼▼ 追加: ランキング用処理 ▼▼▼
+            window.finalScore = score; // スコアを外部公開
+            document.getElementById("name-input-area").style.display = "flex"; // 入力欄表示
+            const submitBtn = document.getElementById("submit-score-btn");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "SUBMIT SCORE";
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+            if (isBgmEnabled) playTitleBGM();
+        }
+
+        function triggerGameClear() {
+            onClear();
+            isClearing = true;
+            isGameRunning = false;
+            isContinue = true;
+            pendingCoreBoost = true;
+            setTimeout(() => {
+                const overlay = document.getElementById("overlay");
+                const titleH1 = document.querySelector("#overlay h1");
+                const startBtn = document.getElementById("start-btn");
+                const clearMsg = document.getElementById("clear-message");
+                if (overlay) {
+                    overlay.classList.remove("hide");
+                    titleH1.innerHTML = "STAGE " + stage + "<br>CLEAR";
+                    startBtn.textContent = "NEXT";
+                    if (clearMsg) {
+                        clearMsg.innerHTML = "The core has collapsed<br>into a Black Hole.<br><br>A new star system awaits.";
+                        clearMsg.style.display = "block";
+                    }
+                    updateResetButtonVisibility();
+                    playClearBgm();
+                }
+            }, SUPERNOVA_END_DELAY);
+        }
+
+        function shoot(e) {
+            if (isPaused) return;
+            if (!isGameRunning || !isClickable || !document.getElementById("overlay").classList.contains("hide")) return;
+            isClickable = false;
+            const nI = nextQueue.shift();
+            nextQueue.push(Math.floor(Math.random() * 4));
+            playSuctionSound();
+            const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+            const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+            const b = Bodies.circle(sX, sY, PLANETS[nI].radius, {
+                index: nI,
+                restitution: 0.2,
+                friction: 0.8,
+                frictionAir: isBoosting ? 0.008 : 0.02,
+                render: { visible: false }
+            });
+            const BASE_SPEED = 6 * difficulty;
+            const BOOST_DRIFT = isBoosting ? 0.35 : 0;
+            const vxC = -Math.cos(launcherAngle);
+            const vyC = -Math.sin(launcherAngle);
+            const vxT = -Math.sin(launcherAngle);
+            const vyT = Math.cos(launcherAngle);
+            const vx = (vxC + vxT * BOOST_DRIFT) * BASE_SPEED;
+            const vy = (vyC + vyT * BOOST_DRIFT) * BASE_SPEED;
+            Body.setVelocity(b, { x: vx, y: vy });
+            Composite.add(engine.world, b);
+            setTimeout(() => { isClickable = true; }, 200);
+            startShotTimer();
+        }
+
+        preInit();
+
+        document.getElementById("start-btn").addEventListener("click", (e) => {
+            e.preventDefault(); e.stopPropagation();
+
+            // ▼▼▼ 追加: ゲーム開始時に入力欄を隠す処理 ▼▼▼
+            const nameInputArea = document.getElementById("name-input-area");
+            if (nameInputArea) nameInputArea.style.display = "none";
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+            requestFullScreen();
+            forceStopBGM();
+            if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
+            if (isPaused) isPaused = false;
+            document.getElementById("clear-message").style.display = "none";
+            isClearing = false;
+            isBlackHoleCore = false;
+            gameOverTime = null;
+            const startBtn = document.getElementById("start-btn");
+            const isNext = startBtn.textContent === "NEXT";
+            if (isNext) {
+                stage++;
+                if (stage > hiStage) {
+                    hiStage = stage;
+                    document.getElementById("hi-stage-val").innerText = hiStage;
+                    localStorage.setItem("stellarGravity_hiStage", hiStage);
+                }
+            } else {
+                stage = 1;
+                score = 0;
+                clearCount = 0;
+                difficulty = 1.0;
+                CORE_RADIUS = CORE_DEFAULT;
+                document.getElementById("score-val").innerText = "0";
+            }
+            document.getElementById("stage-val").innerText = stage;
+            document.getElementById("overlay").classList.add("hide");
+
+            // 安全なリセット処理
+            Composite.clear(engine.world, false);
+            // Engine.clear(engine)は削除
+
+            if (isNext && pendingCoreBoost) {
+                CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
+                pendingCoreBoost = false;
+            }
+            Composite.add(engine.world, Bodies.circle(CENTER.x, CENTER.y, CORE_RADIUS, { isStatic: true, render: { visible: false } }));
+            nextQueue = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)];
+            const currentPlanet = PLANETS[nextQueue[1]];
+            const nameEl = document.getElementById("next-name");
+            if (nameEl) {
+                nameEl.textContent = currentPlanet.name;
+                nameEl.style.color = currentPlanet.color;
+            }
+            isClickable = true;
+            isGameRunning = true;
+            updateResetButtonVisibility();
+            playBGM();
+            startShotTimer();
+        });
+
+        function updateResetButtonVisibility() {
+            const rBtn = document.getElementById("reset-btn");
+            const bPos = document.getElementById("bgm-control-pos");
+            const stageUi = document.getElementById("stage-ui");
+            const clearHiBtn = document.getElementById("clear-hi-btn");
+            const soundtrackBtn = document.getElementById("soundtrack-btn");
             const hint = document.getElementById("controls-hint");
 
             if (isGameRunning) {
