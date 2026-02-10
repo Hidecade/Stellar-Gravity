@@ -590,10 +590,14 @@
         <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 15px;">SOUNDTRACK</button>
 
 
-        <div id="name-input-area">
-            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ENTER YOUR NAME</div>
-            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA">
-            <button id="submit-score-btn">SUBMIT SCORE</button>
+        <div id="name-input-area" style="margin-top: 15px;">
+            <div style="font-size:10px; color:#aaa; margin-bottom:5px; letter-spacing: 2px;">ENTER YOUR NAME</div>
+            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA"
+                   style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px; font-family: 'Orbitron', sans-serif; text-align: center; border-radius: 5px; outline: none; margin-bottom: 10px;">
+            <br>
+            <button id="submit-score-btn" class="btn sub-btn" style="background: rgba(79,172,254,0.3); border-color: #4facfe; opacity: 1;">SUBMIT SCORE</button>
+
+            <button id="skip-score-btn" class="btn sub-btn" style="margin-top: 5px; border:none; font-size:10px; opacity:0.5;">NO THANKS / SKIP</button>
         </div>
 
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR MY HIGH SCORE</button>
@@ -1755,20 +1759,21 @@
                 if (bPos) bPos.style.display = "block";
                 if (stageUi) stageUi.classList.add("ui-faded");
 
-                // タイトル画面の要素（クリア時は非表示にするもの）
+                // クリアしてNEXT待ちの時は none、ゲームオーバーやタイトルの時は block
                 const titleElementsStyle = isContinue ? "none" : "block";
 
                 if (clearHiBtn) clearHiBtn.style.display = titleElementsStyle;
                 if (soundtrackBtn) soundtrackBtn.style.display = titleElementsStyle;
                 if (hint) hint.style.display = titleElementsStyle;
 
-                // 【ここが重要】ランキングボタンもクリア時は非表示にする
+                // 【クリア時はランキングボタンを出さない】
                 if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
 
-                // ゲームクリア・ゲームオーバー時以外は名前入力欄を隠す
+                // ゲームオーバーで名前入力待ちの場所以外（タイトルに戻った後など）は隠す
                 const nameArea = document.getElementById("name-input-area");
                 if (nameArea && !isContinue && isGameRunning === false) {
-                    nameArea.style.display = "none";
+                    // triggerGameOverで flex になるので、ここでは特に自動で none にしなくてもOKですが
+                    // リセット時などは隠すようにしておくと安全です
                 }
             }
         }
@@ -2212,6 +2217,17 @@
                 loadingEl.textContent = "FAILED TO LOAD";
             }
         }
+
+        // 既存の取得コードの下あたりに追加
+        const skipBtn = document.getElementById("skip-score-btn");
+
+        // --- スキップボタンの処理 ---
+        skipBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            // 入力エリアを隠す
+            nameInputArea.style.display = "none";
+            // 必要に応じてタイトルのテキストなどを再セット（triggerGameOverでセット済みなので隠すだけでOK）
+        });
 
         // --- スコア送信関数 ---
         window.submitMyScore = async function (score) {
