@@ -388,12 +388,7 @@
                 background: rgba(255, 255, 255, 0.3);
             }
 
-        #exit-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            opacity: 1.0;
-        }
-
+ 
         #stage-ui {
             text-align: right;
             pointer-events: none;
@@ -590,26 +585,23 @@
 
         <button id="start-btn" class="btn">START</button>
 
-        <button id="show-ranking-btn" class="btn sub-btn" style="margin-top: 15px;">WORLD RANKING</button>
+        <button id="show-ranking-btn" class="btn sub-btn" style="margin-top: 20px;">WORLD RANKING</button>
 
         <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 15px;">SOUNDTRACK</button>
 
 
-        <div id="name-input-area" style="margin-top: 15px;">
-            <div style="font-size:10px; color:#aaa; margin-bottom:5px; letter-spacing: 2px;">ENTER YOUR NAME</div>
-            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA"
-                   style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px; font-family: 'Orbitron', sans-serif; text-align: center; border-radius: 5px; outline: none; margin-bottom: 10px;">
-            <br>
-            <button id="submit-score-btn" class="btn sub-btn" style="background: rgba(79,172,254,0.3); border-color: #4facfe; opacity: 1;">SUBMIT SCORE</button>
+        <div id="name-input-area">
+            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ENTER YOUR NAME</div>
+            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA">
+            <button id="submit-score-btn">SUBMIT SCORE</button>
         </div>
 
-        <button id="clear-hi-btn" class="btn sub-btn" style="margin-top: 20px;">CLEAR MY HIGH SCORE</button>
-
+        <button id="clear-hi-btn" class="btn sub-btn">CLEAR MY HIGH SCORE</button>
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
     </div>
 
     <div id="ranking-overlay">
-        <h2 style="font-size:28px; letter-spacing:2px; color:#fff; margin-bottom:10px; text-shadow: 0 0 15px #4facfe;">WORLD RANKING</h2>
+        <h2 style="font-size:32px; letter-spacing:6px; color:#fff; margin-bottom:10px; text-shadow: 0 0 15px #4facfe;">WORLD RANKING</h2>
         <div id="loading-ranking" style="color:#aaa; letter-spacing:2px;">LOADING...</div>
         <table class="ranking-table" id="ranking-table" style="display:none;">
             <thead>
@@ -1751,7 +1743,6 @@
             const stageUi = document.getElementById("stage-ui");
             const clearHiBtn = document.getElementById("clear-hi-btn");
             const soundtrackBtn = document.getElementById("soundtrack-btn");
-            const showRankingBtn = document.getElementById("show-ranking-btn");
             const hint = document.getElementById("controls-hint");
 
             if (isGameRunning) {
@@ -1762,19 +1753,10 @@
                 if (rBtn) rBtn.style.display = "none";
                 if (bPos) bPos.style.display = "block";
                 if (stageUi) stageUi.classList.add("ui-faded");
-
                 const displayStyle = isContinue ? "none" : "block";
-
-                // 表示・非表示の切り替え
                 if (clearHiBtn) clearHiBtn.style.display = displayStyle;
                 if (soundtrackBtn) soundtrackBtn.style.display = displayStyle;
-                if (showRankingBtn) showRankingBtn.style.display = displayStyle;
                 if (hint) hint.style.display = displayStyle;
-
-                // ゲームクリア・ゲームオーバー時以外は名前入力欄を隠す
-                if (!isContinue && isGameRunning === false) {
-                    document.getElementById("name-input-area").style.display = "none";
-                }
             }
         }
 
@@ -1940,12 +1922,6 @@
             document.getElementById("hi-score-val").innerText = "0";
             document.getElementById("hi-stage-val").innerText = "1";
             alert("HIGH SCORE をリセットしました");
-        });
-
-        document.getElementById("exit-btn").addEventListener("click", () => {
-            if (confirm("ゲームを終了しますか？")) {
-                window.location.href = "https://github.com/Hidecade/Stellar-Gravity";
-            }
         });
 
         let isBgmEnabled = true;
