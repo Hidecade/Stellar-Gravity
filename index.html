@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Stellar Gravity</title>
@@ -186,16 +188,19 @@
             justify-content: space-between;
             align-items: center;
         }
-        .track-item:hover {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-        .track-item.active {
-            border-color: #4facfe;
-            background: rgba(79,172,254,0.2);
-            color: #fff;
-            text-shadow: 0 0 8px rgba(79,172,254,0.8);
-        }
+
+            .track-item:hover {
+                background: rgba(255,255,255,0.1);
+                color: white;
+            }
+
+            .track-item.active {
+                border-color: #4facfe;
+                background: rgba(79,172,254,0.2);
+                color: #fff;
+                text-shadow: 0 0 8px rgba(79,172,254,0.8);
+            }
+
         .track-icon {
             font-size: 12px;
         }
@@ -225,16 +230,26 @@
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
             margin-bottom: 20px;
         }
+
         .pause-sub {
             font-size: 14px;
             letter-spacing: 4px;
             color: #ccc;
             animation: pulse-text 2s infinite;
         }
+
         @keyframes pulse-text {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
         }
 
         h1 {
@@ -410,9 +425,21 @@
         }
 
         @keyframes score-bounce {
-            0% { transform: scale(1); opacity: 1; }
-            30% { transform: scale(1.1); opacity: 0.8; text-shadow: 0 0 10px #fff; }
-            100% { transform: scale(1); opacity: 1; }
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            30% {
+                transform: scale(1.1);
+                opacity: 0.8;
+                text-shadow: 0 0 10px #fff;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 
@@ -465,7 +492,7 @@
         </div>
 
         <button id="start-btn" class="btn">START</button>
-        
+
         <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 20px;">SOUNDTRACK</button>
         <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 15px auto 0; opacity: 0.8;">CREDITS</button>
 
@@ -476,7 +503,7 @@
     <div id="soundtrack-overlay">
         <h2 style="font-size:24px; letter-spacing:4px; margin-bottom:10px;">SOUNDTRACK</h2>
         <ul class="track-list" id="track-list-container">
-            </ul>
+        </ul>
         <button id="soundtrack-back-btn" class="btn sub-btn">BACK</button>
     </div>
 
@@ -960,7 +987,7 @@
 
                 // ポーズ中は描画更新をスキップするか、静止画のままにする
                 // ここでは背景や惑星はそのまま描画され続けるが、Runnerが止まっているので動きは止まる
-                
+
                 if (isGameRunning && !isPaused) {
                     const base = ROTATE_BASE_SPEED * difficulty;
                     const speed = isBoosting ? base * ROTATE_BOOST_MULT : base;
@@ -976,7 +1003,7 @@
                 /* Draw Stars */
                 if (starCanvas) {
                     const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
-                    if (!isPaused) staticStarAngle -= 0.0025 * mult; 
+                    if (!isPaused) staticStarAngle -= 0.0025 * mult;
                     ctx.save();
                     ctx.translate(CENTER.x, CENTER.y);
                     ctx.rotate(staticStarAngle);
@@ -996,7 +1023,7 @@
                 ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
                 ctx.setLineDash([10, 14]);
                 ctx.lineDashOffset = -(t * 0.02) % 1000;
-                
+
                 const blinkBase = isWarning ? 0.7 : 0.3;
                 const blinkFreq = isWarning ? 0.015 : 0.006;
                 const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
@@ -1458,7 +1485,7 @@
             document.querySelector("#overlay h1").innerHTML = "GAME OVER";
             document.getElementById("start-btn").textContent = "START";
             clearHiBtn.style.display = "";
-            
+
             // サウンドトラックボタン等も再表示
             updateResetButtonVisibility();
             document.getElementById("soundtrack-btn").style.display = "block";
@@ -1552,11 +1579,11 @@
             }
             document.getElementById("stage-val").innerText = stage;
             document.getElementById("overlay").classList.add("hide");
-            
+
             // 安全なリセット処理
             Composite.clear(engine.world, false);
             // Engine.clear(engine)は削除
-            
+
             if (isNext && pendingCoreBoost) {
                 CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
                 pendingCoreBoost = false;
@@ -1602,45 +1629,61 @@
         }
 
         /* =========================================================
-         * PAUSE LOGIC
+         * PAUSE LOGIC (Modified)
          * ========================================================= */
         const pauseOverlay = document.getElementById("pause-overlay");
 
         function togglePause(shouldPause) {
-            // 状態が同じなら何もしない
             if (isPaused === shouldPause) return;
 
             isPaused = shouldPause;
 
             if (isPaused) {
                 // --- PAUSE ---
-                if (runner) Runner.stop(runner); // Stop physics
-                if (currentAudio) currentAudio.pause(); // Stop audio
-                pauseOverlay.style.display = "flex"; // Show overlay
+                if (runner) Runner.stop(runner);
+                if (currentAudio) currentAudio.pause();
+
+                // ゲーム実行中のみポーズ画面を出す
+                if (isGameRunning) {
+                    pauseOverlay.style.display = "flex";
+                }
             } else {
                 // --- RESUME ---
-                if (runner) Runner.run(runner, engine); // Resume physics
+                if (isGameRunning) {
+                    if (runner) Runner.run(runner, engine);
+                    pauseOverlay.style.display = "none";
+                }
+
+                // BGMの再開（設定がONの場合のみ）
                 if (isBgmEnabled && currentAudio) {
-                    // Resume audio if allowed
                     currentAudio.play().catch(e => console.log("BGM resume blocked:", e));
                 }
-                pauseOverlay.style.display = "none"; // Hide overlay
             }
         }
 
         document.addEventListener("visibilitychange", () => {
-            if (document.hidden) togglePause(true);
+            if (document.hidden) {
+                togglePause(true);
+            } else {
+                togglePause(false);
+            }
         });
 
+        // window.blur は visibilitychange と重複して誤作動することがあるため、
+        // モバイル環境を考慮し visibilitychange に一本化するか、以下のように記述します。
         window.addEventListener("blur", () => {
             togglePause(true);
+        });
+        // focus時も念のため再開処理を入れる
+        window.addEventListener("focus", () => {
+            togglePause(false);
         });
 
         pauseOverlay.addEventListener("click", () => {
             togglePause(false);
         });
         pauseOverlay.addEventListener("touchstart", (e) => {
-            e.preventDefault(); 
+            e.preventDefault();
             togglePause(false);
         });
 
@@ -1654,22 +1697,23 @@
             e.preventDefault();
             e.stopPropagation();
             if (!isGameRunning) return;
-            isPaused = true;
-            Runner.stop(runner);
-            pauseOverlay.style.display = "none"; 
+
+            // 一時的に物理演算を止める
+            const wasPaused = isPaused;
+            togglePause(true);
+            pauseOverlay.style.display = "none"; // confirm中はポーズ画面を隠す
 
             const ok = confirm("ゲームを中断してタイトルに戻りますか？");
             if (ok) {
-                stopBGM();
-                returnToTitle();
-                requestFullScreen();
-            } else {
+                // タイトルに戻る際はポーズ状態を完全に解除する
                 isPaused = false;
-                Runner.run(runner, engine);
-                requestFullScreen();
-                if (isBgmEnabled && currentAudio) {
-                    currentAudio.play().catch(()=>{});
-                }
+                stopBGM(() => {
+                    returnToTitle();
+                    if (isBgmEnabled) playTitleBGM(); // タイトルに戻ってからBGM開始
+                });
+            } else {
+                // キャンセルした場合は元の状態に戻す
+                togglePause(false);
             }
         }
 
@@ -1685,7 +1729,7 @@
         }
 
         window.addEventListener("pointerdown", (e) => {
-            if (e.target.tagName === "BUTTON" || isPaused) return; 
+            if (e.target.tagName === "BUTTON" || isPaused) return;
             if (isGameRunning && !isPaused) {
                 if (e.button !== 0) return;
                 if (isInsideShootArea(e.clientX, e.clientY)) {
@@ -1806,13 +1850,13 @@
             currentAudio = null;
         }
 
+        // BGM再生関数にポーズチェックを追加
         function playBGM() {
-            if (!isBgmEnabled) return;
+            if (!isBgmEnabled || isPaused) return; // ポーズ中は再生予約のみ
             forceStopBGM();
             const bgmIndex = Math.min(Math.floor((stage - 1) / 2), 3);
             let bgmNum = bgmIndex.toString().padStart(2, '0');
             gameBgmEl.src = `audio/StellarGravity_${bgmNum}.mp3`;
-            gameBgmEl.currentTime = 0;
             gameBgmEl.volume = 0.8;
             gameBgmEl.play().catch(() => { });
             currentAudio = gameBgmEl;
@@ -1851,7 +1895,7 @@
         }
 
         function playTitleBGM() {
-            if (!isBgmEnabled) return;
+            if (!isBgmEnabled || isPaused) return;
             forceStopBGM();
             titleBgm.play().catch(() => { });
             currentAudio = titleBgm;
@@ -1897,7 +1941,7 @@
         soundtrackBackBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             forceStopBGM(); // 試聴中の曲を停止
-            if(activeTrackItem) {
+            if (activeTrackItem) {
                 activeTrackItem.classList.remove("active");
                 activeTrackItem.querySelector(".track-icon").textContent = "▶";
                 activeTrackItem = null;
@@ -1935,7 +1979,7 @@
             } else {
                 audioEl.src = track.file;
             }
-            
+
             audioEl.currentTime = 0;
             audioEl.volume = 0.8;
             audioEl.play().catch(e => console.log(e));
