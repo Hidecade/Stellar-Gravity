@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Stellar Gravity</title>
@@ -544,13 +542,16 @@
 
         const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
+        const gameBgmEl = document.getElementById("game-bgm");
+        const clearBgm = document.getElementById("clear-bgm");
+        const titleBgm = document.getElementById("title-bgm");
+        const resetBtn = document.getElementById("reset-btn"); // ここへ移動
+        const pauseOverlay = document.getElementById("pause-overlay");
+
         /* Game State */
         let isClearing = false;
         let isPaused = false;
 
-        const gameBgmEl = document.getElementById("game-bgm");
-        const clearBgm = document.getElementById("clear-bgm");
-        const titleBgm = document.getElementById("title-bgm");
 
         let WIDTH = window.innerWidth;
         let HEIGHT = window.innerHeight;
@@ -1631,9 +1632,9 @@
         /* =========================================================
          * PAUSE LOGIC (Modified)
          * ========================================================= */
-        const pauseOverlay = document.getElementById("pause-overlay");
 
         function togglePause(shouldPause) {
+            // 状態が変わらない場合は何もしない
             if (isPaused === shouldPause) return;
 
             isPaused = shouldPause;
@@ -1654,65 +1655,72 @@
                     pauseOverlay.style.display = "none";
                 }
 
-                // BGMの再開（設定がONの場合のみ）
-                if (isBgmEnabled && currentAudio) {
-                    currentAudio.play().catch(e => console.log("BGM resume blocked:", e));
+                // BGMの再開：設定がONで、かつ何らかのオーディオがセットされている場合のみ
+                if (isBgmEnabled && currentAudio && currentAudio.paused) {
+                    currentAudio.play().catch(e => {
+                        console.log("BGM resume blocked by browser policy");
+                        // ユーザーが画面を触るまで待機するため、ここでは何もしない
+                    });
                 }
             }
         }
 
+        // 複数のイベントが競合しないよう、visibilitychange を優先
         document.addEventListener("visibilitychange", () => {
-            if (document.hidden) {
-                togglePause(true);
-            } else {
+            togglePause(document.hidden);
+        });
+
+        // window の blur/focus は OSレベルの中断に対応するために残すが、
+        // visibilitychange との二重動作を防ぐため、実際の状態をチェックする
+        window.addEventListener("blur", () => {
+            togglePause(true);
+        });
+
+        window.addEventListener("focus", () => {
+            // ページが見えている状態ならポーズ解除を試みる
+            if (!document.hidden) {
                 togglePause(false);
             }
         });
 
-        // window.blur は visibilitychange と重複して誤作動することがあるため、
-        // モバイル環境を考慮し visibilitychange に一本化するか、以下のように記述します。
-        window.addEventListener("blur", () => {
-            togglePause(true);
-        });
-        // focus時も念のため再開処理を入れる
-        window.addEventListener("focus", () => {
-            togglePause(false);
-        });
-
-        pauseOverlay.addEventListener("click", () => {
+        // ポーズ画面タップで復帰
+        pauseOverlay.addEventListener("click", (e) => {
+            e.stopPropagation();
             togglePause(false);
         });
         pauseOverlay.addEventListener("touchstart", (e) => {
             e.preventDefault();
+            e.stopPropagation();
             togglePause(false);
         });
 
         /* =========================================================
-         * End Pause Logic
+         * RESET / BGM FUNCTIONS (Final Adjustments)
          * ========================================================= */
-
-        const resetBtn = document.getElementById("reset-btn");
 
         function handleResetRequest(e) {
             e.preventDefault();
             e.stopPropagation();
             if (!isGameRunning) return;
 
-            // 一時的に物理演算を止める
-            const wasPaused = isPaused;
+            // 確認ダイアログを出す前に、確実に一時停止させる
             togglePause(true);
-            pauseOverlay.style.display = "none"; // confirm中はポーズ画面を隠す
+            pauseOverlay.style.display = "none"; // confirmパネルの邪魔にならないように
 
+            // confirm はブロッキング処理なので、この間 JS は止まる
             const ok = confirm("ゲームを中断してタイトルに戻りますか？");
+
             if (ok) {
-                // タイトルに戻る際はポーズ状態を完全に解除する
-                isPaused = false;
+                // タイトルに戻るための完全なクリーンアップ
+                isPaused = false; // フラグを先に折る
+                isGameRunning = false;
                 stopBGM(() => {
                     returnToTitle();
-                    if (isBgmEnabled) playTitleBGM(); // タイトルに戻ってからBGM開始
+                    // タイトルBGMが必要ならここで再生
+                    if (isBgmEnabled) playTitleBGM();
                 });
             } else {
-                // キャンセルした場合は元の状態に戻す
+                // キャンセルした場合はゲームを再開
                 togglePause(false);
             }
         }
