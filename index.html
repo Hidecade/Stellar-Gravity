@@ -474,7 +474,7 @@
             .ranking-table th {
                 color: #4facfe;
                 font-size: 14px;
-                letter-spacing: 3px;
+                letter-spacing: 1px;
             }
 
         .rank-1 {
@@ -611,8 +611,9 @@
             <thead>
                 <tr>
                     <th width="15%">RANK</th>
-                    <th width="50%">NAME</th>
-                    <th width="35%">SCORE</th>
+                    <th width="45%">NAME</th>
+                    <th width="15%">STAGE</th>
+                    <th width="25%">SCORE</th>
                 </tr>
             </thead>
             <tbody id="ranking-list-body">
@@ -1616,6 +1617,7 @@
 
             // ▼▼▼ 追加: ランキング用処理 ▼▼▼
             window.finalScore = score; // スコアを外部公開
+            window.finalStage = stage; // ★この行を追加
             document.getElementById("name-input-area").style.display = "flex"; // 入力欄表示
             const submitBtn = document.getElementById("submit-score-btn");
             submitBtn.disabled = false;
@@ -2145,7 +2147,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // ▼▼▼ あなたのFirebase設定に書き換えてください ▼▼▼
+        // ▼▼▼ あなたのFirebase設定 (変更なし) ▼▼▼
         const firebaseConfig = {
             apiKey: "AIzaSyCRjHe893FZopPErdjtgX8KJ8KPT_rmgnI",
             authDomain: "stellar-gravity.firebaseapp.com",
@@ -2160,7 +2162,7 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const SCORES_COLLECTION = "stellar_gravity_scores"; // コレクション名
+        const SCORES_COLLECTION = "stellar_gravity_scores";
 
         // DOM Elements
         const rankingOverlay = document.getElementById("ranking-overlay");
@@ -2173,6 +2175,7 @@
         const nameInputArea = document.getElementById("name-input-area");
         const nameInput = document.getElementById("player-name-input");
         const submitBtn = document.getElementById("submit-score-btn");
+        const skipBtn = document.getElementById("skip-score-btn");
 
         // --- ランキング取得・表示関数 ---
         async function fetchAndShowRanking() {
@@ -2200,11 +2203,15 @@
                     else if (rank === 2) rankClass = "rank-2";
                     else if (rank === 3) rankClass = "rank-3";
 
+                    // 過去のデータにstageがない場合の対応 (|| "-")
+                    const stageVal = data.stage ? data.stage : "-";
+
                     tr.innerHTML = `
-                        <td class="${rankClass}">${rank}</td>
-                        <td style="text-align:left; padding-left:20px;">${escapeHtml(data.name)}</td>
-                        <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                    `;
+                            <td class="${rankClass}">${rank}</td>
+                            <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                            <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                            <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                        `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
@@ -2218,22 +2225,10 @@
             }
         }
 
-        // 既存の取得コードの下あたりに追加
-        const skipBtn = document.getElementById("skip-score-btn");
-
-        // --- スキップボタンの処理 ---
-        skipBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            // 入力エリアを隠す
-            nameInputArea.style.display = "none";
-            // 必要に応じてタイトルのテキストなどを再セット（triggerGameOverでセット済みなので隠すだけでOK）
-        });
-
-        // --- スコア送信関数 ---
-        window.submitMyScore = async function (score) {
+        // --- スコア送信関数 (Stage引数を追加) ---
+        window.submitMyScore = async function (score, stage) {
             const name = nameInput.value.trim() || "UNKNOWN";
 
-            // ボタンを無効化（連打防止）
             submitBtn.disabled = true;
             submitBtn.textContent = "SENDING...";
 
@@ -2241,14 +2236,12 @@
                 await addDoc(collection(db, SCORES_COLLECTION), {
                     name: name,
                     score: score,
+                    stage: stage, // ★ステージ情報を追加保存
                     timestamp: serverTimestamp()
                 });
 
-                // 送信完了後、入力欄を隠してランキングを表示
                 nameInputArea.style.display = "none";
                 fetchAndShowRanking();
-
-                // 送信済みフラグを立てる（任意）
                 localStorage.setItem("stellarGravity_last_name", name);
 
             } catch (e) {
@@ -2261,56 +2254,38 @@
 
         // --- Event Listeners ---
         showRankingBtn.addEventListener("click", (e) => {
-            e.stopPropagation(); // ゲーム開始を防ぐ
+            e.stopPropagation();
             fetchAndShowRanking();
         });
 
         closeRankingBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             rankingOverlay.style.display = "none";
-            // もしゲームオーバー画面から開いていた場合、ボタンを戻すなどの処理が必要ならここに
-
-            // 名前送信後の場合、タイトルに戻る動作を模倣（簡易的）
-            if (nameInputArea.style.display === "none" && !document.getElementById("overlay").classList.contains("hide")) {
-                // 特に何もしなくてもOK、オーバーレイが残っているため
-            }
         });
 
+        // SKIPボタン
+        skipBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            nameInputArea.style.display = "none";
+        });
+
+        // 送信ボタン (引数にstageを追加)
         submitBtn.addEventListener("click", () => {
-            // グローバルスコープのscore変数を参照するため、既存スクリプト側で値を渡すか、グローバル変数を読む
-            // ここでは既存のグローバル変数 score を読み取ることを想定
-            // ※type="module"からはグローバル変数に直接アクセス可能ですが、念のためwindow経由で関数を公開して既存JSから呼び出す方式が安全です
-            // 今回は「ボタンクリック」で発火するので、その時点でグローバルscoreを参照します。
-
-            // ただし、module内スコープのため、既存の global score変数が見えない可能性があります。
-            // 安全策として、window.currentScore という変数を既存JS側で更新してもらうか、
-            // 既存JS側で `score` 変数が `window.score` になっているか確認が必要です。
-            // 既存コードを見ると `let score = 0;` なので、moduleからは直接見えません。
-
-            // ★ 解決策: 既存JSの `triggerGameOver` 内で `window.finalScore = score;` のように値を露出させる必要があります。
             const finalScore = window.finalScore || 0;
-            window.submitMyScore(finalScore);
+            const finalStage = window.finalStage || 1; // ステージ情報を取得
+            window.submitMyScore(finalScore, finalStage);
         });
 
-        // XSS対策
         function escapeHtml(str) {
             if (!str) return "";
             return str.replace(/[&<>"']/g, function (match) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#39;'
-                }[match];
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[match];
             });
         }
 
-        // 前回の名前を復元
         const lastName = localStorage.getItem("stellarGravity_last_name");
         if (lastName) nameInput.value = lastName;
 
     </script>
-
 </body>
 </html>
