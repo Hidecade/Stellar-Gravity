@@ -442,6 +442,102 @@
                 opacity: 1;
             }
         }
+
+
+
+        /* =========================================================
+   Ranking UI
+   ========================================================= */
+        #ranking-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: none; /* 初期非表示 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .ranking-table {
+            width: 90%;
+            max-width: 500px;
+            border-collapse: collapse;
+            color: #fff;
+            margin: 20px 0;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+
+            .ranking-table th, .ranking-table td {
+                padding: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                text-align: center;
+            }
+
+            .ranking-table th {
+                color: #4facfe;
+                font-size: 14px;
+                letter-spacing: 3px;
+            }
+
+        .rank-1 {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            font-weight: bold;
+        }
+
+        .rank-2 {
+            color: #c0c0c0;
+            text-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
+            font-weight: bold;
+        }
+
+        .rank-3 {
+            color: #cd7f32;
+            text-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
+            font-weight: bold;
+        }
+
+        /* Name Input Area (Game Over) */
+        #name-input-area {
+            margin-top: 15px;
+            display: none; /* ゲームオーバー時に表示 */
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #player-name-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #4facfe;
+            color: white;
+            padding: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            text-align: center;
+            width: 200px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        #submit-score-btn {
+            background: #4facfe;
+            color: #000;
+            border: none;
+            padding: 10px 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 20px;
+            letter-spacing: 2px;
+        }
+
+            #submit-score-btn:disabled {
+                background: #555;
+                cursor: not-allowed;
+            }
     </style>
 
 </head>
@@ -494,11 +590,39 @@
 
         <button id="start-btn" class="btn">START</button>
 
-        <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 20px;">SOUNDTRACK</button>
-        <button id="exit-btn" class="btn sub-btn" style="display: block; margin: 15px auto 0; opacity: 0.8;">CREDITS</button>
+        <button id="show-ranking-btn" class="btn sub-btn" style="margin-top: 15px;">WORLD RANKING</button>
 
-        <button id="clear-hi-btn" class="btn sub-btn">CLEAR HIGH SCORE</button>
+        <button id="soundtrack-btn" class="btn sub-btn" style="margin-top: 15px;">SOUNDTRACK</button>
+
+
+        <div id="name-input-area" style="margin-top: 15px;">
+            <div style="font-size:10px; color:#aaa; margin-bottom:5px; letter-spacing: 2px;">ENTER YOUR NAME</div>
+            <input type="text" id="player-name-input" maxlength="10" placeholder="AAA"
+                   style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px; font-family: 'Orbitron', sans-serif; text-align: center; border-radius: 5px; outline: none; margin-bottom: 10px;">
+            <br>
+            <button id="submit-score-btn" class="btn sub-btn" style="background: rgba(79,172,254,0.3); border-color: #4facfe; opacity: 1;">SUBMIT SCORE</button>
+        </div>
+
+        <button id="clear-hi-btn" class="btn sub-btn" style="margin-top: 20px;">CLEAR MY HIGH SCORE</button>
+
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
+    </div>
+
+    <div id="ranking-overlay">
+        <h2 style="font-size:32px; letter-spacing:6px; color:#fff; margin-bottom:10px; text-shadow: 0 0 15px #4facfe;">WORLD RANKING</h2>
+        <div id="loading-ranking" style="color:#aaa; letter-spacing:2px;">LOADING...</div>
+        <table class="ranking-table" id="ranking-table" style="display:none;">
+            <thead>
+                <tr>
+                    <th width="15%">RANK</th>
+                    <th width="50%">NAME</th>
+                    <th width="35%">SCORE</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-list-body">
+            </tbody>
+        </table>
+        <button id="close-ranking-btn" class="btn sub-btn">CLOSE</button>
     </div>
 
     <div id="soundtrack-overlay">
@@ -1494,6 +1618,14 @@
             updateResetButtonVisibility();
             document.getElementById("soundtrack-btn").style.display = "block";
 
+            // ▼▼▼ 追加: ランキング用処理 ▼▼▼
+            window.finalScore = score; // スコアを外部公開
+            document.getElementById("name-input-area").style.display = "flex"; // 入力欄表示
+            const submitBtn = document.getElementById("submit-score-btn");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "SUBMIT SCORE";
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
             if (isBgmEnabled) playTitleBGM();
         }
 
@@ -1556,6 +1688,12 @@
 
         document.getElementById("start-btn").addEventListener("click", (e) => {
             e.preventDefault(); e.stopPropagation();
+
+            // ▼▼▼ 追加: ゲーム開始時に入力欄を隠す処理 ▼▼▼
+            const nameInputArea = document.getElementById("name-input-area");
+            if (nameInputArea) nameInputArea.style.display = "none";
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
             requestFullScreen();
             forceStopBGM();
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
@@ -1611,9 +1749,9 @@
             const rBtn = document.getElementById("reset-btn");
             const bPos = document.getElementById("bgm-control-pos");
             const stageUi = document.getElementById("stage-ui");
-            const exitBtn = document.getElementById("exit-btn");
             const clearHiBtn = document.getElementById("clear-hi-btn");
             const soundtrackBtn = document.getElementById("soundtrack-btn");
+            const showRankingBtn = document.getElementById("show-ranking-btn");
             const hint = document.getElementById("controls-hint");
 
             if (isGameRunning) {
@@ -1624,11 +1762,19 @@
                 if (rBtn) rBtn.style.display = "none";
                 if (bPos) bPos.style.display = "block";
                 if (stageUi) stageUi.classList.add("ui-faded");
+
                 const displayStyle = isContinue ? "none" : "block";
-                if (exitBtn) exitBtn.style.display = displayStyle;
+
+                // 表示・非表示の切り替え
                 if (clearHiBtn) clearHiBtn.style.display = displayStyle;
                 if (soundtrackBtn) soundtrackBtn.style.display = displayStyle;
+                if (showRankingBtn) showRankingBtn.style.display = displayStyle;
                 if (hint) hint.style.display = displayStyle;
+
+                // ゲームクリア・ゲームオーバー時以外は名前入力欄を隠す
+                if (!isContinue && isGameRunning === false) {
+                    document.getElementById("name-input-area").style.display = "none";
+                }
             }
         }
 
@@ -1691,6 +1837,7 @@
             e.stopPropagation();
             togglePause(false);
         });
+
         pauseOverlay.addEventListener("touchstart", (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1998,5 +2145,167 @@
         }
 
     </script>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // ▼▼▼ あなたのFirebase設定に書き換えてください ▼▼▼
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRjHe893FZopPErdjtgX8KJ8KPT_rmgnI",
+            authDomain: "stellar-gravity.firebaseapp.com",
+            projectId: "stellar-gravity",
+            storageBucket: "stellar-gravity.firebasestorage.app",
+            messagingSenderId: "936422140891",
+            appId: "1:936422140891:web:d4e55c30507570602515fe",
+            measurementId: "G-0FWP5X8T2T"
+        };
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const SCORES_COLLECTION = "stellar_gravity_scores"; // コレクション名
+
+        // DOM Elements
+        const rankingOverlay = document.getElementById("ranking-overlay");
+        const showRankingBtn = document.getElementById("show-ranking-btn");
+        const closeRankingBtn = document.getElementById("close-ranking-btn");
+        const rankingBody = document.getElementById("ranking-list-body");
+        const loadingEl = document.getElementById("loading-ranking");
+        const tableEl = document.getElementById("ranking-table");
+
+        const nameInputArea = document.getElementById("name-input-area");
+        const nameInput = document.getElementById("player-name-input");
+        const submitBtn = document.getElementById("submit-score-btn");
+
+        // --- ランキング取得・表示関数 ---
+        async function fetchAndShowRanking() {
+            rankingOverlay.style.display = "flex";
+            loadingEl.style.display = "block";
+            tableEl.style.display = "none";
+            rankingBody.innerHTML = "";
+
+            try {
+                const q = query(
+                    collection(db, SCORES_COLLECTION),
+                    orderBy("score", "desc"),
+                    limit(10)
+                );
+                const querySnapshot = await getDocs(q);
+
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const tr = document.createElement("tr");
+
+                    // Rank Styling
+                    let rankClass = "";
+                    if (rank === 1) rankClass = "rank-1";
+                    else if (rank === 2) rankClass = "rank-2";
+                    else if (rank === 3) rankClass = "rank-3";
+
+                    tr.innerHTML = `
+                        <td class="${rankClass}">${rank}</td>
+                        <td style="text-align:left; padding-left:20px;">${escapeHtml(data.name)}</td>
+                        <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                    `;
+                    rankingBody.appendChild(tr);
+                    rank++;
+                });
+
+                loadingEl.style.display = "none";
+                tableEl.style.display = "table";
+
+            } catch (e) {
+                console.error("Error fetching ranking: ", e);
+                loadingEl.textContent = "FAILED TO LOAD";
+            }
+        }
+
+        // --- スコア送信関数 ---
+        window.submitMyScore = async function (score) {
+            const name = nameInput.value.trim() || "UNKNOWN";
+
+            // ボタンを無効化（連打防止）
+            submitBtn.disabled = true;
+            submitBtn.textContent = "SENDING...";
+
+            try {
+                await addDoc(collection(db, SCORES_COLLECTION), {
+                    name: name,
+                    score: score,
+                    timestamp: serverTimestamp()
+                });
+
+                // 送信完了後、入力欄を隠してランキングを表示
+                nameInputArea.style.display = "none";
+                fetchAndShowRanking();
+
+                // 送信済みフラグを立てる（任意）
+                localStorage.setItem("stellarGravity_last_name", name);
+
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert("送信に失敗しました。");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "SUBMIT SCORE";
+            }
+        };
+
+        // --- Event Listeners ---
+        showRankingBtn.addEventListener("click", (e) => {
+            e.stopPropagation(); // ゲーム開始を防ぐ
+            fetchAndShowRanking();
+        });
+
+        closeRankingBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            rankingOverlay.style.display = "none";
+            // もしゲームオーバー画面から開いていた場合、ボタンを戻すなどの処理が必要ならここに
+
+            // 名前送信後の場合、タイトルに戻る動作を模倣（簡易的）
+            if (nameInputArea.style.display === "none" && !document.getElementById("overlay").classList.contains("hide")) {
+                // 特に何もしなくてもOK、オーバーレイが残っているため
+            }
+        });
+
+        submitBtn.addEventListener("click", () => {
+            // グローバルスコープのscore変数を参照するため、既存スクリプト側で値を渡すか、グローバル変数を読む
+            // ここでは既存のグローバル変数 score を読み取ることを想定
+            // ※type="module"からはグローバル変数に直接アクセス可能ですが、念のためwindow経由で関数を公開して既存JSから呼び出す方式が安全です
+            // 今回は「ボタンクリック」で発火するので、その時点でグローバルscoreを参照します。
+
+            // ただし、module内スコープのため、既存の global score変数が見えない可能性があります。
+            // 安全策として、window.currentScore という変数を既存JS側で更新してもらうか、
+            // 既存JS側で `score` 変数が `window.score` になっているか確認が必要です。
+            // 既存コードを見ると `let score = 0;` なので、moduleからは直接見えません。
+
+            // ★ 解決策: 既存JSの `triggerGameOver` 内で `window.finalScore = score;` のように値を露出させる必要があります。
+            const finalScore = window.finalScore || 0;
+            window.submitMyScore(finalScore);
+        });
+
+        // XSS対策
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str.replace(/[&<>"']/g, function (match) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[match];
+            });
+        }
+
+        // 前回の名前を復元
+        const lastName = localStorage.getItem("stellarGravity_last_name");
+        if (lastName) nameInput.value = lastName;
+
+    </script>
+
 </body>
 </html>
