@@ -338,57 +338,165 @@
             bottom: 60px;
             display: flex;
             align-items: flex-end;
-            gap: 20px;
+            gap: 15px;
             pointer-events: none;
             z-index: 1000;
         }
 
         #management-btn-area {
             position: relative;
-            width: 110px;
-            height: 45px;
             pointer-events: auto;
-            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            height: 30px;
         }
 
-        #reset-btn, #bgm-control-pos {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        /* ゲーム中の右下PAUSEボタン */
+        #hud-pause-btn {
+            width: 80px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: 2px solid #4facfe; /* 青っぽい枠線 */
+            border-radius: 20px;
             font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            outline: none;
+            display: none; /* JSで表示制御 */
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: transform 0.1s;
         }
 
-        /* BGMとReset共通の基本スタイル */
-        #reset-btn, #bgm-toggle {
+            #hud-pause-btn:active {
+                transform: scale(0.95);
+                background: rgba(79, 172, 254, 0.3);
+            }
+
+        /* タイトル画面用 BGMボタン */
+        #bgm-control-pos {
+            display: block;
+            width: 80px;
+            height: 30px;
+        }
+
+        #bgm-toggle {
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.75);
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.6);
             border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
             font-size: 10px;
             letter-spacing: 1px;
             cursor: pointer;
             outline: none;
-            -webkit-tap-highlight-color: transparent;
-            transition: background 0.1s, transform 0.05s;
+            padding: 0;
         }
 
-        /* Resetボタン専用 */
-        #reset-btn {
-            display: none;
-            background: rgba(150, 0, 0, 0.7);
-            border-color: rgba(255, 100, 100, 0.8);
-        }
-
-            #reset-btn:active, #bgm-toggle:active {
+            #bgm-toggle:active {
                 transform: scale(0.95);
                 background: rgba(255, 255, 255, 0.3);
             }
 
- 
+        /* =========================================================
+         Pause Overlay (New Menu)
+         ========================================================= */
+        #pause-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85); /* 背景を濃く */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .pause-text {
+            font-size: 42px;
+            letter-spacing: 8px;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+        }
+
+        /* ポーズメニュー内のボタン */
+        .pause-menu-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            letter-spacing: 4px;
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.8);
+            padding: 15px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            min-width: 200px;
+            transition: all 0.2s;
+        }
+
+            .pause-menu-btn:hover {
+                background: white;
+                color: black;
+            }
+
+        #pause-quit-btn {
+            font-size: 14px;
+            padding: 12px 30px;
+            opacity: 0.8;
+            border-color: rgba(255, 100, 100, 0.6);
+            color: #ffcccc;
+        }
+
+            #pause-quit-btn:hover {
+                background: rgba(255, 50, 50, 0.8);
+                color: white;
+            }
+
+        /* RESETボタン: 赤い背景 */
+        #reset-btn {
+            display: none; /* 初期非表示 */
+            background: rgba(150, 0, 0, 0.7);
+            border-color: rgba(255, 100, 100, 0.8);
+        }
+
+        /* BGMボタンエリア (タイトル画面用) */
+        #bgm-control-pos {
+            display: block;
+            width: 80px;
+            height: 30px;
+        }
+
+        #bgm-toggle {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            transition: background 0.1s, transform 0.05s;
+        }
+
+            #bgm-toggle:active {
+                transform: scale(0.95);
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+        /* Stage Display */
         #stage-ui {
             text-align: right;
             pointer-events: none;
@@ -411,13 +519,9 @@
             transition: opacity 0.5s;
         }
 
+        /* Animations */
         .score-bounce {
             animation: score-bounce 0.5s ease-out;
-        }
-
-        #controls-hint {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 400;
         }
 
         @keyframes score-bounce {
@@ -463,6 +567,7 @@
             margin: 20px 0;
             font-size: 16px;
             letter-spacing: 1px;
+            background: rgba(255, 255, 255, 0.05);
         }
 
             .ranking-table th, .ranking-table td {
@@ -477,22 +582,21 @@
                 letter-spacing: 1px;
             }
 
+        /* 金銀銅の装飾をより輝かせる */
         .rank-1 {
             color: #ffd700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-            font-weight: bold;
+            text-shadow: 0 0 12px #ffd700;
+            font-size: 20px;
         }
 
         .rank-2 {
             color: #c0c0c0;
-            text-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
-            font-weight: bold;
+            text-shadow: 0 0 10px #c0c0c0;
         }
 
         .rank-3 {
             color: #cd7f32;
-            text-shadow: 0 0 10px rgba(205, 127, 50, 0.5);
-            font-weight: bold;
+            text-shadow: 0 0 10px #cd7f32;
         }
 
         /* Name Input Area (Game Over) */
@@ -502,6 +606,11 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(79, 172, 254, 0.5);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
         #player-name-input {
@@ -640,6 +749,7 @@
     <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 60px; display: flex; align-items: flex-end; gap: 0px; pointer-events: none; z-index: 1000;">
 
         <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 30px;">
+            <button id="pause-btn" class="hud-btn">PAUSE</button>
             <button id="reset-btn">RESET</button>
             <div id="bgm-control-pos">
                 <button id="bgm-toggle" class="btn sub-btn" style="margin-top: 0; width: 100%; height: 100%; padding: 0;">BGM ON</button>
@@ -669,8 +779,12 @@
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
         const titleBgm = document.getElementById("title-bgm");
-        const resetBtn = document.getElementById("reset-btn"); // ここへ移動
-        const pauseOverlay = document.getElementById("pause-overlay");
+        //const resetBtn = document.getElementById("reset-btn"); // ここへ移動
+        //const pauseBtn = document.getElementById("pause-btn");
+        //const pauseOverlay = document.getElementById("pause-overlay");
+        const hudPauseBtn = document.getElementById("hud-pause-btn");
+        const pauseResumeBtn = document.getElementById("pause-resume-btn");
+        const pauseQuitBtn = document.getElementById("pause-quit-btn");
 
         /* Game State */
         let isClearing = false;
@@ -1609,20 +1723,29 @@
             bgmToggleBtn.style.opacity = "0.75";
             document.querySelector("#overlay h1").innerHTML = "GAME OVER";
             document.getElementById("start-btn").textContent = "START";
-            clearHiBtn.style.display = "";
 
-            // サウンドトラックボタン等も再表示
-            updateResetButtonVisibility();
-            document.getElementById("soundtrack-btn").style.display = "block";
+            // 削除: ここで個別に表示設定すると隠れなくなるため削除します
+            // clearHiBtn.style.display = ""; 
 
             // ▼▼▼ 追加: ランキング用処理 ▼▼▼
-            window.finalScore = score; // スコアを外部公開
-            window.finalStage = stage; // ★この行を追加
-            document.getElementById("name-input-area").style.display = "flex"; // 入力欄表示
+            window.finalScore = score;
+            window.finalStage = stage;
+
+            // 1. 先に名前入力欄を表示状態にする (重要)
+            // これを先にやらないと、updateResetButtonVisibility が「入力中」と認識できません
+            document.getElementById("name-input-area").style.display = "flex";
+
             const submitBtn = document.getElementById("submit-score-btn");
             submitBtn.disabled = false;
             submitBtn.textContent = "SUBMIT SCORE";
             // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+            // 削除: ここで個別に表示設定すると隠れなくなるため削除します
+            // document.getElementById("soundtrack-btn").style.display = "block";
+
+            // 2. 最後に表示切替関数を呼ぶ
+            // 名前入力欄が flex になっているので、ボタン類が非表示になります
+            updateResetButtonVisibility();
 
             if (isBgmEnabled) playTitleBGM();
         }
@@ -1744,38 +1867,42 @@
         });
 
         function updateResetButtonVisibility() {
-            const rBtn = document.getElementById("reset-btn");
+            // 変数取得
+            const pBtn = document.getElementById("hud-pause-btn");
             const bPos = document.getElementById("bgm-control-pos");
             const stageUi = document.getElementById("stage-ui");
+
+            // サブボタン群
             const clearHiBtn = document.getElementById("clear-hi-btn");
             const soundtrackBtn = document.getElementById("soundtrack-btn");
             const showRankingBtn = document.getElementById("show-ranking-btn");
             const hint = document.getElementById("controls-hint");
+            const startBtn = document.getElementById("start-btn");
+            const nameArea = document.getElementById("name-input-area");
 
             if (isGameRunning) {
-                if (rBtn) rBtn.style.display = "block";
-                if (bPos) bPos.style.display = "none";
+                // --- ゲームプレイ中 ---
+                if (pBtn) pBtn.style.display = "flex"; // PAUSEボタン表示
+                if (bPos) bPos.style.display = "none"; // BGMボタン非表示
                 if (stageUi) stageUi.classList.remove("ui-faded");
             } else {
-                if (rBtn) rBtn.style.display = "none";
-                if (bPos) bPos.style.display = "block";
+                // --- ゲーム停止中 ---
+                if (pBtn) pBtn.style.display = "none"; // PAUSEボタン非表示
+                if (bPos) bPos.style.display = "block"; // BGMボタン表示
                 if (stageUi) stageUi.classList.add("ui-faded");
 
-                // クリアしてNEXT待ちの時は none、ゲームオーバーやタイトルの時は block
-                const titleElementsStyle = isContinue ? "none" : "block";
+                // タイトル画面UIの制御
+                const isStageClear = isContinue;
+                const isGameOverInput = (nameArea && nameArea.style.display === "flex");
+                const titleElementsStyle = (isStageClear || isGameOverInput) ? "none" : "block";
 
                 if (clearHiBtn) clearHiBtn.style.display = titleElementsStyle;
                 if (soundtrackBtn) soundtrackBtn.style.display = titleElementsStyle;
+                if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
                 if (hint) hint.style.display = titleElementsStyle;
 
-                // 【クリア時はランキングボタンを出さない】
-                if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
-
-                // ゲームオーバーで名前入力待ちの場所以外（タイトルに戻った後など）は隠す
-                const nameArea = document.getElementById("name-input-area");
-                if (nameArea && !isContinue && isGameRunning === false) {
-                    // triggerGameOverで flex になるので、ここでは特に自動で none にしなくてもOKですが
-                    // リセット時などは隠すようにしておくと安全です
+                if (startBtn) {
+                    startBtn.style.display = isGameOverInput ? "none" : "block";
                 }
             }
         }
@@ -1880,6 +2007,62 @@
         resetBtn.addEventListener("click", handleResetRequest);
         resetBtn.addEventListener("touchstart", (e) => { handleResetRequest(e); }, { passive: false });
         resetBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+
+        /* =========================================================
+                 * EVENT LISTENERS FOR PAUSE & HUD
+                 * ========================================================= */
+
+        // 1. 右下のPAUSEボタン (HUD)
+        if (hudPauseBtn) {
+            const handlePause = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isGameRunning && !isPaused) {
+                    togglePause(true); // ポーズする
+                }
+            };
+            hudPauseBtn.addEventListener("click", handlePause);
+            hudPauseBtn.addEventListener("touchstart", handlePause, { passive: false });
+            hudPauseBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+        }
+
+        // 2. ポーズ画面内の「RESUME」ボタン
+        if (pauseResumeBtn) {
+            const handleResume = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                togglePause(false); // ゲーム再開
+            };
+            pauseResumeBtn.addEventListener("click", handleResume);
+            pauseResumeBtn.addEventListener("touchstart", handleResume, { passive: false });
+        }
+
+        // 3. ポーズ画面内の「TITLE」ボタン (旧RESET機能)
+        if (pauseQuitBtn) {
+            const handleQuit = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // 確認ダイアログ
+                const ok = confirm("タイトルに戻りますか？\n(現在のスコアは破棄されます)");
+                if (ok) {
+                    // ポーズ解除フラグ処理
+                    isPaused = false;
+                    isGameRunning = false;
+
+                    // ポーズ画面を隠す
+                    document.getElementById("pause-overlay").style.display = "none";
+
+                    // タイトルに戻る処理
+                    stopBGM(() => {
+                        returnToTitle();
+                        if (isBgmEnabled) playTitleBGM();
+                    });
+                }
+            };
+            pauseQuitBtn.addEventListener("click", handleQuit);
+            pauseQuitBtn.addEventListener("touchstart", handleQuit, { passive: false });
+        }
 
         function isInsideShootArea(clientX, clientY) {
             const boostRect = document.getElementById("boost-btn").getBoundingClientRect();
@@ -2225,28 +2408,44 @@
             }
         }
 
-        // --- スコア送信関数 (Stage引数を追加) ---
+        // --- スコア送信関数 (修正版) ---
         window.submitMyScore = async function (score, stage) {
-            const name = nameInput.value.trim() || "UNKNOWN";
+            const rawName = nameInput.value.trim();
 
+            // バリデーション: 空文字またはスペースのみを防止
+            if (!rawName) {
+                alert("名前を入力してください。");
+                return;
+            }
+
+            const name = rawName;
             submitBtn.disabled = true;
             submitBtn.textContent = "SENDING...";
 
             try {
                 await addDoc(collection(db, SCORES_COLLECTION), {
                     name: name,
-                    score: score,
-                    stage: stage, // ★ステージ情報を追加保存
+                    score: Number(score), // 数値型を保証
+                    stage: Number(stage),
                     timestamp: serverTimestamp()
                 });
 
+                // 送信成功後の処理
                 nameInputArea.style.display = "none";
-                fetchAndShowRanking();
                 localStorage.setItem("stellarGravity_last_name", name);
+
+                // ★重要: ここでボタン類を再表示させる
+                // これがないと、ランキングを閉じた後にボタンが何もない状態になります
+                if (typeof updateResetButtonVisibility === "function") {
+                    updateResetButtonVisibility();
+                }
+
+                // ランキングを再取得して表示
+                await fetchAndShowRanking();
 
             } catch (e) {
                 console.error("Error adding document: ", e);
-                alert("送信に失敗しました。");
+                alert("通信エラーが発生しました。");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "SUBMIT SCORE";
             }
@@ -2261,12 +2460,22 @@
         closeRankingBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             rankingOverlay.style.display = "none";
+
+            document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
+            document.getElementById("start-btn").textContent = "START";
         });
 
         // SKIPボタン
         skipBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            nameInputArea.style.display = "none";
+            document.getElementById("name-input-area").style.display = "none";
+
+            // タイトル画面の表記に戻す
+            document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
+            document.getElementById("start-btn").textContent = "START";
+
+            // ボタンを再表示させるために呼び出し
+            updateResetButtonVisibility();
         });
 
         // 送信ボタン (引数にstageを追加)
