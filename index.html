@@ -15,7 +15,6 @@
     <link rel="apple-touch-icon" href="img/StellarGravity.png">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <style>
@@ -207,21 +206,19 @@
         }
 
         /* =========================================================
-         Pause Overlay
+         Pause Overlay (New Menu)
          ========================================================= */
         #pause-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.85); /* 背景を濃く */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 2000;
-            text-align: center;
-            cursor: pointer;
         }
 
         .pause-text {
@@ -229,29 +226,42 @@
             letter-spacing: 8px;
             color: white;
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            margin-bottom: 20px;
+            margin-bottom: 40px;
         }
 
-        .pause-sub {
-            font-size: 14px;
+        /* ポーズメニュー内のボタン */
+        .pause-menu-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
             letter-spacing: 4px;
-            color: #ccc;
-            animation: pulse-text 2s infinite;
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.8);
+            padding: 15px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            min-width: 200px;
+            transition: all 0.2s;
         }
 
-        @keyframes pulse-text {
-            0% {
-                opacity: 0.5;
+            .pause-menu-btn:hover {
+                background: white;
+                color: black;
             }
 
-            50% {
-                opacity: 1;
-            }
-
-            100% {
-                opacity: 0.5;
-            }
+        #pause-quit-btn {
+            font-size: 14px;
+            padding: 12px 30px;
+            opacity: 0.8;
+            border-color: rgba(255, 100, 100, 0.6);
+            color: #ffcccc;
         }
+        
+            #pause-quit-btn:hover {
+                background: rgba(255, 50, 50, 0.8);
+                color: white;
+            }
 
         h1 {
             margin: 0;
@@ -371,104 +381,12 @@
             transition: transform 0.1s;
         }
 
-            #hud-pause-btn:active {
-                transform: scale(0.95);
-                background: rgba(79, 172, 254, 0.3);
-            }
+        #hud-pause-btn:active {
+            transform: scale(0.95);
+            background: rgba(79, 172, 254, 0.3);
+        }
 
         /* タイトル画面用 BGMボタン */
-        #bgm-control-pos {
-            display: block;
-            width: 80px;
-            height: 30px;
-        }
-
-        #bgm-toggle {
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 10px;
-            letter-spacing: 1px;
-            cursor: pointer;
-            outline: none;
-            padding: 0;
-        }
-
-            #bgm-toggle:active {
-                transform: scale(0.95);
-                background: rgba(255, 255, 255, 0.3);
-            }
-
-        /* =========================================================
-         Pause Overlay (New Menu)
-         ========================================================= */
-        #pause-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.85); /* 背景を濃く */
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .pause-text {
-            font-size: 42px;
-            letter-spacing: 8px;
-            color: white;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            margin-bottom: 40px;
-        }
-
-        /* ポーズメニュー内のボタン */
-        .pause-menu-btn {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            letter-spacing: 4px;
-            background: transparent;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.8);
-            padding: 15px 40px;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            min-width: 200px;
-            transition: all 0.2s;
-        }
-
-            .pause-menu-btn:hover {
-                background: white;
-                color: black;
-            }
-
-        #pause-quit-btn {
-            font-size: 14px;
-            padding: 12px 30px;
-            opacity: 0.8;
-            border-color: rgba(255, 100, 100, 0.6);
-            color: #ffcccc;
-        }
-
-            #pause-quit-btn:hover {
-                background: rgba(255, 50, 50, 0.8);
-                color: white;
-            }
-
-        /* RESETボタン: 赤い背景 */
-        #reset-btn {
-            display: none; /* 初期非表示 */
-            background: rgba(150, 0, 0, 0.7);
-            border-color: rgba(255, 100, 100, 0.8);
-        }
-
-        /* BGMボタンエリア (タイトル画面用) */
         #bgm-control-pos {
             display: block;
             width: 80px;
@@ -491,10 +409,10 @@
             transition: background 0.1s, transform 0.05s;
         }
 
-            #bgm-toggle:active {
-                transform: scale(0.95);
-                background: rgba(255, 255, 255, 0.3);
-            }
+        #bgm-toggle:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.3);
+        }
 
         /* Stage Display */
         #stage-ui {
@@ -519,9 +437,13 @@
             transition: opacity 0.5s;
         }
 
-        /* Animations */
         .score-bounce {
             animation: score-bounce 0.5s ease-out;
+        }
+
+        #controls-hint {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
         }
 
         @keyframes score-bounce {
@@ -542,11 +464,9 @@
             }
         }
 
-
-
         /* =========================================================
-   Ranking UI
-   ========================================================= */
+         Ranking UI
+         ========================================================= */
         #ranking-overlay {
             position: fixed;
             inset: 0;
@@ -740,23 +660,22 @@
 
     <div id="pause-overlay">
         <div class="pause-text">PAUSED</div>
-        <div class="pause-sub">TAP TO RESUME</div>
+        <button id="pause-resume-btn" class="pause-menu-btn">RESUME</button>
+        <button id="pause-quit-btn" class="pause-menu-btn">TITLE</button>
     </div>
-
 
     <button id="boost-btn">BOOST</button>
 
-    <div id="bottom-right-ui" style="position: fixed; right: 24px; bottom: 60px; display: flex; align-items: flex-end; gap: 0px; pointer-events: none; z-index: 1000;">
+    <div id="bottom-right-ui">
+        <div id="management-btn-area">
+            <button id="hud-pause-btn">PAUSE</button>
 
-        <div id="management-btn-area" style="pointer-events: auto; position: relative; width: 100px; height: 30px;">
-            <button id="pause-btn" class="hud-btn">PAUSE</button>
-            <button id="reset-btn">RESET</button>
             <div id="bgm-control-pos">
-                <button id="bgm-toggle" class="btn sub-btn" style="margin-top: 0; width: 100%; height: 100%; padding: 0;">BGM ON</button>
+                <button id="bgm-toggle">BGM ON</button>
             </div>
         </div>
 
-        <div id="stage-ui" class="ui-faded" style="text-align: right; pointer-events: none;">
+        <div id="stage-ui" class="ui-faded">
             <div class="stage-label">STAGE</div>
             <div id="stage-val" class="stage-num">1</div>
         </div>
@@ -779,12 +698,12 @@
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
         const titleBgm = document.getElementById("title-bgm");
-        //const resetBtn = document.getElementById("reset-btn"); // ここへ移動
-        //const pauseBtn = document.getElementById("pause-btn");
-        //const pauseOverlay = document.getElementById("pause-overlay");
+        
+        // Pause Elements
         const hudPauseBtn = document.getElementById("hud-pause-btn");
         const pauseResumeBtn = document.getElementById("pause-resume-btn");
         const pauseQuitBtn = document.getElementById("pause-quit-btn");
+        const pauseOverlay = document.getElementById("pause-overlay");
 
         /* Game State */
         let isClearing = false;
@@ -1724,15 +1643,11 @@
             document.querySelector("#overlay h1").innerHTML = "GAME OVER";
             document.getElementById("start-btn").textContent = "START";
 
-            // 削除: ここで個別に表示設定すると隠れなくなるため削除します
-            // clearHiBtn.style.display = ""; 
-
             // ▼▼▼ 追加: ランキング用処理 ▼▼▼
             window.finalScore = score;
             window.finalStage = stage;
 
             // 1. 先に名前入力欄を表示状態にする (重要)
-            // これを先にやらないと、updateResetButtonVisibility が「入力中」と認識できません
             document.getElementById("name-input-area").style.display = "flex";
 
             const submitBtn = document.getElementById("submit-score-btn");
@@ -1740,11 +1655,7 @@
             submitBtn.textContent = "SUBMIT SCORE";
             // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-            // 削除: ここで個別に表示設定すると隠れなくなるため削除します
-            // document.getElementById("soundtrack-btn").style.display = "block";
-
             // 2. 最後に表示切替関数を呼ぶ
-            // 名前入力欄が flex になっているので、ボタン類が非表示になります
             updateResetButtonVisibility();
 
             if (isBgmEnabled) playTitleBGM();
@@ -1845,7 +1756,6 @@
 
             // 安全なリセット処理
             Composite.clear(engine.world, false);
-            // Engine.clear(engine)は削除
 
             if (isNext && pendingCoreBoost) {
                 CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
@@ -1937,7 +1847,6 @@
                 if (isBgmEnabled && currentAudio && currentAudio.paused) {
                     currentAudio.play().catch(e => {
                         console.log("BGM resume blocked by browser policy");
-                        // ユーザーが画面を触るまで待機するため、ここでは何もしない
                     });
                 }
             }
@@ -1948,8 +1857,6 @@
             togglePause(document.hidden);
         });
 
-        // window の blur/focus は OSレベルの中断に対応するために残すが、
-        // visibilitychange との二重動作を防ぐため、実際の状態をチェックする
         window.addEventListener("blur", () => {
             togglePause(true);
         });
@@ -1961,56 +1868,9 @@
             }
         });
 
-        // ポーズ画面タップで復帰
-        pauseOverlay.addEventListener("click", (e) => {
-            e.stopPropagation();
-            togglePause(false);
-        });
-
-        pauseOverlay.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            togglePause(false);
-        });
-
         /* =========================================================
-         * RESET / BGM FUNCTIONS (Final Adjustments)
+         * EVENT LISTENERS FOR PAUSE & HUD
          * ========================================================= */
-
-        function handleResetRequest(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!isGameRunning) return;
-
-            // 確認ダイアログを出す前に、確実に一時停止させる
-            togglePause(true);
-            pauseOverlay.style.display = "none"; // confirmパネルの邪魔にならないように
-
-            // confirm はブロッキング処理なので、この間 JS は止まる
-            const ok = confirm("ゲームを中断してタイトルに戻りますか？");
-
-            if (ok) {
-                // タイトルに戻るための完全なクリーンアップ
-                isPaused = false; // フラグを先に折る
-                isGameRunning = false;
-                stopBGM(() => {
-                    returnToTitle();
-                    // タイトルBGMが必要ならここで再生
-                    if (isBgmEnabled) playTitleBGM();
-                });
-            } else {
-                // キャンセルした場合はゲームを再開
-                togglePause(false);
-            }
-        }
-
-        resetBtn.addEventListener("click", handleResetRequest);
-        resetBtn.addEventListener("touchstart", (e) => { handleResetRequest(e); }, { passive: false });
-        resetBtn.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
-
-        /* =========================================================
-                 * EVENT LISTENERS FOR PAUSE & HUD
-                 * ========================================================= */
 
         // 1. 右下のPAUSEボタン (HUD)
         if (hudPauseBtn) {
@@ -2435,10 +2295,13 @@
                 localStorage.setItem("stellarGravity_last_name", name);
 
                 // ★重要: ここでボタン類を再表示させる
-                // これがないと、ランキングを閉じた後にボタンが何もない状態になります
                 if (typeof updateResetButtonVisibility === "function") {
                     updateResetButtonVisibility();
                 }
+
+                // タイトル画面の表記に戻す
+                document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
+                document.getElementById("start-btn").textContent = "START";
 
                 // ランキングを再取得して表示
                 await fetchAndShowRanking();
@@ -2497,4 +2360,4 @@
 
     </script>
 </body>
-</html>
+</html>  
