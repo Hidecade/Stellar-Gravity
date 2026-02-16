@@ -257,7 +257,7 @@
             border-color: rgba(255, 100, 100, 0.6);
             color: #ffcccc;
         }
-        
+
             #pause-quit-btn:hover {
                 background: rgba(255, 50, 50, 0.8);
                 color: white;
@@ -381,10 +381,10 @@
             transition: transform 0.1s;
         }
 
-        #hud-pause-btn:active {
-            transform: scale(0.95);
-            background: rgba(79, 172, 254, 0.3);
-        }
+            #hud-pause-btn:active {
+                transform: scale(0.95);
+                background: rgba(79, 172, 254, 0.3);
+            }
 
         /* タイトル画面用 BGMボタン */
         #bgm-control-pos {
@@ -409,10 +409,10 @@
             transition: background 0.1s, transform 0.05s;
         }
 
-        #bgm-toggle:active {
-            transform: scale(0.95);
-            background: rgba(255, 255, 255, 0.3);
-        }
+            #bgm-toggle:active {
+                transform: scale(0.95);
+                background: rgba(255, 255, 255, 0.3);
+            }
 
         /* Stage Display */
         #stage-ui {
@@ -698,7 +698,7 @@
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
         const titleBgm = document.getElementById("title-bgm");
-        
+
         // Pause Elements
         const hudPauseBtn = document.getElementById("hud-pause-btn");
         const pauseResumeBtn = document.getElementById("pause-resume-btn");
@@ -1852,20 +1852,22 @@
             }
         }
 
-        // 複数のイベントが競合しないよう、visibilitychange を優先
+        // 画面が隠れた時だけポーズし、戻ってきた時はポーズのまま維持する
         document.addEventListener("visibilitychange", () => {
-            togglePause(document.hidden);
+            // 隠れた(hidden)時のみポーズを実行。
+            // 戻ってきた(visible)時は何もしない（ポーズ画面のままにする）。
+            if (document.hidden) {
+                togglePause(true);
+            }
         });
 
         window.addEventListener("blur", () => {
             togglePause(true);
         });
 
+        // focus時の自動再開（togglePause(false)）を削除
         window.addEventListener("focus", () => {
-            // ページが見えている状態ならポーズ解除を試みる
-            if (!document.hidden) {
-                togglePause(false);
-            }
+            // 何もしない
         });
 
         /* =========================================================
@@ -2250,11 +2252,11 @@
                     const stageVal = data.stage ? data.stage : "-";
 
                     tr.innerHTML = `
-                            <td class="${rankClass}">${rank}</td>
-                            <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
-                            <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                            <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                        `;
+                                <td class="${rankClass}">${rank}</td>
+                                <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                                <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                                <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                            `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
