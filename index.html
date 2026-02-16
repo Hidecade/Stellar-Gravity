@@ -620,13 +620,16 @@
 
 
         <div id="name-input-area" style="margin-top: 15px;">
+            <div id="my-estimated-rank" style="font-size: 16px; color: #ffd700; margin-bottom: 10px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);">
+                CHECKING RANK...
+            </div>
             <div style="font-size:10px; color:#aaa; margin-bottom:5px; letter-spacing: 2px;">ENTER YOUR NAME</div>
             <input type="text" id="player-name-input" maxlength="10" placeholder="AAA"
                    style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px; font-family: 'Orbitron', sans-serif; text-align: center; border-radius: 5px; outline: none; margin-bottom: 10px;">
             <br>
-            <button id="submit-score-btn" class="btn sub-btn" style="background: rgba(79,172,254,0.3); border-color: #4facfe; opacity: 1;">SUBMIT SCORE</button>
+            <button id="submit-score-btn" class="btn sub-btn" style="background: #4facfe; color: #000; border-color: #4facfe; opacity: 1; box-shadow: 0 0 10px #4facfe;">SUBMIT SCORE</button>
 
-            <button id="skip-score-btn" class="btn sub-btn" style="margin-top: 5px; border:none; font-size:10px; opacity:0.5;">NO THANKS / SKIP</button>
+            <button id="skip-score-btn" class="btn sub-btn" style="margin-top: 5px; border:none; font-size:10px; opacity:1;">NO THANKS / SKIP</button>
         </div>
 
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR MY HIGH SCORE</button>
@@ -1650,6 +1653,11 @@
             // 1. 先に名前入力欄を表示状態にする (重要)
             document.getElementById("name-input-area").style.display = "flex";
 
+            // ★追加: ここで順位を計算して表示！
+            if (typeof window.displayMyRank === "function") {
+                window.displayMyRank(score);
+            }
+
             const submitBtn = document.getElementById("submit-score-btn");
             submitBtn.disabled = false;
             submitBtn.textContent = "SUBMIT SCORE";
@@ -2190,7 +2198,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         // ▼▼▼ あなたのFirebase設定 (変更なし) ▼▼▼
         const firebaseConfig = {
@@ -2269,6 +2277,35 @@
                 loadingEl.textContent = "FAILED TO LOAD";
             }
         }
+
+        // --- 自分の順位を計算して表示する関数 ---
+        window.displayMyRank = async function (score) {
+            const rankEl = document.getElementById("my-estimated-rank");
+            if (!rankEl) return;
+
+            rankEl.textContent = "CHECKING RANK...";
+            rankEl.style.color = "#aaa";
+
+            try {
+                // 自分より高いスコアの数を数えるクエリ
+                const coll = collection(db, SCORES_COLLECTION);
+                const q = query(coll, where("score", ">", Number(score)));
+
+                // サーバー側でカウント（高速・低コスト）
+                const snapshot = await getCountFromServer(q);
+                const count = snapshot.data().count;
+
+                const myRank = count + 1; // 自分より上が5人いたら、自分は6位
+
+                // 表示更新
+                rankEl.innerHTML = `WORLD RANKING <span style="font-size:22px; font-weight:bold;">${myRank}</span>`;
+                rankEl.style.color = "#ffd700"; // 金色にする
+
+            } catch (e) {
+                console.error("Rank check failed:", e);
+                rankEl.textContent = ""; // エラー時は非表示
+            }
+        };
 
         // --- スコア送信関数 (修正版) ---
         window.submitMyScore = async function (score, stage) {
