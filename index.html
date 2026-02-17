@@ -1075,52 +1075,9 @@
             ctx.restore();
         }
 
-
-
-        // 星雲を描画する関数
-        function drawNebula(ctx, time) {
-            ctx.save();
-
-            // 1. 背景のベース（ごくわずかに宇宙の青みを入れる）
-            // 透明度を 0.3 -> 0.15 に下げました
-            ctx.fillStyle = "rgba(10, 10, 30, 0.15)";
-            ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-            // 2. 中央の紫のグラデーション（コア周辺のガス）
-            const pulse = Math.sin(time * 0.0005) * 0.1 + 1.0;
-            const grad1 = ctx.createRadialGradient(CENTER.x, CENTER.y, 0, CENTER.x, CENTER.y, WIDTH * 0.8 * pulse);
-
-            // 透明度を 0.4 -> 0.15 に下げ、広がりを持たせました
-            grad1.addColorStop(0, "rgba(80, 0, 150, 0.15)");
-            grad1.addColorStop(0.5, "rgba(40, 0, 80, 0.05)");
-            grad1.addColorStop(1, "transparent");
-
-            ctx.fillStyle = grad1;
-            ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-            // 3. 青い揺らぎ（遠方の星雲）
-            const offX = Math.cos(time * 0.0003) * 100;
-            const offY = Math.sin(time * 0.0003) * 100;
-            const grad2 = ctx.createRadialGradient(CENTER.x + offX, CENTER.y + offY, 0, CENTER.x + offX, CENTER.y + offY, WIDTH * 0.7);
-
-            // 透明度を 0.2 -> 0.1 に下げました
-            grad2.addColorStop(0, "rgba(0, 80, 180, 0.1)");
-            grad2.addColorStop(1, "transparent");
-
-            // lighterを使うと黒背景でも色が死なず、綺麗に透けます
-            ctx.globalCompositeOperation = "lighter";
-
-            ctx.fillStyle = grad2;
-            ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-            ctx.restore();
-        }
-
-
-
-        const STAR_COUNT = Math.floor(80 * 4);
-        const STAR_SIZE_MIN = 0.2;
-        const STAR_SIZE_MAX = 2.0;
+        const STAR_COUNT = Math.floor(80 * 1.5);
+        const STAR_SIZE_MIN = 0.4;
+        const STAR_SIZE_MAX = 3.0;
 
         function generateStars() {
             bgStars = [];
@@ -1128,36 +1085,40 @@
             for (let i = 0; i < STAR_COUNT; i++) {
                 const rand = Math.random();
                 let color;
-                // カラーバリエーションをさらに増加
-                if (rand < 0.4) color = "255, 255, 255";       // 白
-                else if (rand < 0.6) color = "180, 220, 255";  // 青白
-                else if (rand < 0.7) color = "255, 240, 180";  // 薄黄
-                else if (rand < 0.8) color = "255, 180, 180";  // 薄紅
-                else if (rand < 0.9) color = "200, 160, 255";  // 紫
-                else color = "150, 255, 200";                 // エメラルド
-
+                if (rand < 0.6) color = `rgba(255, 255, 255, `;
+                else if (rand < 0.8) color = `rgba(180, 220, 255, `;
+                else if (rand < 0.95) color = `rgba(255, 255, 200, `;
+                else color = `rgba(255, 180, 180, `;
+                const alpha = 0.2 + Math.random() * 0.6;
                 bgStars.push({
                     r: Math.random() * maxDimension,
                     angle: Math.random() * Math.PI * 2,
                     size: STAR_SIZE_MIN + Math.random() * (STAR_SIZE_MAX - STAR_SIZE_MIN),
-                    color: color,
-                    blinkSpeed: 0.001 + Math.random() * 0.002, // ★点滅の速さ
-                    offset: Math.random() * Math.PI * 2       // ★点滅のタイミングのズレ
+                    color: color + alpha + ")"
                 });
             }
-            // ここではあえて starCanvas を作りません（毎フレーム個別に描くため）
+            starCanvas = document.createElement('canvas');
+            const size = maxDimension * 2;
+            starCanvas.width = size;
+            starCanvas.height = size;
+            const sCtx = starCanvas.getContext('2d');
+            bgStars.forEach(s => {
+                sCtx.fillStyle = s.color;
+                if (s.size > 2.0) {
+                    sCtx.shadowBlur = 4;
+                    sCtx.shadowColor = s.color;
+                }
+                sCtx.beginPath();
+                sCtx.arc(size / 2 + Math.cos(s.angle) * s.r, size / 2 + Math.sin(s.angle) * s.r, s.size, 0, Math.PI * 2);
+                sCtx.fill();
+                sCtx.shadowBlur = 0;
+            });
         }
 
         /* Initialize World */
-        // 1. エントリーポイント（ここだけ呼べばOK）
         function preInit() {
             generateStars();
-            initEngine();      // Matter.jsのセットアップ
-            setupEvents();     // 各種ループ処理の登録
-        }
 
-        // 2. Matter.js の初期化設定
-        function initEngine() {
             engine = Engine.create({
                 gravity: { x: 0, y: 0, scale: 0 },
                 enableSleeping: false
@@ -1180,490 +1141,426 @@
                 delta: 1000 / 60
             });
             Runner.run(runner, engine);
-        }
 
-        // 3. イベントリスナーの一括登録
-        function setupEvents() {
-            // 描画ループ (afterRender)
-            Events.on(render, "afterRender", handleRenderLoop);
+            Events.on(render, "afterRender", () => {
+                const ctx = render.context;
+                const now = Date.now();
 
-            // 物理演算ループ (beforeUpdate)
-            Events.on(engine, "beforeUpdate", handlePhysicsLoop);
+         
 
-            // 衝突判定 (collisionStart)
-            Events.on(engine, "collisionStart", handleCollisions);
-        }
 
-        /* =========================================================
-           メイン描画ループ (afterRender)
-           ========================================================= */
-        function handleRenderLoop() {
-            const ctx = render.context;
-            const now = Date.now();
+                if (isGameRunning && !isPaused) {
+                    const base = ROTATE_BASE_SPEED * difficulty;
+                    const speed = isBoosting ? base * ROTATE_BOOST_MULT : base;
+                    launcherAngle += speed;
+                }
 
-            // 背景・星雲・星の描画
-            drawBackgroundLayer(ctx, now);
+                if (nextQueue.length >= 2) {
+                    const nextPlanet = PLANETS[nextQueue[1]];
+                    document.getElementById("next-name").textContent = nextPlanet.name;
+                    document.getElementById("next-name").style.color = nextPlanet.color;
+                }
 
-            // ゲーム状態の更新（ランチャー回転など）
-            updateGameState(now);
+                /* Draw Stars */
+                if (starCanvas) {
+                    const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
+                    if (!isPaused) staticStarAngle -= 0.0025 * mult;
+                    ctx.save();
+                    ctx.translate(CENTER.x, CENTER.y);
+                    ctx.rotate(staticStarAngle);
+                    ctx.drawImage(starCanvas, -starCanvas.width / 2, -starCanvas.height / 2);
+                    ctx.restore();
+                }
 
-            // デッドライン(RedZone)の描画
-            drawRedZone(ctx, now);
+                ctx.globalAlpha = 1;
 
-            // エフェクト（スパーク・パーティクル）
-            manageParticles(ctx);
-
-            // コア（中央の星）の描画
-            drawCore(ctx, now);
-
-            // 惑星の描画
-            drawPlanets(ctx, now);
-
-            // ランチャー（射出ガイド）の描画
-            drawLauncher(ctx, now);
-
-            // ゲームオーバー判定
-            checkGameOver(now);
-        }
-
-        /* =========================================================
-           描画ヘルパー関数群
-           ========================================================= */
-
-        function drawBackgroundLayer(ctx, now) {
-
-            // 星雲
-            drawNebula(ctx, now);
-
-            // 2. 背景の星（点滅とカラー対応）
-            if (bgStars.length > 0) {
-                const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
-                if (!isPaused) staticStarAngle -= 0.0025 * mult;
+                /* RedZone */
+                const t = performance.now();
+                const isWarning = gameOverTime !== null;
 
                 ctx.save();
                 ctx.translate(CENTER.x, CENTER.y);
-                ctx.rotate(staticStarAngle);
+                ctx.beginPath();
+                ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
+                ctx.setLineDash([10, 14]);
+                ctx.lineDashOffset = -(t * 0.02) % 1000;
 
-                bgStars.forEach(s => {
-                    // ★さりげない点滅の計算
-                    // Math.sin を使って、0.3 〜 1.0 の間でアルファ値を揺らす
-                    const alpha = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(now * s.blinkSpeed + s.offset));
+                const blinkBase = isWarning ? 0.7 : 0.3;
+                const blinkFreq = isWarning ? 0.015 : 0.006;
+                const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
 
-                    ctx.fillStyle = `rgba(${s.color}, ${alpha})`;
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
+                ctx.lineWidth = isWarning ? 4 : 2;
+                ctx.stroke();
 
-                    if (s.size > 2.2) {
-                        ctx.shadowBlur = 5;
-                        ctx.shadowColor = `rgba(${s.color}, ${alpha})`;
+                ctx.beginPath();
+                ctx.setLineDash([]);
+                ctx.arc(0, 0, DEADLINE_RADIUS + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink * 0.5})` : "rgba(255, 80, 80, 0.25)";
+                ctx.lineWidth = isWarning ? 10 : 6;
+                ctx.stroke();
+                ctx.restore();
+
+                /* Sparks */
+                if (!isPaused) { // ポーズ中はパーティクル生成を停止
+                    const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
+                    const SPARK_MAX = 220;
+                    if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
+                    if (Math.random() < SPARK_RATE) {
+                        const burst = 2 + (isBoosting ? 4 : 2);
+                        for (let k = 0; k < burst; k++) {
+                            const ang = Math.random() * Math.PI * 2;
+                            const r = DEADLINE_RADIUS + (Math.random() * 10 - 5);
+                            const x = CENTER.x + Math.cos(ang) * r;
+                            const y = CENTER.y + Math.sin(ang) * r;
+                            const sp = (isBoosting ? 5.0 : 3.2) * (0.6 + Math.random() * 0.8);
+                            const ox = Math.cos(ang) * sp + (Math.random() - 0.5) * 1.0;
+                            const oy = Math.sin(ang) * sp + (Math.random() - 0.5) * 1.0;
+                            particles.push({
+                                type: "spark",
+                                x, y, px: x, py: y, vx: ox, vy: oy,
+                                life: 1.0,
+                                size: 1.5 + Math.random() * 2.5,
+                                color: isWarning ? "rgba(255, 255, 255, 1)" : "rgba(255,60,60,1)"
+                            });
+                        }
                     }
+                }
 
+                /* Core */
+                ctx.save();
+                ctx.translate(CENTER.x, CENTER.y);
+                const currentRadius = CORE_RADIUS * implosionScale;
+                if (isImploding) {
+                    ctx.globalAlpha = implosionAlpha;
+                    const gR = currentRadius * 3;
+                    const grad = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
                     ctx.beginPath();
-                    const x = Math.cos(s.angle) * s.r;
-                    const y = Math.sin(s.angle) * s.r;
-                    ctx.arc(x, y, s.size, 0, Math.PI * 2);
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.shadowBlur = 0;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                } else if (isBlackHoleCore) {
+                    const t2 = performance.now() * 0.002;
+                    for (let i = 0; i < 6; i++) {
+                        const r = CORE_RADIUS * (1.8 + i * 0.25);
+                        const a = 0.15 + Math.sin(t2 + i) * 0.1;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,80,40,${a})`;
+                        ctx.lineWidth = 6;
+                        ctx.stroke();
+                    }
+                    const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
+                    holeGrad.addColorStop(0, "rgba(0,0,0,1)");
+                    holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
+                    holeGrad.addColorStop(1, "rgba(0,0,0,1)");
+                    ctx.fillStyle = holeGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
+                    const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
+                    grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
+                    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gR, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fff700";
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                /* Planets */
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (!b.isStatic && b.index !== undefined) {
+                        drawPlanet(ctx, b.position.x, b.position.y, b.circleRadius, PLANETS[b.index].color, now, b.id);
+                    }
                 });
 
-                ctx.restore();
-            }
-
-            // グローバルアルファをリセット
-            ctx.globalAlpha = 1;
-        }
-
-        function updateGameState(now) {
-            if (isGameRunning && !isPaused) {
-                const base = ROTATE_BASE_SPEED * difficulty;
-                const speed = isBoosting ? base * ROTATE_BOOST_MULT : base;
-                launcherAngle += speed;
-            }
-
-            if (nextQueue.length >= 2) {
-                const nextPlanet = PLANETS[nextQueue[1]];
-                const nameEl = document.getElementById("next-name");
-                if (nameEl) {
-                    nameEl.textContent = nextPlanet.name;
-                    nameEl.style.color = nextPlanet.color;
-                }
-            }
-        }
-
-        function drawRedZone(ctx, now) {
-            const t = performance.now();
-            const isWarning = gameOverTime !== null;
-
-            ctx.save();
-            ctx.translate(CENTER.x, CENTER.y);
-            ctx.beginPath();
-            ctx.arc(0, 0, DEADLINE_RADIUS, 0, Math.PI * 2);
-            ctx.setLineDash([10, 14]);
-            ctx.lineDashOffset = -(t * 0.02) % 1000;
-
-            const blinkBase = isWarning ? 0.7 : 0.3;
-            const blinkFreq = isWarning ? 0.015 : 0.006;
-            const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
-
-            ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
-            ctx.lineWidth = isWarning ? 4 : 2;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.setLineDash([]);
-            ctx.arc(0, 0, DEADLINE_RADIUS + 3, 0, Math.PI * 2);
-            ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink * 0.5})` : "rgba(255, 80, 80, 0.25)";
-            ctx.lineWidth = isWarning ? 10 : 6;
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        function manageParticles(ctx) {
-            // 生成処理
-            const isWarning = gameOverTime !== null;
-            if (!isPaused) {
-                const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
-                const SPARK_MAX = 220;
-                if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
-
-                if (Math.random() < SPARK_RATE) {
-                    const burst = 2 + (isBoosting ? 6 : 2);
-                    for (let k = 0; k < burst; k++) {
-                        const ang = Math.random() * Math.PI * 2;
-                        const r = DEADLINE_RADIUS + (Math.random() * 10 - 5);
-                        const x = CENTER.x + Math.cos(ang) * r;
-                        const y = CENTER.y + Math.sin(ang) * r;
-                        const sp = (isBoosting ? 5.0 : 3.2) * (0.6 + Math.random() * 0.8);
-                        const ox = Math.cos(ang) * sp + (Math.random() - 0.5) * 1.0;
-                        const oy = Math.sin(ang) * sp + (Math.random() - 0.5) * 1.0;
-                        particles.push({
-                            type: "spark",
-                            x, y, px: x, py: y, vx: ox, vy: oy,
-                            life: 1.0,
-                            size: 1.5 + Math.random() * 2.5,
-                            color: isWarning ? "rgba(255, 255, 255, 1)" : "rgba(255,60,60,1)"
-                        });
+                /* Launcher */
+                if (isGameRunning) {
+                    if (isClickable) {
+                        const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+                        const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([4, 6]);
+                        ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
+                        ctx.lineWidth = 1.5;
+                        ctx.moveTo(sX, sY);
+                        ctx.lineTo(CENTER.x, CENTER.y);
+                        ctx.stroke();
+                        ctx.restore();
+                        drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+                    }
+                    if (nextQueue.length >= 2) {
+                        const nextPlanet = PLANETS[nextQueue[1]];
+                        const nextUiEl = document.getElementById("next-ui");
+                        if (nextUiEl) {
+                            const rect = nextUiEl.getBoundingClientRect();
+                            const centerX = rect.left + rect.width / 2;
+                            const centerY = rect.top + rect.height / 2;
+                            ctx.save();
+                            ctx.translate(centerX, centerY);
+                            drawPlanet(ctx, 0, 0, nextPlanet.radius * 0.7, nextPlanet.color, now, 1);
+                            ctx.restore();
+                        }
                     }
                 }
-            }
 
-            // 更新と描画
-            const MAX_PARTICLES = isIOS ? 150 : 300;
-            if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+                /* Particles */
+                const MAX_PARTICLES = isIOS ? 150 : 300;
+                if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
 
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                if (!isPaused) {
-                    if (p.type === "flash") p.life -= 0.07;
-                    else if (p.type === "spark") p.life -= 0.04;
-                    else p.life -= 0.02;
-                }
-                if (p.life <= 0) {
-                    particles.splice(i, 1);
-                    continue;
-                }
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    if (!isPaused) { // ポーズ中は寿命を減らさない
+                        if (p.type === "flash") p.life -= 0.07;
+                        else if (p.type === "spark") p.life -= 0.04;
+                        else p.life -= 0.02;
+                    }
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
 
-                if (!isPaused) {
-                    p.px = p.x; p.py = p.y;
-                    p.x += (p.vx || 0);
-                    p.y += (p.vy || 0);
-                    if (p.type === "shockwave") p.radius += (p.speed || 0) * 0.5;
-                }
+                    if (!isPaused) { // ポーズ中は移動しない
+                        p.px = p.x; p.py = p.y;
+                        p.x += (p.vx || 0);
+                        p.y += (p.vy || 0);
+                        if (p.type === "shockwave") p.radius += (p.speed || 0) * 0.5;
+                    }
 
-                // パーティクルごとの描画
-                if (p.type === "shockwave") {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255,255,255,${p.life})`;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.restore();
-                } else if (p.type === "flash") {
-                    ctx.save();
-                    ctx.globalAlpha = p.life;
-                    ctx.fillStyle = p.color || "rgba(255,255,255,1)";
-                    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-                    ctx.restore();
-                } else if (p.type === "spark") {
-                    ctx.save();
-                    ctx.globalCompositeOperation = "lighter";
-                    ctx.globalAlpha = p.life;
-                    ctx.strokeStyle = p.color || "rgba(255,60,60,1)";
-                    ctx.lineWidth = 2.2;
-                    ctx.beginPath();
-                    ctx.moveTo(p.px, p.py);
-                    ctx.lineTo(p.x, p.y);
-                    ctx.stroke();
-                    ctx.fillStyle = "rgba(255,120,120,1)";
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                } else if (p.type === "combo-dust") {
-                    ctx.save();
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = "#ffffff";
-                    ctx.globalAlpha = p.life;
-                    ctx.fillStyle = "#ffffff";
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                    ctx.globalAlpha = p.life * 0.8;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                } else {
-                    ctx.save();
-                    ctx.fillStyle = p.color;
-                    ctx.globalAlpha = p.life;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-            }
-        }
-
-        function drawCore(ctx, now) {
-            ctx.save();
-            ctx.translate(CENTER.x, CENTER.y);
-            const currentRadius = CORE_RADIUS * implosionScale;
-
-            if (isImploding) {
-                ctx.globalAlpha = implosionAlpha;
-                const gR = currentRadius * 3;
-                const grad = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, gR);
-                grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
-                grad.addColorStop(1, "rgba(255, 0, 0, 0)");
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(0, 0, gR, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
-                ctx.fillStyle = "#fff700";
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            } else if (isBlackHoleCore) {
-                const t2 = performance.now() * 0.002;
-                for (let i = 0; i < 6; i++) {
-                    const r = CORE_RADIUS * (1.8 + i * 0.25);
-                    const a = 0.15 + Math.sin(t2 + i) * 0.1;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, r, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255,80,40,${a})`;
-                    ctx.lineWidth = 6;
-                    ctx.stroke();
-                }
-                const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, CORE_RADIUS);
-                holeGrad.addColorStop(0, "rgba(0,0,0,1)");
-                holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
-                holeGrad.addColorStop(1, "rgba(0,0,0,1)");
-                ctx.fillStyle = holeGrad;
-                ctx.beginPath();
-                ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                const gR = CORE_RADIUS * 3 + Math.sin(now * 0.008) * 5;
-                const grad = ctx.createRadialGradient(0, 0, CORE_RADIUS, 0, 0, gR);
-                grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
-                grad.addColorStop(1, "rgba(255, 0, 0, 0)");
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(0, 0, gR, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(0, 0, CORE_RADIUS, 0, Math.PI * 2);
-                ctx.fillStyle = "#fff700";
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        function drawPlanets(ctx, now) {
-            Composite.allBodies(engine.world).forEach(b => {
-                if (!b.isStatic && b.index !== undefined) {
-                    drawPlanet(ctx, b.position.x, b.position.y, b.circleRadius, PLANETS[b.index].color, now, b.id);
-                }
-            });
-        }
-
-        function drawLauncher(ctx, now) {
-            if (isGameRunning) {
-                if (isClickable) {
-                    const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
-                    const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.setLineDash([4, 6]);
-                    ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
-                    ctx.lineWidth = 1.5;
-                    ctx.moveTo(sX, sY);
-                    ctx.lineTo(CENTER.x, CENTER.y);
-                    ctx.stroke();
-                    ctx.restore();
-                    drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
-                }
-                if (nextQueue.length >= 2) {
-                    const nextPlanet = PLANETS[nextQueue[1]];
-                    const nextUiEl = document.getElementById("next-ui");
-                    if (nextUiEl) {
-                        const rect = nextUiEl.getBoundingClientRect();
-                        const centerX = rect.left + rect.width / 2;
-                        const centerY = rect.top + rect.height / 2;
+                    if (p.type === "shockwave") {
                         ctx.save();
-                        ctx.translate(centerX, centerY);
-                        drawPlanet(ctx, 0, 0, nextPlanet.radius * 0.7, nextPlanet.color, now, 1);
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = `rgba(255,255,255,${p.life})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.restore();
+                    } else if (p.type === "flash") {
+                        ctx.save();
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = p.color || "rgba(255,255,255,1)";
+                        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                        ctx.restore();
+                    } else if (p.type === "spark") {
+                        ctx.save();
+                        ctx.globalCompositeOperation = "lighter";
+                        ctx.globalAlpha = p.life;
+                        ctx.strokeStyle = p.color || "rgba(255,60,60,1)";
+                        ctx.lineWidth = 2.2;
+                        ctx.beginPath();
+                        ctx.moveTo(p.px, p.py);
+                        ctx.lineTo(p.x, p.y);
+                        ctx.stroke();
+                        ctx.fillStyle = "rgba(255,120,120,1)";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    } else if (p.type === "combo-dust") {
+                        ctx.save();
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = "#ffffff";
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = "#ffffff";
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        ctx.globalAlpha = p.life * 0.8;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    } else {
+                        ctx.save();
+                        ctx.fillStyle = p.color;
+                        ctx.globalAlpha = p.life;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
                         ctx.restore();
                     }
                 }
-            }
-        }
 
-        function checkGameOver(now) {
-            if (isGameRunning && !isPaused) {
-                let isOut = false;
-                Composite.allBodies(engine.world).forEach(b => {
-                    if (!b.isStatic && b.index !== undefined) {
-                        const d = Math.sqrt((b.position.x - CENTER.x) ** 2 + (b.position.y - CENTER.y) ** 2);
-                        if (d > DEADLINE_RADIUS) isOut = true;
-                    }
-                });
-                if (isOut) {
-                    if (!gameOverTime) gameOverTime = now;
-                    if (now - gameOverTime > 3000) triggerGameOver();
-                } else {
-                    gameOverTime = null;
-                }
-            }
-        }
-
-        /* =========================================================
-           物理演算ループ (beforeUpdate)
-           ========================================================= */
-        function handlePhysicsLoop() {
-            Composite.allBodies(engine.world).forEach(b => {
-                if (b.isStatic) return;
-
-                // 画面外に出たオブジェクトを削除
-                if (Math.abs(b.position.x - CENTER.x) > WIDTH || Math.abs(b.position.y - CENTER.y) > HEIGHT) {
-                    Composite.remove(engine.world, b);
-                    return;
-                }
-
-                // 重力の適用 (中心へ引き寄せる)
-                const dx = CENTER.x - b.position.x;
-                const dy = CENTER.y - b.position.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const force = 0.0028 * b.mass;
-                Body.applyForce(b, b.position, { x: (dx / dist) * force, y: (dy / dist) * force });
-            });
-        }
-
-        /* =========================================================
-           衝突判定 (collisionStart)
-           ========================================================= */
-        function handleCollisions(e) {
-            if (!isGameRunning || isClearing) return;
-
-            e.pairs.forEach(p => {
-                const a = p.bodyA;
-                const b = p.bodyB;
-
-                // マージ条件のチェック
-                if (a.index === undefined || b.index === undefined || a.isMerging || b.isMerging) return;
-                if (a.index !== b.index || a.index >= PLANETS.length - 1) return;
-
-                // マージ処理実行
-                executeMerge(a, b);
-            });
-        }
-
-        function executeMerge(a, b) {
-            a.isMerging = true;
-            b.isMerging = true;
-            const mid = { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 };
-            const nI = a.index + 1;
-            const nP = PLANETS[nI];
-
-            // 古い星を削除
-            Composite.remove(engine.world, [a, b]);
-
-            playExplosionSound();
-
-            // 周囲への衝撃波（物理的な反発）
-            applyMergeShockwave(mid);
-
-            // エフェクト生成
-            createMergeEffects(mid, nP.color);
-
-            // スコア計算
-            calculateScore(nI, nP, mid);
-
-            // 新しい星の生成（遅延実行）
-            setTimeout(() => {
-                if (nI === CLEAR_INDEX) {
-                    handleStageClear(mid);
-                } else {
-                    const nb = Bodies.circle(mid.x, mid.y, nP.radius, {
-                        index: nI,
-                        restitution: 0.4,
-                        friction: 0.8,
-                        frictionAir: 0.02,
-                        render: { visible: false }
+                /* Game Over Check */
+                if (isGameRunning && !isPaused) {
+                    let isOut = false;
+                    Composite.allBodies(engine.world).forEach(b => {
+                        if (!b.isStatic && b.index !== undefined) {
+                            const d = Math.sqrt((b.position.x - CENTER.x) ** 2 + (b.position.y - CENTER.y) ** 2);
+                            if (d > DEADLINE_RADIUS) isOut = true;
+                        }
                     });
-                    Composite.add(engine.world, nb);
-                }
-            }, 40);
-        }
-
-        function applyMergeShockwave(mid) {
-            const allBodies = Composite.allBodies(engine.world);
-            allBodies.forEach(body => {
-                if (body.isStatic || body.isMerging) return;
-                const dx = body.position.x - mid.x;
-                const dy = body.position.y - mid.y;
-                const distSq = dx * dx + dy * dy;
-                const forceRadius = 150;
-                if (distSq < forceRadius * forceRadius) {
-                    const dist = Math.sqrt(distSq);
-                    const forceMagnitude = 0.003 * body.mass;
-                    Body.applyForce(body, body.position, { x: (dx / dist) * forceMagnitude, y: (dy / dist) * forceMagnitude });
+                    if (isOut) {
+                        if (!gameOverTime) gameOverTime = now;
+                        if (now - gameOverTime > 3000) triggerGameOver();
+                    } else {
+                        gameOverTime = null;
+                    }
                 }
             });
-        }
 
-        function createMergeEffects(mid, color) {
-            particles.push({ type: "shockwave", x: mid.x, y: mid.y, radius: 10, speed: 5, life: 1 });
-            for (let i = 0; i < 12; i++) {
-                const ang = Math.random() * Math.PI * 2;
-                const s = Math.random() * 4 + 2;
-                particles.push({ x: mid.x, y: mid.y, vx: Math.cos(ang) * s, vy: Math.sin(ang) * s, life: 1, color: color, size: 3 });
+            Events.on(engine, "beforeUpdate", () => {
+                Composite.allBodies(engine.world).forEach(b => {
+                    if (b.isStatic) return;
+                    if (Math.abs(b.position.x - CENTER.x) > WIDTH || Math.abs(b.position.y - CENTER.y) > HEIGHT) {
+                        Composite.remove(engine.world, b);
+                        return;
+                    }
+                    const dx = CENTER.x - b.position.x;
+                    const dy = CENTER.y - b.position.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const force = 0.0028 * b.mass;
+                    Body.applyForce(b, b.position, { x: (dx / dist) * force, y: (dy / dist) * force });
+                });
+            });
+
+            function removeAllDynamicBodies() {
+                const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
+                if (bodies.length) Composite.remove(engine.world, bodies);
             }
-        }
 
-        function calculateScore(nI, nP, mid) {
-            const now = Date.now();
-            if (now - lastMergeTime < 800) comboCount++;
-            else comboCount = 0;
-            lastMergeTime = now;
+            function triggerSupernovaAt(x, y, color = "#ffffff") {
+                isImploding = true;
+                implosionScale = 1.0;
+                implosionAlpha = 1.0;
+                let startTime = performance.now();
+                const animateImplosion = (now) => {
+                    const elapsed = now - startTime;
+                    if (elapsed < 300) {
+                        implosionScale = 1.0 + (elapsed / 300) * 0.5;
+                    } else if (elapsed < 900) {
+                        const p = (elapsed - 300) / 600;
+                        implosionScale = 1.5 * (1 - p);
+                        implosionAlpha = 1 - p;
+                    } else {
+                        isImploding = false;
+                        implosionScale = 0;
+                        return;
+                    }
+                    requestAnimationFrame(animateImplosion);
+                };
+                requestAnimationFrame(animateImplosion);
 
-            const comboBonus = 1 + (comboCount * 0.2);
-            const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
-            updateScore(Math.floor(points * comboBonus));
-            showComboText(mid.x, mid.y, comboCount);
-        }
+                particles.push({ type: "flash", life: 1.0, color: "rgba(255,255,255,1)" });
+                setTimeout(() => { particles.push({ type: "flash", life: 0.6, color: "rgba(255,200,150,0.8)" }); }, 120);
+                setTimeout(() => { particles.push({ type: "flash", life: 0.35, color: "rgba(255,120,80,0.6)" }); }, 300);
 
-        function handleStageClear(mid) {
-            if (isClearing) return;
-            isClearing = true;
-            isBlackHoleCore = true;
-            isGameRunning = false;
-            isClickable = false;
-            triggerSupernovaAt(mid.x, mid.y, "#ffffff");
-            setTimeout(removeAllDynamicBodies, SUPERNOVA_CLEAR_DELAY);
-            setTimeout(triggerGameClear, SUPERNOVA_END_DELAY);
+                const waves = [{ r: 10, sp: 10, life: 1.2 }, { r: 40, sp: 8, life: 1.1 }, { r: 90, sp: 6, life: 1.0 }, { r: 160, sp: 4, life: 0.9 }, { r: 240, sp: 2.5, life: 0.8 }];
+                waves.forEach((w, i) => {
+                    setTimeout(() => {
+                        particles.push({ type: "shockwave", x, y, radius: w.r, speed: w.sp, life: w.life });
+                    }, i * 80);
+                });
+
+                // 軽量化: パーティクル数を 260 -> 160 に削減
+                for (let i = 0; i < 160; i++) {
+                    const ang = Math.random() * Math.PI * 2;
+                    const sp = Math.random() * 14 + 4;
+                    particles.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1.2, color, size: Math.random() * 3.2 + 1.2 });
+                }
+
+                setTimeout(() => {
+                    particles.push({ type: "flash", life: 0.9, color: "rgba(0,0,0,0.85)" });
+                    particles.push({ type: "shockwave", x, y, radius: Math.max(WIDTH, HEIGHT), speed: -10, life: 1.4 });
+                    // 軽量化: 180 -> 120
+                    for (let i = 0; i < 120; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const r = Math.random() * 260 + 60;
+                        const sp = Math.random() * 6 + 3;
+                        particles.push({ x: x + Math.cos(ang) * r, y: y + Math.sin(ang) * r, vx: -Math.cos(ang + Math.PI / 6) * sp, vy: -Math.sin(ang + Math.PI / 6) * sp, life: 1.3, color: "#ffffff", size: Math.random() * 2.2 + 0.8 });
+                    }
+                    if (typeof playBlackHoleSound === "function") playBlackHoleSound();
+                }, 520);
+                playExplosionSound();
+                setTimeout(playExplosionSound, 180);
+                setTimeout(playExplosionSound, 420);
+            }
+
+            Events.on(engine, "collisionStart", (e) => {
+                if (!isGameRunning || isClearing) return;
+                e.pairs.forEach(p => {
+                    const a = p.bodyA;
+                    const b = p.bodyB;
+                    if (a.index === undefined || b.index === undefined || a.isMerging || b.isMerging) return;
+                    if (a.index !== b.index || a.index >= PLANETS.length - 1) return;
+
+                    a.isMerging = true;
+                    b.isMerging = true;
+                    const mid = { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 };
+                    const nI = a.index + 1;
+                    const nP = PLANETS[nI];
+                    Composite.remove(engine.world, [a, b]);
+
+                    playExplosionSound();
+                    const allBodies = Composite.allBodies(engine.world);
+                    allBodies.forEach(body => {
+                        if (body.isStatic || body.isMerging) return;
+                        const dx = body.position.x - mid.x;
+                        const dy = body.position.y - mid.y;
+                        const distSq = dx * dx + dy * dy;
+                        const forceRadius = 150;
+                        if (distSq < forceRadius * forceRadius) {
+                            const dist = Math.sqrt(distSq);
+                            const forceMagnitude = 0.003 * body.mass;
+                            Body.applyForce(body, body.position, { x: (dx / dist) * forceMagnitude, y: (dy / dist) * forceMagnitude });
+                        }
+                    });
+
+                    particles.push({ type: "shockwave", x: mid.x, y: mid.y, radius: 10, speed: 5, life: 1 });
+                    for (let i = 0; i < 12; i++) {
+                        const ang = Math.random() * Math.PI * 2;
+                        const s = Math.random() * 4 + 2;
+                        particles.push({ x: mid.x, y: mid.y, vx: Math.cos(ang) * s, vy: Math.sin(ang) * s, life: 1, color: nP.color, size: 3 });
+                    }
+
+                    const now = Date.now();
+                    if (now - lastMergeTime < 800) comboCount++;
+                    else comboCount = 0;
+                    lastMergeTime = now;
+                    const comboBonus = 1 + (comboCount * 0.2);
+                    const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
+                    updateScore(Math.floor(points * comboBonus));
+                    showComboText(mid.x, mid.y, comboCount);
+
+                    setTimeout(() => {
+                        if (nI === CLEAR_INDEX) {
+                            if (isClearing) return;
+                            isClearing = true;
+                            isBlackHoleCore = true;
+                            isGameRunning = false;
+                            isClickable = false;
+                            triggerSupernovaAt(mid.x, mid.y, "#ffffff");
+                            setTimeout(removeAllDynamicBodies, SUPERNOVA_CLEAR_DELAY);
+                            setTimeout(triggerGameClear, SUPERNOVA_END_DELAY);
+                        } else {
+                            const nb = Bodies.circle(mid.x, mid.y, nP.radius, {
+                                index: nI,
+                                restitution: 0.4,
+                                friction: 0.8,
+                                frictionAir: 0.02,
+                                render: { visible: false }
+                            });
+                            Composite.add(engine.world, nb);
+                        }
+                    }, 40);
+                });
+            });
         }
 
         /* Controls */
