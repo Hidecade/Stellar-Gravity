@@ -1635,7 +1635,10 @@
         }
 
         function triggerGameOver() {
+
             stopBGM();
+ 
+
             document.getElementById("clear-message").style.display = "none";
             isGameRunning = false;
             isContinue = false;
@@ -1666,7 +1669,11 @@
             // 2. 最後に表示切替関数を呼ぶ
             updateResetButtonVisibility();
 
-            if (isBgmEnabled) playTitleBGM();
+            if (isBgmEnabled) {
+                playTitleBGM();
+            } else {
+                forceStopBGM(); // 設定がOFFなら確実に殺す
+            }
         }
 
         function triggerGameClear() {
@@ -1999,6 +2006,7 @@
 
         let isBgmEnabled = true;
         const bgmToggleBtn = document.getElementById("bgm-toggle");
+
         bgmToggleBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             if (isGameRunning) return;
@@ -2087,8 +2095,12 @@
         window.addEventListener('mousedown', unlockAudio, { once: false });
 
         function playClearBgm() {
-            if (!isBgmEnabled) return;
+            if (!isBgmEnabled) {
+                forceStopBGM(); // 音を止める処理だけは行う
+                return;
+            }
             forceStopBGM();
+
             if (audioCtx.state === "suspended") { audioCtx.resume(); }
             clearBgm.currentTime = 0;
             clearBgm.volume = 0.3;
@@ -2102,10 +2114,15 @@
         }
 
         function playTitleBGM() {
-            if (!isBgmEnabled || isPaused) return;
+            // isPaused のチェックが入っているため、画面がフォーカスを失った時に再生されないようになります
+            if (!isBgmEnabled || isPaused || isGameRunning) {
+                forceStopBGM();
+                return;
+            }
             forceStopBGM();
-            titleBgm.play().catch(() => { });
-            currentAudio = titleBgm;
+            titleBgm.play().then(() => {
+                currentAudio = titleBgm;
+            }).catch(() => { });
         }
 
         /* =========================================================
