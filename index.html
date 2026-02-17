@@ -56,14 +56,14 @@
         }
 
         /* =========================================================
-         HUD (Top Score / Next) - Stylish Refinement
-         ========================================================= */
+         * HUD (Top Score / Next) - Compact & TRON Style
+         * ========================================================= */
         #ui-layer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            padding: 20px;
+            padding: 12px 15px; /* 外側の余白を狭く */
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
@@ -71,146 +71,189 @@
             pointer-events: none;
             z-index: 10;
             font-weight: normal;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
         }
 
-        /* 共通パネルスタイル：すりガラス + ネオンアクセント */
+        /* 共通パネルスタイル：高さを抑えてコンパクトに */
         .hud-panel-left, .hud-panel-right {
-            background: rgba(10, 15, 30, 0.65); /* 暗い半透明ブルー */
-            backdrop-filter: blur(12px);         /* すりガラス効果 */
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1); /* 薄い枠線 */
-            border-left: 4px solid #4facfe;      /* 左側のネオンアクセント */
-            padding: 15px 20px;
-            border-radius: 0 12px 12px 0;        /* 右側だけ丸くする */
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3), 
-                        0 0 15px rgba(79, 172, 254, 0.1); /* ほのかな発光 */
-            transform: skewX(-10deg); /* 少し斜めにしてスピード感を出す */
+            background: rgba(5, 15, 30, 0.85);
+            border: 2px solid #00f7ff;
+            box-shadow: 0 0 10px #00f7ff, inset 0 0 15px rgba(0, 247, 255, 0.4);
+            /* ▼▼▼ 以下の2行を削除（またはコメントアウト）してグリッドを消去 ▼▼▼ */
+            /* background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px); */
+            /* background-size: 20px 20px; */
+            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
+            padding: 8px 12px;
+            position: relative;
+            overflow: hidden;
+            height: 110px;
+            min-width: 130px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
         }
 
-        /* 中身の文字は斜めを戻す */
+            /* パネル内の光のエフェクト */
+            .hud-panel-left::before, .hud-panel-right::before {
+                content: "";
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: linear-gradient( transparent, rgba(0, 247, 255, 0.1), transparent );
+                transform: rotate(45deg);
+                animation: grid-scan 6s linear infinite;
+                pointer-events: none;
+            }
+
+        @keyframes grid-scan {
+            0% {
+                transform: translateY(-100%) rotate(45deg);
+            }
+
+            100% {
+                transform: translateY(100%) rotate(45deg);
+            }
+        }
+
+        /* 中身の要素 */
         .hud-panel-left > *, .hud-panel-right > * {
-            transform: skewX(10deg);
+            position: relative;
+            z-index: 1;
+        }
+
+        .hud-panel-left {
+            border-left: 5px solid #00f7ff;
+            align-items: flex-start;
         }
 
         .hud-panel-right {
-            border-left: none;
-            border-right: 4px solid #4facfe;     /* 右パネルは右アクセント */
-            border-radius: 12px 0 0 12px;
-            text-align: center;
-            min-width: 110px;
+            border-right: 5px solid #00f7ff;
+            align-items: center;
         }
 
         .hud-item {
-            margin-bottom: 8px;
+            width: 100%;
         }
 
-        .hud-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .hud-label {
+        .hud-label, .next-label {
             font-size: 10px;
-            color: #88ccff; /* 青みがかったグレー */
-            letter-spacing: 2px;
+            color: #00f7ff;
+            letter-spacing: 1px;
             font-weight: 700;
             display: block;
-            margin-bottom: 2px;
+            margin-bottom: 0px; /* 隙間を詰める */
             text-transform: uppercase;
-            opacity: 0.8;
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
         }
 
         .score-num {
-            font-size: 28px;
+            font-size: 26px; /* 30pxから少し小さく */
             color: #fff;
-            text-shadow: 0 0 15px rgba(79,172,254, 0.8);
+            text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff, 0 0 30px #00f7ff;
             font-weight: 400;
             line-height: 1;
-            font-variant-numeric: tabular-nums; /* 数字の幅を揃える */
+            font-variant-numeric: tabular-nums;
             letter-spacing: 1px;
         }
 
         .hi-score-num {
-            font-size: 20px; /* スコアより少し小さく */
+            font-size: 18px; /* 22pxから小さく */
             color: #ffd700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
             font-variant-numeric: tabular-nums;
         }
 
         .hi-stage-text {
-            margin-left: 10px;
+            margin-left: 8px;
             font-size: 10px;
-            color: #aaa;
+            color: #88ccff;
             letter-spacing: 1px;
+            text-shadow: 0 0 5px #00f7ff;
         }
 
         #hi-stage-val {
-            font-size: 14px;
+            font-size: 12px;
             color: #fff;
             font-weight: bold;
         }
 
         /* NEXT 表示周り */
-        .next-label {
-            font-size: 12px;
-            color: #88ccff;
-            letter-spacing: 3px;
-            margin-bottom: 5px;
-            display: block;
-            font-weight: 700;
-        }
-
         #next-ui {
-            height: 50px;
-            width: 50px;
-            margin: 5px auto;
+            height: 46px; /* 60pxから縮小 */
+            width: 46px;
+            margin: 2px auto;
             position: relative;
-            
-            /* ターゲットスコープ風の装飾 */
-            background: radial-gradient(circle, rgba(79,172,254,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0,247,255,0.15) 0%, transparent 60%);
             border-radius: 50%;
-            border: 1px dashed rgba(255, 255, 255, 0.3);
-            
-            /* 中身（Canvas）を中央揃え */
+            border: 2px solid rgba(0, 247, 255, 0.5);
+            box-shadow: inset 0 0 15px rgba(0, 247, 255, 0.3), 0 0 10px rgba(0, 247, 255, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
-        /* NEXT用の小さなCanvas */
-        #next-ui canvas {
-            position: static; /* absoluteを解除 */
-            width: 50px;
-            height: 50px;
-            display: block;
-        }
+
+            #next-ui canvas {
+                position: static;
+                width: 46px;
+                height: 46px;
+                display: block;
+                filter: drop-shadow(0 0 8px rgba(255,255,255,0.7));
+            }
 
         #next-name {
-            margin-top: 4px;
+            margin-top: 2px;
             font-size: 11px;
             letter-spacing: 1px;
             font-weight: bold;
             line-height: 1.1;
-            opacity: 0.9;
-            text-shadow: 0 0 5px currentColor; /* 文字色に合わせて光る */
+            text-shadow: 0 0 8px currentColor;
             white-space: nowrap;
         }
 
-        /* タイマーバーもスタイリッシュに */
+        /* タイマーバー */
         #timer-bar-container {
             width: 100%;
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            margin-top: 8px;
+            height: 4px; /* 少し細く */
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid #00f7ff;
+            border-radius: 0;
+            margin-top: 4px;
             overflow: hidden;
-            display: none; /* JSで制御 */
+            display: none;
+            box-shadow: 0 0 5px #00f7ff;
         }
-        
+
         #timer-bar-fill {
             height: 100%;
             background: #ff3c3c;
-            box-shadow: 0 0 10px #ff0000;
+            box-shadow: 0 0 15px #ff0000, inset 0 0 5px #fff;
             transition: width 0.1s linear;
+        }
+
+        /* UI以外のボタンやテキストの発光 */
+        h1#title-text {
+            text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
+        }
+
+        .btn, .sub-btn, .pause-menu-btn, #hud-pause-btn, #bgm-toggle {
+            border-color: #00f7ff !important;
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.2), inset 0 0 5px rgba(0, 247, 255, 0.2);
+        }
+
+            .btn:hover, .pause-menu-btn:hover {
+                background: #00f7ff !important;
+                color: #000 !important;
+                box-shadow: 0 0 30px #00f7ff !important;
+            }
+
+        .stage-num {
+            text-shadow: 0 0 15px #00f7ff, 0 0 30px #fff;
         }
 
         /* =========================================================
@@ -219,7 +262,7 @@
         #overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.95);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -296,7 +339,7 @@
         #pause-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85); /* 背景を濃く */
+            background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             display: none;
@@ -392,47 +435,70 @@
             }
 
         /* =========================================================
-         Bottom Left: BOOST
-         ========================================================= */
-        #boost-btn {
-            position: fixed;
-            bottom: 70px;
-            left: 32px;
-            padding: 10px 25px;
-            font-size: 20px;
-            letter-spacing: 2px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.6);
-            border-radius: 30px;
-            cursor: pointer;
-            z-index: 20;
-            box-shadow: inset 0 0 12px rgba(255,255,255,0.25);
-            isolation: isolate;
+         * Action Buttons (BOOST, PAUSE, BGM) - Unified TRON Style
+         * ========================================================= */
+
+        /* 3つのボタンの共通スタイル */
+        #boost-btn, #hud-pause-btn, #bgm-toggle {
             font-family: 'Orbitron', sans-serif;
             font-weight: bold;
+            color: white;
+            background: rgba(5, 15, 30, 0.85); /* パネル背景と共通化 */
+            border: 2px solid #00f7ff; /* TRONシアンの枠線 */
+            border-radius: 30px; /* 丸みを統一 */
+            cursor: pointer;
+            outline: none;
+            /* ネオン発光エフェクト */
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3), inset 0 0 10px rgba(0, 247, 255, 0.1);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex; /* 文字を中央揃え */
+            align-items: center;
+            justify-content: center;
         }
 
+            /* クリック時のエフェクト（共通） */
+            #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
+                background: rgba(0, 247, 255, 0.3); /* 背景が光る */
+                box-shadow: 0 0 25px rgba(0, 247, 255, 0.6), inset 0 0 15px rgba(0, 247, 255, 0.4);
+                transform: scale(0.95);
+                text-shadow: 0 0 15px #fff;
+                border-color: #fff;
+            }
+
+        /* --- 個別の配置設定 --- */
+
+        /* 左下: BOOSTボタン */
+        #boost-btn {
+            position: fixed;
+            bottom: 60px; /* 70px -> 60px に変更（右側と高さを揃える） */
+            left: 32px;
+            padding: 15px 35px;
+            font-size: 20px;
+            z-index: 20;
+        }
+
+            /* BOOSTボタン専用の装飾リング */
             #boost-btn::before {
                 content: "";
                 position: absolute;
-                inset: -15px;
-                border-radius: 100px;
-                border: 3px solid rgba(79,172,254,0.8);
-                box-shadow: 0 0 25px rgba(79,172,254,0.5);
+                inset: -6px;
+                border-radius: 40px;
+                border: 1px solid rgba(0, 247, 255, 0.4);
+                box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
                 pointer-events: none;
                 z-index: -1;
             }
 
-        /* =========================================================
-         Bottom Right Area: Management & Stage
-         ========================================================= */
+        /* 右下エリア */
         #bottom-right-ui {
             position: fixed;
             right: 24px;
-            bottom: 60px;
+            bottom: 60px; /* ここが基準（60px） */
             display: flex;
-            align-items: flex-end;
+            align-items: flex-end; /* 下揃え */
             gap: 15px;
             pointer-events: none;
             z-index: 1000;
@@ -443,61 +509,38 @@
             pointer-events: auto;
             display: flex;
             align-items: center;
-            height: 30px;
+            height: 36px;
         }
 
-        /* ゲーム中の右下PAUSEボタン */
+        /* PAUSEボタン */
         #hud-pause-btn {
-            width: 80px;
-            height: 30px;
-            background: rgba(0, 0, 0, 0.75);
-            color: white;
-            border: 2px solid #4facfe; /* 青っぽい枠線 */
-            border-radius: 20px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 10px;
-            letter-spacing: 1px;
-            cursor: pointer;
-            outline: none;
-            display: none; /* JSで表示制御 */
-            align-items: center;
-            justify-content: center;
+            width: 90px;
+            height: 36px;
+            font-size: 12px;
             padding: 0;
-            transition: transform 0.1s;
+            display: none; /* JSで表示制御 */
         }
 
-            #hud-pause-btn:active {
-                transform: scale(0.95);
-                background: rgba(79, 172, 254, 0.3);
-            }
-
-        /* タイトル画面用 BGMボタン */
+        /* BGMボタン（PAUSEと同じ場所に出る） */
         #bgm-control-pos {
             display: block;
-            width: 80px;
-            height: 30px;
+            width: 90px;
+            height: 36px;
         }
 
         #bgm-toggle {
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 10px;
-            letter-spacing: 1px;
-            cursor: pointer;
-            outline: none;
+            font-size: 12px;
             padding: 0;
-            transition: background 0.1s, transform 0.05s;
         }
 
-            #bgm-toggle:active {
-                transform: scale(0.95);
-                background: rgba(255, 255, 255, 0.3);
-            }
+        /* ステージ表示（変更なし） */
+        #stage-ui {
+            text-align: right;
+            pointer-events: none;
+        }
+
 
         /* Stage Display */
         #stage-ui {
@@ -779,6 +822,11 @@
         const SUPERNOVA_END_DELAY = 1100;
 
         const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+        // --- Gravity Grid Variables ---
+        const GRID_SPACING =10; // グリッドの間隔
+        let gridPoints = [];     // 格子点の配列
+        let shockwaves = [];     // 発生中の衝撃波リスト
 
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
@@ -1164,7 +1212,7 @@
         function generateStars() {
             bgStars = [];
             const maxDimension = Math.max(WIDTH, HEIGHT) * 1.5;
-            
+
             for (let i = 0; i < STAR_COUNT; i++) {
                 const rand = Math.random();
                 let baseColor;
@@ -1185,8 +1233,27 @@
                 });
             }
             // starCanvas (画像キャッシュ) は使用しないため削除
-            starCanvas = null; 
+            starCanvas = null;
         }
+
+        function initGrid() {
+            gridPoints = [];
+            // 画面より少し広めにグリッドを作る（揺れた時に端が見えないように）
+            const margin = 200;
+            const cols = Math.ceil((WIDTH + margin * 2) / GRID_SPACING);
+            const rows = Math.ceil((HEIGHT + margin * 2) / GRID_SPACING);
+
+            for (let i = 0; i <= cols; i++) {
+                gridPoints[i] = [];
+                for (let j = 0; j <= rows; j++) {
+                    const x = i * GRID_SPACING - margin;
+                    const y = j * GRID_SPACING - margin;
+                    // ox, oy: 本来の位置, x, y: 歪んだ後の位置
+                    gridPoints[i][j] = { x, y, ox: x, oy: y };
+                }
+            }
+        }
+
 
         /* =========================================================
          * Refactored Initialization & Loops
@@ -1195,7 +1262,7 @@
         // ---------------------------------------------------------
         // 1. Helper Functions (Moved out from preInit)
         // ---------------------------------------------------------
-        
+
         function removeAllDynamicBodies() {
             const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
             if (bodies.length) Composite.remove(engine.world, bodies);
@@ -1206,7 +1273,7 @@
             implosionScale = 1.0;
             implosionAlpha = 1.0;
             let startTime = performance.now();
-            
+
             const animateImplosion = (now) => {
                 const elapsed = now - startTime;
                 if (elapsed < 300) {
@@ -1294,6 +1361,9 @@
         // ---------------------------------------------------------
         // 3. Game Logic Events (Gravity & Collision)
         // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // 3. Game Logic Events (Gravity & Collision)
+        // ---------------------------------------------------------
         function setupGameLogic() {
             // [Gravity] - Pull objects to center
             Events.on(engine, "beforeUpdate", () => {
@@ -1325,9 +1395,19 @@
                     a.isMerging = true;
                     b.isMerging = true;
                     const mid = { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 };
+
+                    // ★修正箇所: 変数の定義(nI, nP)を先に持ってくる
                     const nI = a.index + 1;
                     const nP = PLANETS[nI];
-                    
+
+                    // その後に衝撃波の生成を行う (これでエラーが直ります)
+                    shockwaves.push({
+                        x: mid.x,
+                        y: mid.y,
+                        radius: 10,
+                        life: 1.0 + (nI * 0.1) // ランクが高いほど持続
+                    });
+
                     Composite.remove(engine.world, [a, b]);
                     playExplosionSound();
 
@@ -1359,7 +1439,7 @@
                     if (now - lastMergeTime < 800) comboCount++;
                     else comboCount = 0;
                     lastMergeTime = now;
-                    
+
                     const comboBonus = 1 + (comboCount * 0.2);
                     const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
                     updateScore(Math.floor(points * comboBonus));
@@ -1395,28 +1475,29 @@
         // 4. Drawing / Render Loop functions
         // ---------------------------------------------------------
         function drawBackground(ctx) {
-            // 背景回転の計算
+            // --- 共通変数の準備 ---
             const mult = isBoosting ? STAR_BOOST_MULT : 1.0;
             if (!isPaused) staticStarAngle -= 0.0025 * mult;
 
+            const now = Date.now();
+            const t = performance.now();
+
+            // =========================================================
+            // 1. 星の描画 (グリッドの奥に見えるように最初に描く)
+            // =========================================================
             ctx.save();
             ctx.translate(CENTER.x, CENTER.y);
-            ctx.rotate(staticStarAngle); // 全体を回転
+            ctx.rotate(staticStarAngle); // 星のみ回転させる
 
-            const now = Date.now(); // 現在時刻を取得
-
-            // すべての星をループして描画
             for (let i = 0; i < bgStars.length; i++) {
                 const s = bgStars[i];
 
-                // 点滅の計算 (サイン波を使ってアルファ値を揺らす)
-                // baseAlpha を基準に、少し明るくなったり暗くなったりさせる
+                // 点滅の計算
                 const blink = Math.sin(now * s.blinkSpeed + s.blinkPhase);
-                // 透明度が0以下にならないよう調整 (0.3 〜 1.0 の範囲などにする)
                 const currentAlpha = Math.max(0.1, Math.min(1, s.baseAlpha + blink * 0.3));
 
                 ctx.fillStyle = `rgba(${s.colorBase}, ${currentAlpha})`;
-                
+
                 // 大きい星だけ光彩（ぼかし）を入れる
                 if (s.size > 1.8) {
                     ctx.shadowBlur = 4;
@@ -1426,14 +1507,119 @@
                 }
 
                 ctx.beginPath();
-                // 回転した座標系に描画するため、単純な三角関数で座標を求める
                 const x = Math.cos(s.angle) * s.r;
                 const y = Math.sin(s.angle) * s.r;
-                
                 ctx.arc(x, y, s.size, 0, Math.PI * 2);
                 ctx.fill();
             }
+            ctx.restore(); // 星の回転状態を解除
 
+            // =========================================================
+            // 2. グリッドの物理計算 (重力歪み)
+            // =========================================================
+            const bodies = Composite.allBodies(engine.world);
+
+            // 重力源リストを作成
+            const gravitySources = [];
+
+            // コア
+            gravitySources.push({
+                x: CENTER.x,
+                y: CENTER.y,
+                power: CORE_RADIUS * 12
+            });
+
+            // 惑星
+            bodies.forEach(b => {
+                if (!b.isStatic && b.index !== undefined) {
+                    gravitySources.push({
+                        x: b.position.x,
+                        y: b.position.y,
+                        power: b.circleRadius * 3
+                    });
+                }
+            });
+
+            // ランチャー位置の微細な歪み
+            const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+            const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+            gravitySources.push({ x: sX, y: sY, power: 30 });
+
+            // 衝撃波の更新
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.life -= 0.015;
+                sw.radius += 5;
+                if (sw.life <= 0) shockwaves.splice(i, 1);
+            }
+
+            // グリッド各点の座標計算
+            const cols = gridPoints.length;
+            const rows = gridPoints[0].length;
+
+            for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                    const p = gridPoints[i][j];
+                    let dx = 0;
+                    let dy = 0;
+
+                    // A. 重力源による吸い寄せ
+                    gravitySources.forEach(src => {
+                        const distX = src.x - p.ox;
+                        const distY = src.y - p.oy;
+                        const distSq = distX * distX + distY * distY;
+                        const factor = src.power * 25 / (distSq + 2500);
+                        dx += distX * factor;
+                        dy += distY * factor;
+                    });
+
+                    // B. 衝撃波による変位 (強化版)
+                    shockwaves.forEach(sw => {
+                        const dist = Math.sqrt((p.ox - sw.x) ** 2 + (p.oy - sw.y) ** 2);
+                        const waveDist = Math.abs(dist - sw.radius);
+
+                        // 範囲を50 -> 80に拡大して波を太くする
+                        if (waveDist < 80) {
+                            const angle = Math.atan2(p.oy - sw.y, p.ox - sw.x);
+                            // 係数を15 -> 180にアップして歪みを激しくする
+                            const waveForce = Math.sin(waveDist * 0.1) * sw.life * 180;
+                            dx += Math.cos(angle) * waveForce;
+                            dy += Math.sin(angle) * waveForce;
+                        }
+                    });
+
+                    // C. 弾性（元の位置に戻る力）
+                    p.x += (p.ox + dx - p.x) * 0.1;
+                    p.y += (p.oy + dy - p.y) * 0.1;
+                }
+            }
+
+            // =========================================================
+            // 3. グリッドの描画 (デジタル・ネオン風)
+            // =========================================================
+            ctx.save();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "rgba(0, 247, 255, 0.15)"; // 薄いシアン
+
+            // 縦線
+            for (let i = 0; i < cols; i++) {
+                ctx.beginPath();
+                ctx.moveTo(gridPoints[i][0].x, gridPoints[i][0].y);
+                for (let j = 1; j < rows; j++) {
+                    ctx.lineTo(gridPoints[i][j].x, gridPoints[i][j].y);
+                }
+                ctx.stroke();
+            }
+
+            // 横線
+            for (let j = 0; j < rows; j++) {
+                ctx.beginPath();
+                ctx.moveTo(gridPoints[0][j].x, gridPoints[0][j].y);
+                for (let i = 1; i < cols; i++) {
+                    ctx.lineTo(gridPoints[i][j].x, gridPoints[i][j].y);
+                }
+                ctx.stroke();
+            }
             ctx.restore();
         }
 
@@ -1467,7 +1653,7 @@
             const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
             const SPARK_MAX = 220;
             if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
-            
+
             if (Math.random() < SPARK_RATE) {
                 const burst = 2 + (isBoosting ? 4 : 2);
                 for (let k = 0; k < burst; k++) {
@@ -1493,7 +1679,7 @@
             ctx.save();
             ctx.translate(CENTER.x, CENTER.y);
             const currentRadius = CORE_RADIUS * implosionScale;
-            
+
             if (isImploding) {
                 ctx.globalAlpha = implosionAlpha;
                 const gR = currentRadius * 3;
@@ -1539,29 +1725,29 @@
         function initNextCanvas() {
             const container = document.getElementById("next-ui");
             if (!container) return;
-            
+
             // 既存の中身をクリア
             container.innerHTML = "";
-            
+
             const c = document.createElement("canvas");
             const dpr = window.devicePixelRatio || 1;
-            
+
             // 解像度を高くしてクッキリさせる
-            c.width = 50 * dpr;
-            c.height = 50 * dpr;
-            
+            c.width = 46 * dpr; // サイズ変更
+            c.height = 46 * dpr;
+
             // 表示サイズ
-            c.style.width = "50px";
-            c.style.height = "50px";
-            
+            c.style.width = "46px";
+            c.style.height = "46px";
+
             nextCtx = c.getContext("2d");
             nextCtx.scale(dpr, dpr);
-            
+
             container.appendChild(c);
         }
 
         function drawLauncher(ctx, now) {
-            // 1. 発射台の描画（これはメインCanvas = ctx に描く）
+            // 1. 発射台の描画（光線に変更）
             if (isGameRunning && isClickable) {
                 const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
                 const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
@@ -1574,26 +1760,19 @@
                 ctx.lineTo(CENTER.x, CENTER.y);
                 ctx.stroke();
                 ctx.restore();
-                
-                // 次の発射弾（現在の惑星）
+
+                // 次の発射弾
                 drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
             }
 
-            // 2. NEXT表示の更新（専用の nextCtx に描く）
+            // 2. NEXT表示の更新
             if (nextCtx && nextQueue.length >= 2) {
-                // UI用Canvasをクリア
-                nextCtx.clearRect(0, 0, 50, 50);
-                
+                // NEXT Canvasのサイズを CSS に合わせて 46x46 に変更
+                nextCtx.clearRect(0, 0, 46, 46);
                 const nextPlanet = PLANETS[nextQueue[1]];
-                
-                // ★サイズ反映の調整
-                // 出現する惑星は最大でも半径30px (Vega) です。
-                // 50x50の枠（半径25px）に対し、光彩(glow)の余裕を持たせて 0.7倍 に設定します。
-                // これにより、最小(10px→7px) と 最大(30px→21px) の差がはっきり見えるようになります。
-                const uiScale = 0.7; 
-                
-                // UI用Canvasの中心(25, 25)に描画
-                drawPlanet(nextCtx, 25, 25, nextPlanet.radius * uiScale, nextPlanet.color, now, 1);
+                const uiScale = 0.65;  // 枠に収まるように微調整
+                // 中心座標を (23, 23) に変更
+                drawPlanet(nextCtx, 23, 23, nextPlanet.radius * uiScale, nextPlanet.color, now, 1);
             }
         }
 
@@ -1701,7 +1880,7 @@
                 if (nextQueue.length >= 2) {
                     const nextPlanet = PLANETS[nextQueue[1]];
                     const nextNameEl = document.getElementById("next-name");
-                    if(nextNameEl) {
+                    if (nextNameEl) {
                         nextNameEl.textContent = nextPlanet.name;
                         nextNameEl.style.color = nextPlanet.color;
                     }
@@ -1709,9 +1888,9 @@
 
                 // --- Draw Sequence ---
                 drawBackground(ctx);
-                
+
                 ctx.globalAlpha = 1;
-                
+
                 const isWarning = gameOverTime !== null;
                 drawRedZone(ctx, t, isWarning);
                 spawnSparks(isWarning);
@@ -1736,6 +1915,7 @@
         // ---------------------------------------------------------
         function preInit() {
             initPhysics();
+            initGrid();
             initNextCanvas();
             setupGameLogic();
             setupRenderLoop();
@@ -1815,7 +1995,7 @@
         function triggerGameOver() {
 
             stopBGM();
- 
+
 
             document.getElementById("clear-message").style.display = "none";
             isGameRunning = false;
@@ -2166,6 +2346,8 @@
                     p.x += dx; p.y += dy;
                     if (p.px !== undefined) { p.px += dx; p.py += dy; }
                 });
+
+                initGrid();
             }, 100);
         });
 
@@ -2456,11 +2638,11 @@
                     const stageVal = data.stage ? data.stage : "-";
 
                     tr.innerHTML = `
-                                <td class="${rankClass}">${rank}</td>
-                                <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
-                                <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                                <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                            `;
+                                    <td class="${rankClass}">${rank}</td>
+                                    <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                                    <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                                    <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                                `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
