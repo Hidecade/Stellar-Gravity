@@ -18,677 +18,743 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <style>
-        /* =========================================================
-         Global / Layout
-         ========================================================= */
-        body {
-            margin: 0;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100dvh;
-            width: 100vw;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-            color: white;
-            position: fixed;
-            overflow: hidden;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 200 !important;
-        }
+            /* =========================================================
+        * Global / Layout
+        * ========================================================= */
+            body {
+                margin: 0;
+                background: #000;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100dvh;
+                width: 100vw;
+                touch-action: none;
+                user-select: none;
+                -webkit-user-select: none;
+                color: white;
+                position: fixed;
+                overflow: hidden;
+                font-family: 'Orbitron', sans-serif;
+                font-weight: 200 !important;
+            }
 
-        .btn {
-            font-family: 'Orbitron', sans-serif;
-        }
+            .btn {
+                font-family: 'Orbitron', sans-serif;
+            }
 
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            display: block;
-            -webkit-touch-callout: none;
-        }
-
-        /* =========================================================
-         * HUD (Top Score / Next) - Compact & TRON Style
-         * ========================================================= */
-        #ui-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 12px 15px; /* 外側の余白を狭く */
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            pointer-events: none;
-            z-index: 10;
-            font-weight: normal;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-        }
-
-        /* 共通パネルスタイル：高さを抑えてコンパクトに */
-        .hud-panel-left, .hud-panel-right {
-            background: rgba(5, 15, 30, 0.85);
-            border: 1px solid #00f7ff;
-            box-shadow: 0 0 10px #00f7ff, inset 0 0 15px rgba(0, 247, 255, 0.4);
-            /* ▼▼▼ 以下の2行を削除（またはコメントアウト）してグリッドを消去 ▼▼▼ */
-            /* background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px); */
-            /* background-size: 20px 20px; */
-            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
-
-            padding: 5px 10px;
-            position: relative;
-            overflow: hidden;
-            height: 110px;
-            min-width: 130px;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-evenly;
-        }
-
-            /* パネル内の光のエフェクト */
-            .hud-panel-left::before, .hud-panel-right::before {
-                content: "";
+            canvas {
                 position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: linear-gradient( transparent, rgba(0, 247, 255, 0.1), transparent );
-                transform: rotate(45deg);
-                animation: grid-scan 6s linear infinite;
-                pointer-events: none;
-            }
-
-        @keyframes grid-scan {
-            0% {
-                transform: translateY(-100%) rotate(45deg);
-            }
-
-            100% {
-                transform: translateY(100%) rotate(45deg);
-            }
-        }
-
-        /* 中身の要素 */
-        .hud-panel-left > *, .hud-panel-right > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        .hud-panel-left {
-            align-items: flex-start;
-        }
-
-        .hud-panel-right {
-            align-items: center;
-        }
-
-        .hud-item {
-            width: 100%;
-        }
-
-        .hud-label, .next-label {
-            font-size: 14px;
-            color: #00f7ff;
-            letter-spacing: 1px;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 0px; /* 隙間を詰める */
-            text-transform: uppercase;
-            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-        }
-
-        .score-num {
-            font-size: 26px; /* 30pxから少し小さく */
-            color: #fff;
-            text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff, 0 0 30px #00f7ff;
-            font-weight: 400;
-            line-height: 1;
-            font-variant-numeric: tabular-nums;
-            letter-spacing: 1px;
-        }
-
-        .hi-score-num {
-            font-size: 18px; /* 22pxから小さく */
-            color: #ffd700;
-            text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .hi-stage-text {
-            margin-left: 8px;
-            font-size: 12px;
-            color: #ffffff;
-            letter-spacing: 1px;
-            text-shadow: 0 0 5px #ffffff;
-        }
-
-        #hi-stage-val {
-            font-size: 14px;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        /* NEXT 表示周り */
-        #next-ui {
-            height: 46px; /* 60pxから縮小 */
-            width: 46px;
-            margin: 2px auto;
-            position: relative;
-            background: radial-gradient(circle, rgba(0,247,255,0.15) 0%, transparent 60%);
-            border-radius: 50%;
-            border: 2px solid rgba(0, 247, 255, 0.5);
-            box-shadow: inset 0 0 15px rgba(0, 247, 255, 0.3), 0 0 10px rgba(0, 247, 255, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-            #next-ui canvas {
-                position: static;
-                width: 46px;
-                height: 46px;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
                 display: block;
-                filter: drop-shadow(0 0 8px rgba(255,255,255,0.7));
+                -webkit-touch-callout: none;
             }
 
-        #next-name {
-            margin-top: 2px;
-            font-size: 11px;
-            letter-spacing: 1px;
-            font-weight: bold;
-            line-height: 1.1;
-            text-shadow: 0 0 8px currentColor;
-            white-space: nowrap;
-        }
-
-        /* タイマーバー */
-        #timer-bar-container {
-            width: 100%;
-            height: 4px; /* 少し細く */
-            background: rgba(0, 20, 40, 0.8);
-            border: 1px solid #00f7ff;
-            border-radius: 0;
-            margin-top: 4px;
-            overflow: hidden;
-            display: none;
-            box-shadow: 0 0 5px #00f7ff;
-        }
-
-        #timer-bar-fill {
-            height: 100%;
-            background: #ff3c3c;
-            box-shadow: 0 0 15px #ff0000, inset 0 0 5px #fff;
-            transition: width 0.1s linear;
-        }
-
-        /* UI以外のボタンやテキストの発光 */
-        h1#title-text {
-            text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
-        }
-
-        .btn, .sub-btn, .pause-menu-btn, #hud-pause-btn, #bgm-toggle {
-            border-color: #00f7ff !important;
-            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-            box-shadow: 0 0 10px rgba(0, 247, 255, 0.2), inset 0 0 5px rgba(0, 247, 255, 0.2);
-        }
-
-            .btn:hover, .pause-menu-btn:hover {
-                background: #00f7ff !important;
-                color: #000 !important;
-                box-shadow: 0 0 30px #00f7ff !important;
-            }
-
-        .stage-num {
-            text-shadow: 0 0 15px #00f7ff, 0 0 30px #fff;
-        }
-
-        /* =========================================================
-         Overlay (Title / Result)
-         ========================================================= */
-        #overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            text-align: center;
-            transition: opacity 0.5s;
-        }
-
-            #overlay.hide {
-                opacity: 0;
+            /* =========================================================
+        * HUD (Top Score / Next) - Compact & TRON Style
+        * ========================================================= */
+            #ui-layer {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                padding: 12px 15px;
+                box-sizing: border-box;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
                 pointer-events: none;
+                z-index: 10;
+                font-weight: normal;
+                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+                background-size: 100% 2px, 3px 100%;
             }
 
-        /* =========================================================
-         Soundtrack Overlay
-         ========================================================= */
-        #soundtrack-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 10, 20, 0.95);
-            display: none; /* 初期非表示 */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1500;
-            text-align: center;
-        }
+            /* Common Panel Style */
+            .hud-panel-left, .hud-panel-right {
+                background: rgba(5, 15, 30, 0.85);
+                border: 2px solid #00f7ff;
+                box-shadow: 0 0 10px #00f7ff, inset 0 0 15px rgba(0, 247, 255, 0.4);
+                padding: 8px 12px;
+                position: relative;
+                overflow: hidden;
+                height: 110px;
+                min-width: 130px;
+                border-radius: 8px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-evenly;
+            }
+
+                /* Light Scan Effect */
+                .hud-panel-left::before, .hud-panel-right::before {
+                    content: "";
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: linear-gradient( transparent, rgba(0, 247, 255, 0.1), transparent );
+                    transform: rotate(45deg);
+                    animation: grid-scan 6s linear infinite;
+                    pointer-events: none;
+                }
+
+            @keyframes grid-scan {
+                0% {
+                    transform: translateY(-100%) rotate(45deg);
+                }
+
+                100% {
+                    transform: translateY(100%) rotate(45deg);
+                }
+            }
+
+            .hud-panel-left > *, .hud-panel-right > * {
+                position: relative;
+                z-index: 1;
+            }
+
+            .hud-panel-left {
+                border-left: 5px solid #00f7ff;
+                align-items: flex-start;
+            }
+
+            .hud-panel-right {
+                border-right: 5px solid #00f7ff;
+                align-items: center;
+            }
+
+            .hud-item {
+                width: 100%;
+            }
+
+            .hud-label, .next-label {
+                font-size: 10px;
+                color: #00f7ff;
+                letter-spacing: 1px;
+                font-weight: 700;
+                display: block;
+                margin-bottom: 0px;
+                text-transform: uppercase;
+                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            }
+
+            .score-num {
+                font-size: 26px;
+                color: #fff;
+                text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff, 0 0 30px #00f7ff;
+                font-weight: 400;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 1px;
+            }
+
+            .hi-score-num {
+                font-size: 18px;
+                color: #ffd700;
+                text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
+                font-variant-numeric: tabular-nums;
+            }
+
+            .hi-stage-text {
+                margin-left: 8px;
+                font-size: 10px;
+                color: #88ccff;
+                letter-spacing: 1px;
+                text-shadow: 0 0 5px #00f7ff;
+            }
+
+            #hi-stage-val {
+                font-size: 12px;
+                color: #fff;
+                font-weight: bold;
+            }
+
+            /* NEXT UI */
+            #next-ui {
+                height: 46px;
+                width: 46px;
+                margin: 2px auto;
+                position: relative;
+                background: radial-gradient(circle, rgba(0,247,255,0.1) 0%, transparent 60%);
+                border-radius: 50%;
+                border: 1px dotted rgba(180, 180, 180, 0.6);
+                box-shadow: inset 0 0 10px rgba(150, 150, 150, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+                #next-ui canvas {
+                    position: static;
+                    width: 46px;
+                    height: 46px;
+                    display: block;
+                    filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
+                }
+
+            #next-name {
+                margin-top: 2px;
+                font-size: 11px;
+                letter-spacing: 1px;
+                font-weight: bold;
+                line-height: 1.1;
+                text-shadow: 0 0 8px currentColor;
+                white-space: nowrap;
+            }
+
+            /* Timer Bar */
+            #timer-bar-container {
+                width: 100%;
+                height: 4px;
+                background: rgba(0, 20, 40, 0.8);
+                border: 1px solid #00f7ff;
+                border-radius: 0;
+                margin-top: 4px;
+                overflow: hidden;
+                display: none;
+                box-shadow: 0 0 5px #00f7ff;
+            }
+
+            #timer-bar-fill {
+                height: 100%;
+                background: #ff3c3c;
+                box-shadow: 0 0 15px #ff0000, inset 0 0 5px #fff;
+                transition: width 0.1s linear;
+            }
+
+            /* Text Glow Effects */
+            h1#title-text {
+                text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
+            }
+
+            .btn, .sub-btn, .pause-menu-btn, #hud-pause-btn, #bgm-toggle {
+                border-color: #00f7ff !important;
+                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+                box-shadow: 0 0 10px rgba(0, 247, 255, 0.2), inset 0 0 5px rgba(0, 247, 255, 0.2);
+            }
+
+                .btn:hover, .pause-menu-btn:hover {
+                    background: #00f7ff !important;
+                    color: #000 !important;
+                    box-shadow: 0 0 30px #00f7ff !important;
+                }
+
+            .stage-num {
+                text-shadow: 0 0 15px #00f7ff, 0 0 30px #fff;
+            }
+
+            /* =========================================================
+        * Overlay (Title / Result)
+        * ========================================================= */
+            #overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.95);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                text-align: center;
+                transition: opacity 0.5s;
+            }
+
+                #overlay.hide {
+                    opacity: 0;
+                    pointer-events: none;
+                }
+
+            /* =========================================================
+        * Soundtrack Overlay
+        * ========================================================= */
+            #soundtrack-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(10, 10, 20, 0.95);
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 1500;
+                text-align: center;
+            }
 
         .track-list {
             list-style: none;
             padding: 0;
-            margin: 20px 0;
+            margin: 15px 0;
             width: 80%;
             max-width: 400px;
-            max-height: 60vh;
+            /* ▼▼▼ ここを変更（縦に長くする） ▼▼▼ */
+            max-height: 60vh; /* 40vh -> 60vh に拡大 */
+            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
             overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #00f7ff transparent;
         }
+                /* Webkit Scrollbar */
+                .track-list::-webkit-scrollbar {
+                    width: 6px;
+                }
 
-        .track-item {
-            padding: 15px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 14px;
-            letter-spacing: 2px;
-            color: #ccc;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+                .track-list::-webkit-scrollbar-thumb {
+                    background-color: rgba(0, 247, 255, 0.5);
+                    border-radius: 3px;
+                }
 
-            .track-item:hover {
-                background: rgba(255,255,255,0.1);
+            .track-item {
+                padding: 10px 15px;
+                margin-bottom: 6px;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 10px;
+                cursor: pointer;
+                transition: background 0.2s;
+                font-size: 12px;
+                letter-spacing: 2px;
+                color: #ccc;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+                .track-item:hover {
+                    background: rgba(255,255,255,0.1);
+                    color: white;
+                }
+
+                .track-item.active {
+                    border-color: #4facfe;
+                    background: rgba(79,172,254,0.2);
+                    color: #fff;
+                    text-shadow: 0 0 8px rgba(79,172,254,0.8);
+                }
+
+            .track-icon {
+                font-size: 12px;
+            }
+
+            /* =========================================================
+        * Pause Overlay
+        * ========================================================= */
+            #pause-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 2000;
+            }
+
+            .pause-text {
+                font-size: 42px;
+                letter-spacing: 8px;
                 color: white;
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+                margin-bottom: 40px;
             }
 
-            .track-item.active {
-                border-color: #4facfe;
-                background: rgba(79,172,254,0.2);
-                color: #fff;
-                text-shadow: 0 0 8px rgba(79,172,254,0.8);
-            }
-
-        .track-icon {
-            font-size: 12px;
-        }
-
-        /* =========================================================
-         Pause Overlay (New Menu)
-         ========================================================= */
-        #pause-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .pause-text {
-            font-size: 42px;
-            letter-spacing: 8px;
-            color: white;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            margin-bottom: 40px;
-        }
-
-        /* ポーズメニュー内のボタン */
-        .pause-menu-btn {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            letter-spacing: 4px;
-            background: transparent;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.8);
-            padding: 15px 40px;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            min-width: 200px;
-            transition: all 0.2s;
-        }
-
-            .pause-menu-btn:hover {
-                background: white;
-                color: black;
-            }
-
-        #pause-quit-btn {
-            font-size: 14px;
-            padding: 12px 30px;
-            opacity: 0.8;
-            border-color: rgba(255, 100, 100, 0.6);
-            color: #ffcccc;
-        }
-
-            #pause-quit-btn:hover {
-                background: rgba(255, 50, 50, 0.8);
+            .pause-menu-btn {
+                font-family: 'Orbitron', sans-serif;
+                font-size: 18px;
+                letter-spacing: 4px;
+                background: transparent;
                 color: white;
+                border: 1px solid rgba(255,255,255,0.8);
+                padding: 15px 40px;
+                border-radius: 50px;
+                cursor: pointer;
+                margin-bottom: 20px;
+                min-width: 200px;
+                transition: all 0.2s;
             }
 
-        h1 {
-            margin: 0;
-            font-size: 42px;
-            line-height: 1.1;
-            letter-spacing: 6px;
-            font-weight: 200;
-        }
+                .pause-menu-btn:hover {
+                    background: white;
+                    color: black;
+                }
 
-        .btn {
-            margin-top: 30px; /* 少し間隔調整 */
-            padding: 15px 50px;
-            font-size: 18px;
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.8);
-            color: white;
-            border-radius: 50px;
-            cursor: pointer;
-            letter-spacing: 4px;
-        }
-
-            .btn:hover {
-                background: white;
-                color: black;
+            #pause-quit-btn {
+                font-size: 14px;
+                padding: 12px 30px;
+                opacity: 0.8;
+                border-color: rgba(255, 100, 100, 0.6);
+                color: #ffcccc;
             }
+
+                #pause-quit-btn:hover {
+                    background: rgba(255, 50, 50, 0.8);
+                    color: white;
+                }
+
+            h1 {
+                margin: 0;
+                font-size: 42px;
+                line-height: 1.1;
+                letter-spacing: 6px;
+                font-weight: 200;
+            }
+
+            .btn {
+            width: 280px;
+                margin-top: 30px;
+                padding: 15px 50px;
+                font-size: 18px;
+                background: transparent;
+                border: 1px solid rgba(255,255,255,0.8);
+                color: white;
+                border-radius: 50px;
+                cursor: pointer;
+                letter-spacing: 4px;
+            }
+
+                .btn:hover {
+                    background: white;
+                    color: black;
+                }
 
         .sub-btn {
-            margin-top: 20px; /* 間隔調整 */
-            padding: 10px 16px;
+            margin-top: 15px; /* 間隔を少し微調整 */
+            padding: 7px 0; /* 上下パディングのみ指定（左右はwidthで決まるため0でOK） */
+            /* ▼▼▼ 幅を固定して揃える ▼▼▼ */
+            width: 280px;
+            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+
             font-size: 13px;
             letter-spacing: 2px;
-            opacity: 0.6;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.3);
+            opacity: 0.8; /* 視認性を上げるため少し不透明度アップ */
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
-            border-radius: 20px;
-            transition: opacity 0.3s, background 0.3s;
+            border-radius: 30px; /* 丸みを少し強く */
+            transition: all 0.3s;
+            /* テキストを中央揃えに */
+            text-align: center;
         }
 
+            /* ホバー時の挙動（既存のTRONスタイルに合わせる） */
             .sub-btn:hover {
                 opacity: 1.0;
-                background: rgba(255, 0, 0, 0.4);
+                background: rgba(0, 247, 255, 0.2);
+                border-color: #00f7ff;
+                box-shadow: 0 0 15px rgba(0, 247, 255, 0.4);
+                color: #fff;
             }
 
-        /* =========================================================
-         * Action Buttons (BOOST, PAUSE, BGM) - Unified TRON Style
-         * ========================================================= */
-
-        /* 3つのボタンの共通スタイル */
-        #boost-btn, #hud-pause-btn, #bgm-toggle {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            color: white;
-            background: rgba(5, 15, 30, 0.85); /* パネル背景と共通化 */
-            border: 2px solid #00f7ff; /* TRONシアンの枠線 */
-            border-radius: 30px; /* 丸みを統一 */
-            cursor: pointer;
-            outline: none;
-            /* ネオン発光エフェクト */
-            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3), inset 0 0 10px rgba(0, 247, 255, 0.1);
-            transition: all 0.1s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            display: flex; /* 文字を中央揃え */
-            align-items: center;
-            justify-content: center;
-        }
-
-            /* クリック時のエフェクト（共通） */
-            #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
-                background: rgba(0, 247, 255, 0.3); /* 背景が光る */
-                box-shadow: 0 0 25px rgba(0, 247, 255, 0.6), inset 0 0 15px rgba(0, 247, 255, 0.4);
-                transform: scale(0.95);
-                text-shadow: 0 0 15px #fff;
-                border-color: #fff;
+            /* =========================================================
+        * Action Buttons (BOOST, PAUSE, BGM)
+        * ========================================================= */
+            #boost-btn, #hud-pause-btn, #bgm-toggle {
+                font-family: 'Orbitron', sans-serif;
+                font-weight: bold;
+                color: white;
+                background: rgba(5, 15, 30, 0.85);
+                border: 1px solid #00f7ff;
+                
+                border-radius: 30px;
+                cursor: pointer;
+                outline: none;
+                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+                box-shadow: 0 0 10px rgba(0, 247, 255, 0.3), inset 0 0 10px rgba(0, 247, 255, 0.1);
+                transition: all 0.1s;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
-        /* --- 個別の配置設定 --- */
+                #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
+                    background: rgba(0, 247, 255, 0.3);
+                    box-shadow: 0 0 25px rgba(0, 247, 255, 0.6), inset 0 0 15px rgba(0, 247, 255, 0.4);
+                    transform: scale(0.95);
+                    text-shadow: 0 0 15px #fff;
+                    border-color: #fff;
+                }
 
-        /* 左下: BOOSTボタン */
-        #boost-btn {
-            position: fixed;
-            bottom: 60px; /* 70px -> 60px に変更（右側と高さを揃える） */
-            left: 32px;
-            padding: 15px 35px;
-            font-size: 20px;
-            z-index: 20;
-        }
+            /* Left Bottom: BOOST */
+            #boost-btn {
+                position: fixed;
+                bottom: 60px;
+                left: 32px;
+                padding: 15px 35px;
+                font-size: 20px;
+                z-index: 20;
+            }
 
-            /* BOOSTボタン専用の装飾リング */
-            #boost-btn::before {
-                content: "";
-                position: absolute;
-                inset: -6px;
-                border-radius: 40px;
-                border: 1px solid rgba(0, 247, 255, 0.4);
-                box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+                #boost-btn::before {
+                    content: "";
+                    position: absolute;
+                    inset: -6px;
+                    border-radius: 40px;
+                    border: 1px solid rgba(0, 247, 255, 0.4);
+                    box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+            /* Right Bottom: PAUSE/BGM & Stage */
+            #bottom-right-ui {
+                position: fixed;
+                right: 24px;
+                bottom: 60px;
+                display: flex;
+                align-items: flex-end;
+                gap: 15px;
                 pointer-events: none;
-                z-index: -1;
+                z-index: 1000;
             }
 
-        /* 右下エリア */
-        #bottom-right-ui {
-            position: fixed;
-            right: 24px;
-            bottom: 60px; /* ここが基準（60px） */
-            display: flex;
-            align-items: flex-end; /* 下揃え */
-            gap: 15px;
-            pointer-events: none;
-            z-index: 1000;
-        }
-
-        #management-btn-area {
-            position: relative;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            height: 36px;
-        }
-
-        /* PAUSEボタン */
-        #hud-pause-btn {
-            width: 70px;
-            height: 32px;
-            font-size: 10px;
-            padding: 0;
-            display: none; /* JSで表示制御 */
-        }
-
-        /* BGMボタン（PAUSEと同じ場所に出る） */
-        #bgm-control-pos {
-            display: block;
-            width: 70px;
-            height: 32px;
-        }
-
-        #bgm-toggle {
-            width: 100%;
-            height: 100%;
-            font-size: 10px;
-            padding: 0;
-        }
-
-        /* ステージ表示（変更なし） */
-        #stage-ui {
-            text-align: right;
-            pointer-events: none;
-        }
-
-
-        /* Stage Display */
-        #stage-ui {
-            text-align: right;
-            pointer-events: none;
-        }
-
-        .stage-label {
-            font-size: 12px;
-            letter-spacing: 2px;
-            color: #aaa;
-        }
-
-        .stage-num {
-            font-size: 36px;
-            font-weight: bold;
-            text-shadow: 0 0 12px rgba(255,255,255,0.6);
-        }
-
-        .ui-faded {
-            opacity: 0.3;
-            transition: opacity 0.5s;
-        }
-
-        .score-bounce {
-            animation: score-bounce 0.5s ease-out;
-        }
-
-        #controls-hint {
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 400;
-        }
-
-        @keyframes score-bounce {
-            0% {
-                transform: scale(1);
-                opacity: 1;
+            #management-btn-area {
+                position: relative;
+                pointer-events: auto;
+                display: flex;
+                align-items: center;
+                height: 36px;
             }
 
-            30% {
-                transform: scale(1.1);
-                opacity: 0.8;
-                text-shadow: 0 0 10px #fff;
+            #hud-pause-btn {
+                width: 70px;
+                height: 32px;
+                font-size: 10px;
+                padding: 0;
+                display: none;
             }
 
-            100% {
-                transform: scale(1);
-                opacity: 1;
+            #bgm-control-pos {
+                display: block;
+                width: 70px;
+                height: 32px;
             }
-        }
 
-        /* =========================================================
-         Ranking UI
-         ========================================================= */
-        #ranking-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 10, 20, 0.95);
-            display: none; /* 初期非表示 */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 2500;
-            font-family: 'Orbitron', sans-serif;
-        }
+            #bgm-toggle {
+                width: 100%;
+                height: 100%;
+                font-size: 10px;
+                padding: 0;
+            }
 
+            #stage-ui {
+                text-align: right;
+                pointer-events: none;
+            }
+
+            .stage-label {
+                font-size: 12px;
+                letter-spacing: 2px;
+                color: #aaa;
+            }
+
+            .stage-num {
+                font-size: 36px;
+                font-weight: bold;
+                text-shadow: 0 0 12px rgba(255,255,255,0.6);
+            }
+
+            .ui-faded {
+                opacity: 0.3;
+                transition: opacity 0.5s;
+            }
+
+            .score-bounce {
+                animation: score-bounce 0.5s ease-out;
+            }
+
+            #controls-hint {
+                font-family: 'Orbitron', sans-serif;
+                font-weight: 400;
+            }
+
+            @keyframes score-bounce {
+                0% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+
+                30% {
+                    transform: scale(1.1);
+                    opacity: 0.8;
+                    text-shadow: 0 0 10px #fff;
+                }
+
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            /* =========================================================
+        * Ranking UI (Neon Style)
+        * ========================================================= */
+            #ranking-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(5, 10, 20, 0.95);
+                backdrop-filter: blur(15px);
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 2500;
+                font-family: 'Orbitron', sans-serif;
+                border: 1px solid #00f7ff;
+                box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
+            }
+
+                #ranking-overlay h2 {
+                    font-size: 24px;
+                    letter-spacing: 4px;
+                    color: #fff;
+                    margin-bottom: 20px;
+                    text-shadow: 0 0 15px #00f7ff, 0 0 30px #00f7ff;
+                    border-bottom: 2px solid #00f7ff;
+                    padding-bottom: 10px;
+                }
+
+        /* --- ランキング表のコンパクト化 (修正版) --- */
         .ranking-table {
-            width: 90%;
+            width: 95%; /* 横幅は少し広げる */
             max-width: 500px;
             border-collapse: collapse;
             color: #fff;
-            margin: 20px 0;
-            font-size: 16px;
+            margin: 10px 0; /* マージン縮小 */
+            font-size: 13px; /* フォントサイズ縮小 (16px -> 13px) */
             letter-spacing: 1px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 247, 255, 0.05);
+            border: 1px solid rgba(0, 247, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 247, 255, 0.1);
         }
 
             .ranking-table th, .ranking-table td {
-                padding: 10px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 8px 4px; /* パディングを大幅に縮小 (10px -> 6px) */
+                border-bottom: 1px solid rgba(0, 247, 255, 0.2);
                 text-align: center;
             }
 
             .ranking-table th {
-                color: #4facfe;
-                font-size: 14px;
-                letter-spacing: 1px;
+                color: #00f7ff;
+                font-size: 12px; /* ヘッダー文字も小さく */
+                letter-spacing: 2px;
+                text-shadow: 0 0 8px rgba(0, 247, 255, 0.6);
+                padding-top: 8px;
+                padding-bottom: 8px;
             }
 
-        /* 金銀銅の装飾をより輝かせる */
-        .rank-1 {
-            color: #ffd700;
-            text-shadow: 0 0 12px #ffd700;
-            font-size: 20px;
-        }
-
-        .rank-2 {
-            color: #c0c0c0;
-            text-shadow: 0 0 10px #c0c0c0;
-        }
-
-        .rank-3 {
-            color: #cd7f32;
-            text-shadow: 0 0 10px #cd7f32;
-        }
-
-        /* Name Input Area (Game Over) */
-        #name-input-area {
-            margin-top: 15px;
-            display: none; /* ゲームオーバー時に表示 */
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            background: rgba(20, 20, 30, 0.9);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid rgba(79, 172, 254, 0.5);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        }
-
-        #player-name-input {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #4facfe;
-            color: white;
-            padding: 10px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            text-align: center;
-            width: 200px;
-            border-radius: 5px;
-            outline: none;
-        }
-
-        #submit-score-btn {
-            background: #4facfe;
-            color: #000;
-            border: none;
-            padding: 10px 30px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 20px;
-            letter-spacing: 2px;
-        }
-
-            #submit-score-btn:disabled {
-                background: #555;
-                cursor: not-allowed;
+            .ranking-table td {
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1; /* 行の高さを抑える */
             }
+
+            /* Rank Colors */
+            .rank-1 {
+                background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+                background-size: 200% auto;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                animation: rainbow-text 3s linear infinite;
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+                font-size: 22px;
+                font-weight: bold;
+            }
+
+            @keyframes rainbow-text {
+                to {
+                    background-position: 200% center;
+                }
+            }
+
+            .rank-2 {
+                color: #00f7ff;
+                text-shadow: 0 0 12px #00f7ff;
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .rank-3 {
+                color: #ff00ff;
+                text-shadow: 0 0 12px #ff00ff;
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            /* Name Input Area (Neon Style) */
+            #name-input-area {
+                margin-top: 15px;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                background: rgba(5, 15, 30, 0.9);
+                padding: 30px 40px;
+                border-radius: 10px;
+                border: 2px solid #00f7ff;
+                box-shadow: 0 0 20px rgba(0, 247, 255, 0.4), inset 0 0 20px rgba(0, 247, 255, 0.1);
+            }
+
+                #name-input-area > div:first-child {
+                    text-shadow: 0 0 10px currentColor;
+                    letter-spacing: 2px;
+                }
+
+            #player-name-input {
+                background: rgba(0, 0, 0, 0.5);
+                border: 1px solid #00f7ff;
+                color: #00f7ff;
+                padding: 12px;
+                font-family: 'Orbitron', sans-serif;
+                font-size: 20px;
+                text-align: center;
+                width: 240px;
+                border-radius: 5px;
+                outline: none;
+                box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
+                transition: box-shadow 0.2s;
+            }
+
+                #player-name-input:focus {
+                    box-shadow: 0 0 20px rgba(0, 247, 255, 0.6);
+                }
+
+            #submit-score-btn {
+                background: #00f7ff;
+                color: #000;
+                border: none;
+                padding: 12px 40px;
+                font-family: 'Orbitron', sans-serif;
+                font-weight: bold;
+                cursor: pointer;
+                border-radius: 30px;
+                letter-spacing: 3px;
+                font-size: 16px;
+                box-shadow: 0 0 15px #00f7ff;
+                transition: all 0.2s;
+            }
+
+                #submit-score-btn:hover:not(:disabled) {
+                    background: #fff;
+                    color: #00f7ff;
+                    box-shadow: 0 0 25px #00f7ff;
+                }
+
+                #submit-score-btn:disabled {
+                    background: #555;
+                    color: #888;
+                    box-shadow: none;
+                    cursor: not-allowed;
+                }
     </style>
+
 
 </head>
 
@@ -2653,11 +2719,11 @@
                     const stageVal = data.stage ? data.stage : "-";
 
                     tr.innerHTML = `
-                                            <td class="${rankClass}">${rank}</td>
-                                            <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
-                                            <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                                            <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                                        `;
+                                                <td class="${rankClass}">${rank}</td>
+                                                <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                                                <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                                                <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                                            `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
