@@ -56,14 +56,14 @@
         }
 
         /* =========================================================
-         HUD (Top Score / Next)
+         HUD (Top Score / Next) - Stylish Refinement
          ========================================================= */
         #ui-layer {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            padding: 20px 10px 20px 25px;
+            padding: 20px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
@@ -73,59 +73,144 @@
             font-weight: normal;
         }
 
+        /* 共通パネルスタイル：すりガラス + ネオンアクセント */
+        .hud-panel-left, .hud-panel-right {
+            background: rgba(10, 15, 30, 0.65); /* 暗い半透明ブルー */
+            backdrop-filter: blur(12px);         /* すりガラス効果 */
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); /* 薄い枠線 */
+            border-left: 4px solid #4facfe;      /* 左側のネオンアクセント */
+            padding: 15px 20px;
+            border-radius: 0 12px 12px 0;        /* 右側だけ丸くする */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3), 
+                        0 0 15px rgba(79, 172, 254, 0.1); /* ほのかな発光 */
+            transform: skewX(-10deg); /* 少し斜めにしてスピード感を出す */
+        }
+
+        /* 中身の文字は斜めを戻す */
+        .hud-panel-left > *, .hud-panel-right > * {
+            transform: skewX(10deg);
+        }
+
+        .hud-panel-right {
+            border-left: none;
+            border-right: 4px solid #4facfe;     /* 右パネルは右アクセント */
+            border-radius: 12px 0 0 12px;
+            text-align: center;
+            min-width: 110px;
+        }
+
         .hud-item {
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+        }
+
+        .hud-item:last-child {
+            margin-bottom: 0;
         }
 
         .hud-label {
-            font-size: 18px;
-            color: #aaa;
-            letter-spacing: 1px;
-            display: inline-block;
+            font-size: 10px;
+            color: #88ccff; /* 青みがかったグレー */
+            letter-spacing: 2px;
+            font-weight: 700;
+            display: block;
             margin-bottom: 2px;
-            justify-content: space-between;
+            text-transform: uppercase;
+            opacity: 0.8;
         }
 
         .score-num {
-            font-size: 32px;
+            font-size: 28px;
             color: #fff;
-            text-shadow: 0 0 15px #4facfe;
-            display: block;
-            font-weight: normal;
+            text-shadow: 0 0 15px rgba(79,172,254, 0.8);
+            font-weight: 400;
+            line-height: 1;
+            font-variant-numeric: tabular-nums; /* 数字の幅を揃える */
+            letter-spacing: 1px;
         }
 
         .hi-score-num {
-            font-size: 32px;
-            color: #f1c40f;
-            text-shadow: 0 0 10px rgba(241,196,15,0.5);
-            font-weight: normal;
+            font-size: 20px; /* スコアより少し小さく */
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            font-variant-numeric: tabular-nums;
         }
 
         .hi-stage-text {
-            margin-left: 12px;
-            font-size: 12px;
+            margin-left: 10px;
+            font-size: 10px;
             color: #aaa;
             letter-spacing: 1px;
-            font-weight: normal;
-            vertical-align: baseline;
         }
 
         #hi-stage-val {
-            font-size: 26px;
+            font-size: 14px;
             color: #fff;
-            margin-left: 2px;
-            position: relative;
-            top: 2px;
             font-weight: bold;
         }
 
+        /* NEXT 表示周り */
+        .next-label {
+            font-size: 12px;
+            color: #88ccff;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            display: block;
+            font-weight: 700;
+        }
+
+        #next-ui {
+            height: 50px;
+            width: 50px;
+            margin: 5px auto;
+            position: relative;
+            
+            /* ターゲットスコープ風の装飾 */
+            background: radial-gradient(circle, rgba(79,172,254,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.3);
+            
+            /* 中身（Canvas）を中央揃え */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* NEXT用の小さなCanvas */
+        #next-ui canvas {
+            position: static; /* absoluteを解除 */
+            width: 50px;
+            height: 50px;
+            display: block;
+        }
+
         #next-name {
-            margin-top: 5px;
-            font-size: 15px;
+            margin-top: 4px;
+            font-size: 11px;
             letter-spacing: 1px;
+            font-weight: bold;
             line-height: 1.1;
             opacity: 0.9;
-            text-shadow: 0 0 6px rgba(255,255,255,0.4);
+            text-shadow: 0 0 5px currentColor; /* 文字色に合わせて光る */
+            white-space: nowrap;
+        }
+
+        /* タイマーバーもスタイリッシュに */
+        #timer-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none; /* JSで制御 */
+        }
+        
+        #timer-bar-fill {
+            height: 100%;
+            background: #ff3c3c;
+            box-shadow: 0 0 10px #ff0000;
+            transition: width 0.1s linear;
         }
 
         /* =========================================================
@@ -575,33 +660,30 @@
 
     <div id="canvas-container"></div>
 
-    <div id="ui-layer" style="padding: 20px 10px 20px 20px;">
-        <div style="text-align:left;">
+    <div id="ui-layer">
+        <div class="hud-panel-left">
             <div class="hud-item">
-                <span class="hud-label">HIGH SCORE</span><br />
+                <span class="hud-label">HIGH SCORE</span>
                 <span id="hi-score-val" class="hi-score-num">0</span>
-                <span class="hi-stage-text">STAGE <span id="hi-stage-val">1</span></span>
+                <span class="hi-stage-text">STG <span id="hi-stage-val">1</span></span>
             </div>
             <div class="hud-item">
-                <span class="hud-label">SCORE</span><br />
+                <span class="hud-label">SCORE</span>
                 <span id="score-val" class="score-num">0</span>
             </div>
         </div>
 
-        <div style="text-align: right; margin-right: -5px;">
-            <div style="display: inline-flex; flex-direction: column; align-items: center; min-width: 100px;">
-                <span style="font-size:20px; color:#aaa; letter-spacing:2px; margin-bottom: 2px;">NEXT</span>
+        <div class="hud-panel-right">
+            <span class="next-label">NEXT</span>
 
-                <div id="next-ui" style="height:55px; width:60px; margin: 0 auto;"></div>
+            <div id="next-ui"></div>
 
-                <div id="timer-bar-container" style="width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin-top: 8px; display: none; overflow: hidden;">
-                    <div id="timer-bar-fill" style="width: 100%; height: 100%; background: #ff3c3c; box-shadow: 0 0 10px #ff0000;"></div>
-                </div>
+            <div id="next-name"></div>
 
-                <div id="next-name" style="margin-top: 2px; font-size:15px; letter-spacing:1px; font-weight: bold; line-height: 1.1;"></div>
+            <div id="timer-bar-container">
+                <div id="timer-bar-fill"></div>
             </div>
         </div>
-
     </div>
 
     <div id="overlay">
@@ -1075,15 +1157,14 @@
             ctx.restore();
         }
 
+        const STAR_COUNT = Math.floor(80 * 4);
+        const STAR_SIZE_MIN = 0.2;
+        const STAR_SIZE_MAX = 2.0;
+
         function generateStars() {
-
-            const STAR_COUNT = Math.floor(80 * 4);
-            const STAR_SIZE_MIN = 0.2;
-            const STAR_SIZE_MAX = 2.0;
-
             bgStars = [];
             const maxDimension = Math.max(WIDTH, HEIGHT) * 1.5;
-
+            
             for (let i = 0; i < STAR_COUNT; i++) {
                 const rand = Math.random();
                 let baseColor;
@@ -1104,10 +1185,9 @@
                 });
             }
             // starCanvas (画像キャッシュ) は使用しないため削除
-            starCanvas = null;
+            starCanvas = null; 
         }
 
-        /* Initialize World */
         /* =========================================================
          * Refactored Initialization & Loops
          * ========================================================= */
@@ -1115,7 +1195,7 @@
         // ---------------------------------------------------------
         // 1. Helper Functions (Moved out from preInit)
         // ---------------------------------------------------------
-
+        
         function removeAllDynamicBodies() {
             const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
             if (bodies.length) Composite.remove(engine.world, bodies);
@@ -1126,7 +1206,7 @@
             implosionScale = 1.0;
             implosionAlpha = 1.0;
             let startTime = performance.now();
-
+            
             const animateImplosion = (now) => {
                 const elapsed = now - startTime;
                 if (elapsed < 300) {
@@ -1247,7 +1327,7 @@
                     const mid = { x: (a.position.x + b.position.x) / 2, y: (a.position.y + b.position.y) / 2 };
                     const nI = a.index + 1;
                     const nP = PLANETS[nI];
-
+                    
                     Composite.remove(engine.world, [a, b]);
                     playExplosionSound();
 
@@ -1279,7 +1359,7 @@
                     if (now - lastMergeTime < 800) comboCount++;
                     else comboCount = 0;
                     lastMergeTime = now;
-
+                    
                     const comboBonus = 1 + (comboCount * 0.2);
                     const points = nI === CLEAR_INDEX ? SUPERNOVA_BONUS : nP.score;
                     updateScore(Math.floor(points * comboBonus));
@@ -1336,8 +1416,8 @@
                 const currentAlpha = Math.max(0.1, Math.min(1, s.baseAlpha + blink * 0.3));
 
                 ctx.fillStyle = `rgba(${s.colorBase}, ${currentAlpha})`;
-
-                // 大きい星だけ光彩（ぼかし）を入れる（重ければ削除可）
+                
+                // 大きい星だけ光彩（ぼかし）を入れる
                 if (s.size > 1.8) {
                     ctx.shadowBlur = 4;
                     ctx.shadowColor = `rgba(${s.colorBase}, ${currentAlpha})`;
@@ -1349,7 +1429,7 @@
                 // 回転した座標系に描画するため、単純な三角関数で座標を求める
                 const x = Math.cos(s.angle) * s.r;
                 const y = Math.sin(s.angle) * s.r;
-
+                
                 ctx.arc(x, y, s.size, 0, Math.PI * 2);
                 ctx.fill();
             }
@@ -1370,7 +1450,7 @@
             const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(t * blinkFreq));
 
             ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
-            ctx.lineWidth = isWarning ? 6 : 2;
+            ctx.lineWidth = isWarning ? 4 : 2;
             ctx.stroke();
 
             ctx.beginPath();
@@ -1387,7 +1467,7 @@
             const SPARK_RATE = isWarning ? 0.8 : (isIOS ? 0.25 : 0.45);
             const SPARK_MAX = 220;
             if (particles.length > SPARK_MAX) particles.splice(0, particles.length - SPARK_MAX);
-
+            
             if (Math.random() < SPARK_RATE) {
                 const burst = 2 + (isBoosting ? 4 : 2);
                 for (let k = 0; k < burst; k++) {
@@ -1413,7 +1493,7 @@
             ctx.save();
             ctx.translate(CENTER.x, CENTER.y);
             const currentRadius = CORE_RADIUS * implosionScale;
-
+            
             if (isImploding) {
                 ctx.globalAlpha = implosionAlpha;
                 const gR = currentRadius * 3;
@@ -1453,36 +1533,67 @@
             ctx.restore();
         }
 
+        // NEXT表示用のコンテキスト
+        let nextCtx = null;
+
+        function initNextCanvas() {
+            const container = document.getElementById("next-ui");
+            if (!container) return;
+            
+            // 既存の中身をクリア
+            container.innerHTML = "";
+            
+            const c = document.createElement("canvas");
+            const dpr = window.devicePixelRatio || 1;
+            
+            // 解像度を高くしてクッキリさせる
+            c.width = 50 * dpr;
+            c.height = 50 * dpr;
+            
+            // 表示サイズ
+            c.style.width = "50px";
+            c.style.height = "50px";
+            
+            nextCtx = c.getContext("2d");
+            nextCtx.scale(dpr, dpr);
+            
+            container.appendChild(c);
+        }
+
         function drawLauncher(ctx, now) {
-            if (isGameRunning) {
-                if (isClickable) {
-                    const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
-                    const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.setLineDash([4, 6]);
-                    ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
-                    ctx.lineWidth = 1.5;
-                    ctx.moveTo(sX, sY);
-                    ctx.lineTo(CENTER.x, CENTER.y);
-                    ctx.stroke();
-                    ctx.restore();
-                    drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
-                }
-                // Next Planet UI Icon
-                if (nextQueue.length >= 2) {
-                    const nextPlanet = PLANETS[nextQueue[1]];
-                    const nextUiEl = document.getElementById("next-ui");
-                    if (nextUiEl) {
-                        const rect = nextUiEl.getBoundingClientRect();
-                        const centerX = rect.left + rect.width / 2;
-                        const centerY = rect.top + rect.height / 2;
-                        ctx.save();
-                        ctx.translate(centerX, centerY);
-                        drawPlanet(ctx, 0, 0, nextPlanet.radius * 0.7, nextPlanet.color, now, 1);
-                        ctx.restore();
-                    }
-                }
+            // 1. 発射台の描画（これはメインCanvas = ctx に描く）
+            if (isGameRunning && isClickable) {
+                const sX = CENTER.x + Math.cos(launcherAngle) * SPAWN_RADIUS;
+                const sY = CENTER.y + Math.sin(launcherAngle) * SPAWN_RADIUS;
+                ctx.save();
+                ctx.beginPath();
+                ctx.setLineDash([4, 6]);
+                ctx.strokeStyle = "rgba(180, 180, 180, 0.5)";
+                ctx.lineWidth = 1.5;
+                ctx.moveTo(sX, sY);
+                ctx.lineTo(CENTER.x, CENTER.y);
+                ctx.stroke();
+                ctx.restore();
+                
+                // 次の発射弾（現在の惑星）
+                drawPlanet(ctx, sX, sY, PLANETS[nextQueue[0]].radius, PLANETS[nextQueue[0]].color, now, 0);
+            }
+
+            // 2. NEXT表示の更新（専用の nextCtx に描く）
+            if (nextCtx && nextQueue.length >= 2) {
+                // UI用Canvasをクリア
+                nextCtx.clearRect(0, 0, 50, 50);
+                
+                const nextPlanet = PLANETS[nextQueue[1]];
+                
+                // ★サイズ反映の調整
+                // 出現する惑星は最大でも半径30px (Vega) です。
+                // 50x50の枠（半径25px）に対し、光彩(glow)の余裕を持たせて 0.7倍 に設定します。
+                // これにより、最小(10px→7px) と 最大(30px→21px) の差がはっきり見えるようになります。
+                const uiScale = 0.7; 
+                
+                // UI用Canvasの中心(25, 25)に描画
+                drawPlanet(nextCtx, 25, 25, nextPlanet.radius * uiScale, nextPlanet.color, now, 1);
             }
         }
 
@@ -1590,7 +1701,7 @@
                 if (nextQueue.length >= 2) {
                     const nextPlanet = PLANETS[nextQueue[1]];
                     const nextNameEl = document.getElementById("next-name");
-                    if (nextNameEl) {
+                    if(nextNameEl) {
                         nextNameEl.textContent = nextPlanet.name;
                         nextNameEl.style.color = nextPlanet.color;
                     }
@@ -1598,9 +1709,9 @@
 
                 // --- Draw Sequence ---
                 drawBackground(ctx);
-
+                
                 ctx.globalAlpha = 1;
-
+                
                 const isWarning = gameOverTime !== null;
                 drawRedZone(ctx, t, isWarning);
                 spawnSparks(isWarning);
@@ -1625,10 +1736,10 @@
         // ---------------------------------------------------------
         function preInit() {
             initPhysics();
+            initNextCanvas();
             setupGameLogic();
             setupRenderLoop();
         }
-
 
         /* Controls */
         const boostBtn = document.getElementById("boost-btn");
@@ -2484,4 +2595,4 @@
 
     </script>
 </body>
-</html>  
+</html>
