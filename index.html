@@ -276,6 +276,11 @@
             text-align: center;
         }
 
+        /* --- 修正箇所: リスト部分のスクロール操作を許可する --- */
+        .track-list, #ranking-overlay, #soundtrack-overlay {
+            touch-action: pan-y !important; /* 上下スクロールを許可 */
+        }
+
         .track-list {
             list-style: none;
             padding: 0;
@@ -637,6 +642,11 @@
             font-family: 'Orbitron', sans-serif;
             border: 1px solid #00f7ff;
             box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
+
+            overflow-y: auto; /* コンテンツが溢れたらスクロール */
+            justify-content: flex-start; /* 上寄せにしてスクロールしやすくする */
+            padding-top: 60px; /* 上部に余白 */
+            padding-bottom: 60px; /* 下部に余白 */
         }
 
             #ranking-overlay h2 {
@@ -1923,7 +1933,14 @@
 
         function updateScore(points) {
             score += points;
-            document.getElementById("score-val").innerText = score;
+            const scoreEl = document.getElementById("score-val"); // 要素を取得
+            scoreEl.innerText = score;
+
+            // ▼▼▼ 追加: アニメーションクラスの付け外し ▼▼▼
+            scoreEl.classList.remove("score-bounce"); // 一旦外す（連打対応）
+            void scoreEl.offsetWidth; // リフローを強制してアニメーションをリセット
+            scoreEl.classList.add("score-bounce"); // 再度付与
+
             if (score > hiScore) {
                 hiScore = score;
                 document.getElementById("hi-score-val").innerText = hiScore;
@@ -2186,11 +2203,16 @@
                     pauseOverlay.style.display = "none";
                 }
 
-                // BGMの再開：設定がONで、かつ何らかのオーディオがセットされている場合のみ
+                // BGMの再開
                 if (isBgmEnabled && currentAudio && currentAudio.paused) {
-                    currentAudio.play().catch(e => {
-                        console.log("BGM resume blocked by browser policy");
-                    });
+                    // ▼▼▼ 修正: Promiseのエラーハンドリングを確実にする ▼▼▼
+                    const playPromise = currentAudio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.log("Audio resume blocked. Waiting for interaction.");
+                            // 必要であれば、画面タップで再開するワンショットリスナーを追加
+                        });
+                    }
                 }
             }
         }
