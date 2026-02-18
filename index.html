@@ -18,48 +18,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <style>
-            /* =========================================================
+        /* =========================================================
         * Global / Layout
         * ========================================================= */
-            body {
-                margin: 0;
-                background: #000;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100dvh;
-                width: 100vw;
-                touch-action: none;
-                user-select: none;
-                -webkit-user-select: none;
-                color: white;
-                position: fixed;
-                overflow: hidden;
-                font-family: 'Orbitron', sans-serif;
-                font-weight: 200 !important;
-            }
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100dvh;
+            width: 100vw;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            color: white;
+            position: fixed;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 200 !important;
+        }
 
-            .btn {
-                font-family: 'Orbitron', sans-serif;
-            }
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+        }
 
-            canvas {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 0;
-                display: block;
-                -webkit-touch-callout: none;
-            }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+            -webkit-touch-callout: none;
+        }
 
-            /* =========================================================
+        /* =========================================================
              * HUD (Top Score / Next) - Compact & TRON Style
              * ========================================================= */
-            /* 共通パネルスタイル */
-#ui-layer {
+        /* 共通パネルスタイル */
+        #ui-layer {
             position: fixed;
             top: 0;
             left: 0;
@@ -71,14 +71,12 @@
             align-items: flex-start;
             pointer-events: none;
             z-index: 10;
-            font-weight: normal;
-            
             /* ▼▼▼ ここを変更（背景のメッシュを消す） ▼▼▼ */
-            background: none; 
+            background: none;
             /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
         }
 
-            /* Common Panel Style */
+        /* Common Panel Style */
 
         /* 共通パネルスタイル：内側にグリッドとフェード効果を追加 */
         .hud-panel-left, .hud-panel-right {
@@ -110,48 +108,48 @@
                 z-index: 1;
             }
 
-            .hud-panel-left {
-                border-left: 5px solid #00f7ff;
-                align-items: flex-start;
-            }
+        .hud-panel-left {
+            border-left: 5px solid #00f7ff;
+            align-items: flex-start;
+        }
 
-            .hud-panel-right {
-                border-right: 5px solid #00f7ff;
-                align-items: center;
-            }
+        .hud-panel-right {
+            border-right: 5px solid #00f7ff;
+            align-items: center;
+        }
 
-            .hud-item {
-                width: 100%;
-            }
+        .hud-item {
+            width: 100%;
+        }
 
-            .hud-label, .next-label {
-                font-size: 16px;
-                color: #00f7ff;
-                letter-spacing: 1px;
-                font-weight: bold;
-                display: block;
-                margin-bottom: 0px;
-                text-transform: uppercase;
-                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-            }
+        .hud-label, .next-label {
+            font-size: 16px;
+            color: #00f7ff;
+            letter-spacing: 1px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0px;
+            text-transform: uppercase;
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+        }
 
-            .score-num {
-                font-size:32px;
-                color: #fff;
-                text-shadow: 0 0 10px #fff, 0 0 15px #00f7ff;
-                font-weight: 400;
-                line-height: 1;
-                font-variant-numeric: tabular-nums;
-                letter-spacing: 1px;
-            }
+        .score-num {
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 15px #00f7ff;
+            font-weight: 400;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+        }
 
-            .hi-score-num {
-                font-size: 30px;
-                font-weight: 400;
-                color: #ffd700;
-                text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
-                font-variant-numeric: tabular-nums;
-            }
+        .hi-score-num {
+            font-size: 30px;
+            font-weight: 400;
+            color: #ffd700;
+            text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
+            font-variant-numeric: tabular-nums;
+        }
 
         .hi-stage-text {
             margin-left: 8px;
@@ -168,115 +166,115 @@
             text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
         }
 
-            /* NEXT UI */
-            #next-ui {
-                height: 46px;
+        /* NEXT UI */
+        #next-ui {
+            height: 46px;
+            width: 46px;
+            margin: 2px auto;
+            position: relative;
+            background: radial-gradient(circle, rgba(0,247,255,0.1) 0%, transparent 60%);
+            border-radius: 50%;
+            border: 1px dotted rgba(180, 180, 180, 0.6);
+            box-shadow: inset 0 0 10px rgba(150, 150, 150, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #next-ui canvas {
+                position: static;
                 width: 46px;
-                margin: 2px auto;
-                position: relative;
-                background: radial-gradient(circle, rgba(0,247,255,0.1) 0%, transparent 60%);
-                border-radius: 50%;
-                border: 1px dotted rgba(180, 180, 180, 0.6);
-                box-shadow: inset 0 0 10px rgba(150, 150, 150, 0.2);
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                height: 46px;
+                display: block;
+                filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
             }
 
-                #next-ui canvas {
-                    position: static;
-                    width: 46px;
-                    height: 46px;
-                    display: block;
-                    filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
-                }
+        #next-name {
+            margin-top: 2px;
+            font-size: 11px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            line-height: 1.1;
+            text-shadow: 0 0 8px currentColor;
+            white-space: nowrap;
+        }
 
-            #next-name {
-                margin-top: 2px;
-                font-size: 11px;
-                letter-spacing: 1px;
-                font-weight: bold;
-                line-height: 1.1;
-                text-shadow: 0 0 8px currentColor;
-                white-space: nowrap;
+        /* Timer Bar */
+        #timer-bar-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid #00f7ff;
+            border-radius: 0;
+            margin-top: 4px;
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 0 5px #00f7ff;
+        }
+
+        #timer-bar-fill {
+            height: 100%;
+            background: #ff3c3c;
+            box-shadow: 0 0 15px #ff0000, inset 0 0 5px #fff;
+            transition: width 0.1s linear;
+        }
+
+        /* Text Glow Effects */
+        h1#title-text {
+            text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
+        }
+
+        .btn, .sub-btn, .pause-menu-btn, #hud-pause-btn, #bgm-toggle {
+            border-color: #00f7ff !important;
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.2), inset 0 0 5px rgba(0, 247, 255, 0.2);
+        }
+
+            .btn:hover, .pause-menu-btn:hover {
+                background: #00f7ff !important;
+                color: #000 !important;
+                box-shadow: 0 0 30px #00f7ff !important;
             }
 
-            /* Timer Bar */
-            #timer-bar-container {
-                width: 100%;
-                height: 4px;
-                background: rgba(0, 20, 40, 0.8);
-                border: 1px solid #00f7ff;
-                border-radius: 0;
-                margin-top: 4px;
-                overflow: hidden;
-                display: none;
-                box-shadow: 0 0 5px #00f7ff;
-            }
+        .stage-num {
+            text-shadow: 0 0 15px #00f7ff, 0 0 30px #fff;
+        }
 
-            #timer-bar-fill {
-                height: 100%;
-                background: #ff3c3c;
-                box-shadow: 0 0 15px #ff0000, inset 0 0 5px #fff;
-                transition: width 0.1s linear;
-            }
-
-            /* Text Glow Effects */
-            h1#title-text {
-                text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
-            }
-
-            .btn, .sub-btn, .pause-menu-btn, #hud-pause-btn, #bgm-toggle {
-                border-color: #00f7ff !important;
-                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-                box-shadow: 0 0 10px rgba(0, 247, 255, 0.2), inset 0 0 5px rgba(0, 247, 255, 0.2);
-            }
-
-                .btn:hover, .pause-menu-btn:hover {
-                    background: #00f7ff !important;
-                    color: #000 !important;
-                    box-shadow: 0 0 30px #00f7ff !important;
-                }
-
-            .stage-num {
-                text-shadow: 0 0 15px #00f7ff, 0 0 30px #fff;
-            }
-
-            /* =========================================================
+        /* =========================================================
              * Overlay (Title / Result)
              * ========================================================= */
-            #overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.95);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                text-align: center;
-                transition: opacity 0.5s;
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+
+            #overlay.hide {
+                opacity: 0;
+                pointer-events: none;
             }
 
-                #overlay.hide {
-                    opacity: 0;
-                    pointer-events: none;
-                }
-
-            /* =========================================================
+        /* =========================================================
              * Soundtrack Overlay
              * ========================================================= */
-            #soundtrack-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(10, 10, 20, 0.95);
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 1500;
-                text-align: center;
-            }
+        #soundtrack-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            text-align: center;
+        }
 
         .track-list {
             list-style: none;
@@ -292,128 +290,128 @@
             scrollbar-width: thin;
             scrollbar-color: #00f7ff transparent;
         }
-                /* Webkit Scrollbar */
-                .track-list::-webkit-scrollbar {
-                    width: 6px;
-                }
-
-                .track-list::-webkit-scrollbar-thumb {
-                    background-color: rgba(0, 247, 255, 0.5);
-                    border-radius: 3px;
-                }
-
-            .track-item {
-                padding: 10px 15px;
-                margin-bottom: 6px;
-                border: 1px solid rgba(255,255,255,0.2);
-                border-radius: 10px;
-                cursor: pointer;
-                transition: background 0.2s;
-                font-size: 12px;
-                letter-spacing: 2px;
-                color: #ccc;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+            /* Webkit Scrollbar */
+            .track-list::-webkit-scrollbar {
+                width: 6px;
             }
 
-                .track-item:hover {
-                    background: rgba(255,255,255,0.1);
-                    color: white;
-                }
-
-                .track-item.active {
-                    border-color: #4facfe;
-                    background: rgba(79,172,254,0.2);
-                    color: #fff;
-                    text-shadow: 0 0 8px rgba(79,172,254,0.8);
-                }
-
-            .track-icon {
-                font-size: 12px;
+            .track-list::-webkit-scrollbar-thumb {
+                background-color: rgba(0, 247, 255, 0.5);
+                border-radius: 3px;
             }
 
-            /* =========================================================
+        .track-item {
+            padding: 10px 15px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .track-item:hover {
+                background: rgba(255,255,255,0.1);
+                color: white;
+            }
+
+            .track-item.active {
+                border-color: #4facfe;
+                background: rgba(79,172,254,0.2);
+                color: #fff;
+                text-shadow: 0 0 8px rgba(79,172,254,0.8);
+            }
+
+        .track-icon {
+            font-size: 12px;
+        }
+
+        /* =========================================================
         * Pause Overlay
         * ========================================================= */
-            #pause-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.85);
-                backdrop-filter: blur(8px);
-                -webkit-backdrop-filter: blur(8px);
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 2000;
+        #pause-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .pause-text {
+            font-size: 42px;
+            letter-spacing: 8px;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+        }
+
+        .pause-menu-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            letter-spacing: 4px;
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.8);
+            padding: 15px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            min-width: 200px;
+            transition: all 0.2s;
+        }
+
+            .pause-menu-btn:hover {
+                background: white;
+                color: black;
             }
 
-            .pause-text {
-                font-size: 42px;
-                letter-spacing: 8px;
+        #pause-quit-btn {
+            font-size: 14px;
+            padding: 12px 30px;
+            opacity: 0.8;
+            border-color: rgba(255, 100, 100, 0.6);
+            color: #ffcccc;
+        }
+
+            #pause-quit-btn:hover {
+                background: rgba(255, 50, 50, 0.8);
                 color: white;
-                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-                margin-bottom: 40px;
             }
 
-            .pause-menu-btn {
-                font-family: 'Orbitron', sans-serif;
-                font-size: 18px;
-                letter-spacing: 4px;
-                background: transparent;
-                color: white;
-                border: 1px solid rgba(255,255,255,0.8);
-                padding: 15px 40px;
-                border-radius: 50px;
-                cursor: pointer;
-                margin-bottom: 20px;
-                min-width: 200px;
-                transition: all 0.2s;
+        h1 {
+            margin: 0;
+            font-size: 42px;
+            line-height: 1.1;
+            letter-spacing: 6px;
+            font-weight: 200;
+        }
+
+        .btn {
+            margin-top: 30px;
+            padding: 15px 50px;
+            font-size: 18px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.8);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 4px;
+        }
+
+            .btn:hover {
+                background: white;
+                color: black;
             }
-
-                .pause-menu-btn:hover {
-                    background: white;
-                    color: black;
-                }
-
-            #pause-quit-btn {
-                font-size: 14px;
-                padding: 12px 30px;
-                opacity: 0.8;
-                border-color: rgba(255, 100, 100, 0.6);
-                color: #ffcccc;
-            }
-
-                #pause-quit-btn:hover {
-                    background: rgba(255, 50, 50, 0.8);
-                    color: white;
-                }
-
-            h1 {
-                margin: 0;
-                font-size: 42px;
-                line-height: 1.1;
-                letter-spacing: 6px;
-                font-weight: 200;
-            }
-
-            .btn {
-                margin-top: 30px;
-                padding: 15px 50px;
-                font-size: 18px;
-                background: transparent;
-                border: 1px solid rgba(255,255,255,0.8);
-                color: white;
-                border-radius: 50px;
-                cursor: pointer;
-                letter-spacing: 4px;
-            }
-
-                .btn:hover {
-                    background: white;
-                    color: black;
-                }
 
         .sub-btn {
             margin-top: 15px; /* 間隔を少し微調整 */
@@ -443,97 +441,97 @@
                 color: #fff;
             }
 
-            /* =========================================================
+        /* =========================================================
         * Action Buttons (BOOST, PAUSE, BGM)
         * ========================================================= */
-            #boost-btn, #hud-pause-btn, #bgm-toggle {
-                font-family: 'Orbitron', sans-serif;
-                font-weight: bold;
-                color: white;
-                background: rgba(5, 15, 30, 0.85);
-                border: 2px solid #00f7ff;
-                border-radius: 30px;
-                cursor: pointer;
-                outline: none;
-                text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
-                box-shadow: 0 0 10px rgba(0, 247, 255, 0.3), inset 0 0 10px rgba(0, 247, 255, 0.1);
-                transition: all 0.1s;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+        #boost-btn, #hud-pause-btn, #bgm-toggle {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            color: white;
+            background: rgba(5, 15, 30, 0.85);
+            border: 2px solid #00f7ff;
+            border-radius: 30px;
+            cursor: pointer;
+            outline: none;
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3), inset 0 0 10px rgba(0, 247, 255, 0.1);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
+                background: rgba(0, 247, 255, 0.3);
+                box-shadow: 0 0 25px rgba(0, 247, 255, 0.6), inset 0 0 15px rgba(0, 247, 255, 0.4);
+                transform: scale(0.95);
+                text-shadow: 0 0 15px #fff;
+                border-color: #fff;
             }
 
-                #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
-                    background: rgba(0, 247, 255, 0.3);
-                    box-shadow: 0 0 25px rgba(0, 247, 255, 0.6), inset 0 0 15px rgba(0, 247, 255, 0.4);
-                    transform: scale(0.95);
-                    text-shadow: 0 0 15px #fff;
-                    border-color: #fff;
-                }
+        /* Left Bottom: BOOST */
+        #boost-btn {
+            position: fixed;
+            bottom: 60px;
+            left: 32px;
+            padding: 15px 35px;
+            font-size: 20px;
+            z-index: 20;
+        }
 
-            /* Left Bottom: BOOST */
-            #boost-btn {
-                position: fixed;
-                bottom: 60px;
-                left: 32px;
-                padding: 15px 35px;
-                font-size: 20px;
-                z-index: 20;
-            }
-
-                #boost-btn::before {
-                    content: "";
-                    position: absolute;
-                    inset: -6px;
-                    border-radius: 40px;
-                    border: 1px solid rgba(0, 247, 255, 0.4);
-                    box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
-                    pointer-events: none;
-                    z-index: -1;
-                }
-
-            /* Right Bottom: PAUSE/BGM & Stage */
-            #bottom-right-ui {
-                position: fixed;
-                right: 24px;
-                bottom: 60px;
-                display: flex;
-                align-items: flex-end;
-                gap: 15px;
+            #boost-btn::before {
+                content: "";
+                position: absolute;
+                inset: -6px;
+                border-radius: 40px;
+                border: 1px solid rgba(0, 247, 255, 0.4);
+                box-shadow: 0 0 15px rgba(0, 247, 255, 0.2);
                 pointer-events: none;
-                z-index: 1000;
+                z-index: -1;
             }
 
-            #management-btn-area {
-                position: relative;
-                pointer-events: auto;
-                display: flex;
-                align-items: center;
-                height: 36px;
-            }
+        /* Right Bottom: PAUSE/BGM & Stage */
+        #bottom-right-ui {
+            position: fixed;
+            right: 24px;
+            bottom: 60px;
+            display: flex;
+            align-items: flex-end;
+            gap: 15px;
+            pointer-events: none;
+            z-index: 1000;
+        }
 
-            #hud-pause-btn {
-                width: 70px;
-                height: 32px;
-                font-size: 10px;
-                padding: 0;
-                display: none;
-            }
+        #management-btn-area {
+            position: relative;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            height: 36px;
+        }
 
-            #bgm-control-pos {
-                display: block;
-                width: 70px;
-                height: 32px;
-            }
+        #hud-pause-btn {
+            width: 70px;
+            height: 32px;
+            font-size: 10px;
+            padding: 0;
+            display: none;
+        }
 
-            #bgm-toggle {
-                width: 100%;
-                height: 100%;
-                font-size: 10px;
-                padding: 0;
-            }
+        #bgm-control-pos {
+            display: block;
+            width: 70px;
+            height: 32px;
+        }
+
+        #bgm-toggle {
+            width: 100%;
+            height: 100%;
+            font-size: 10px;
+            padding: 0;
+        }
 
         /* Stage Display Area */
         #stage-ui {
@@ -557,65 +555,65 @@
             text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff;
         }
 
-            .ui-faded {
-                opacity: 0.3;
-                transition: opacity 0.5s;
+        .ui-faded {
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+
+        .score-bounce {
+            animation: score-bounce 0.5s ease-out;
+        }
+
+        #controls-hint {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+        }
+
+        @keyframes score-bounce {
+            0% {
+                transform: scale(1);
+                opacity: 1;
             }
 
-            .score-bounce {
-                animation: score-bounce 0.5s ease-out;
+            30% {
+                transform: scale(1.1);
+                opacity: 0.8;
+                text-shadow: 0 0 10px #fff;
             }
 
-            #controls-hint {
-                font-family: 'Orbitron', sans-serif;
-                font-weight: 400;
+            100% {
+                transform: scale(1);
+                opacity: 1;
             }
+        }
 
-            @keyframes score-bounce {
-                0% {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-
-                30% {
-                    transform: scale(1.1);
-                    opacity: 0.8;
-                    text-shadow: 0 0 10px #fff;
-                }
-
-                100% {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-            }
-
-            /* =========================================================
+        /* =========================================================
         * Ranking UI (Neon Style)
         * ========================================================= */
-            #ranking-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(5, 10, 20, 0.95);
-                backdrop-filter: blur(15px);
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 2500;
-                font-family: 'Orbitron', sans-serif;
-                border: 1px solid #00f7ff;
-                box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
-            }
+        #ranking-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 10, 20, 0.95);
+            backdrop-filter: blur(15px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            font-family: 'Orbitron', sans-serif;
+            border: 1px solid #00f7ff;
+            box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
+        }
 
-                #ranking-overlay h2 {
-                    font-size: 24px;
-                    letter-spacing: 4px;
-                    color: #fff;
-                    margin-bottom: 20px;
-                    text-shadow: 0 0 15px #00f7ff, 0 0 30px #00f7ff;
-                    border-bottom: 2px solid #00f7ff;
-                    padding-bottom: 10px;
-                }
+            #ranking-overlay h2 {
+                font-size: 24px;
+                letter-spacing: 4px;
+                color: #fff;
+                margin-bottom: 20px;
+                text-shadow: 0 0 15px #00f7ff, 0 0 30px #00f7ff;
+                border-bottom: 2px solid #00f7ff;
+                padding-bottom: 10px;
+            }
 
         /* --- ランキング表のコンパクト化 (修正版) --- */
         .ranking-table {
@@ -651,104 +649,105 @@
                 line-height: 1.1; /* 行の高さを抑える */
             }
 
-            /* Rank Colors */
-            .rank-1 {
-                background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
-                background-size: 200% auto;
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                animation: rainbow-text 3s linear infinite;
-                text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-                font-size: 22px;
-                font-weight: bold;
+        /* Rank Colors */
+        .rank-1 {
+            background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow-text 3s linear infinite;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        @keyframes rainbow-text {
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        .rank-2 {
+            color: #00f7ff;
+            text-shadow: 0 0 12px #00f7ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .rank-3 {
+            color: #ff00ff;
+            text-shadow: 0 0 12px #ff00ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Name Input Area (Neon Style) */
+        #name-input-area {
+            margin-top: 15px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: rgba(5, 15, 30, 0.9);
+            padding: 30px 40px;
+            border-radius: 10px;
+            border: 2px solid #00f7ff;
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.4), inset 0 0 20px rgba(0, 247, 255, 0.1);
+        }
+
+            #name-input-area > div:first-child {
+                text-shadow: 0 0 10px currentColor;
+                letter-spacing: 2px;
             }
 
-            @keyframes rainbow-text {
-                to {
-                    background-position: 200% center;
-                }
+        #player-name-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00f7ff;
+            color: #00f7ff;
+            padding: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            text-align: center;
+            width: 240px;
+            border-radius: 5px;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
+            transition: box-shadow 0.2s;
+        }
+
+            #player-name-input:focus {
+                box-shadow: 0 0 20px rgba(0, 247, 255, 0.6);
             }
 
-            .rank-2 {
+        #submit-score-btn {
+            background: #00f7ff;
+            color: #000;
+            border: none;
+            padding: 12px 40px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 30px;
+            letter-spacing: 3px;
+            font-size: 16px;
+            box-shadow: 0 0 15px #00f7ff;
+            transition: all 0.2s;
+        }
+
+            #submit-score-btn:hover:not(:disabled) {
+                background: #fff;
                 color: #00f7ff;
-                text-shadow: 0 0 12px #00f7ff;
-                font-size: 18px;
-                font-weight: bold;
+                box-shadow: 0 0 25px #00f7ff;
             }
 
-            .rank-3 {
-                color: #ff00ff;
-                text-shadow: 0 0 12px #ff00ff;
-                font-size: 18px;
-                font-weight: bold;
+            #submit-score-btn:disabled {
+                background: #555;
+                color: #888;
+                box-shadow: none;
+                cursor: not-allowed;
             }
-
-            /* Name Input Area (Neon Style) */
-            #name-input-area {
-                margin-top: 15px;
-                display: none;
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-                background: rgba(5, 15, 30, 0.9);
-                padding: 30px 40px;
-                border-radius: 10px;
-                border: 2px solid #00f7ff;
-                box-shadow: 0 0 20px rgba(0, 247, 255, 0.4), inset 0 0 20px rgba(0, 247, 255, 0.1);
-            }
-
-                #name-input-area > div:first-child {
-                    text-shadow: 0 0 10px currentColor;
-                    letter-spacing: 2px;
-                }
-
-            #player-name-input {
-                background: rgba(0, 0, 0, 0.5);
-                border: 1px solid #00f7ff;
-                color: #00f7ff;
-                padding: 12px;
-                font-family: 'Orbitron', sans-serif;
-                font-size: 20px;
-                text-align: center;
-                width: 240px;
-                border-radius: 5px;
-                outline: none;
-                box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
-                transition: box-shadow 0.2s;
-            }
-
-                #player-name-input:focus {
-                    box-shadow: 0 0 20px rgba(0, 247, 255, 0.6);
-                }
-
-            #submit-score-btn {
-                background: #00f7ff;
-                color: #000;
-                border: none;
-                padding: 12px 40px;
-                font-family: 'Orbitron', sans-serif;
-                font-weight: bold;
-                cursor: pointer;
-                border-radius: 30px;
-                letter-spacing: 3px;
-                font-size: 16px;
-                box-shadow: 0 0 15px #00f7ff;
-                transition: all 0.2s;
-            }
-
-                #submit-score-btn:hover:not(:disabled) {
-                    background: #fff;
-                    color: #00f7ff;
-                    box-shadow: 0 0 25px #00f7ff;
-                }
-
-                #submit-score-btn:disabled {
-                    background: #555;
-                    color: #888;
-                    box-shadow: none;
-                    cursor: not-allowed;
-                }
     </style>
+
 
 
 </head>
@@ -881,6 +880,7 @@
         const SUPERNOVA_END_DELAY = 1100;
 
         const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
 
 
         const gameBgmEl = document.getElementById("game-bgm");
@@ -1312,7 +1312,7 @@
             starCanvas = null;
         }
 
-  
+
         /* =========================================================
          * Refactored Initialization & Loops
          * ========================================================= */
@@ -1455,14 +1455,6 @@
                     const nI = a.index + 1;
                     const nP = PLANETS[nI];
 
-                    // その後に衝撃波の生成を行う (これでエラーが直ります)
-                    shockwaves.push({
-                        x: mid.x,
-                        y: mid.y,
-                        radius: 10,
-                        life: 1.0 + (nI * 0.1) // ランクが高いほど持続
-                    });
-
                     Composite.remove(engine.world, [a, b]);
                     playExplosionSound();
 
@@ -1535,7 +1527,7 @@
             if (!isPaused) staticStarAngle -= 0.0025 * mult;
 
             const now = Date.now();
-            const t = performance.now();
+        
 
             // =========================================================
             // 1. 星の描画
@@ -1564,7 +1556,7 @@
             }
             ctx.restore();
 
-         
+    
         }
 
 
