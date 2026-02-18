@@ -64,7 +64,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            padding: 12px 15px;
+            padding: 12px 5px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
@@ -144,7 +144,7 @@
         }
 
         .hi-score-num {
-            font-size: 30px;
+            font-size: 24px;
             font-weight: 400;
             color: #ffd700;
             text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
@@ -930,7 +930,7 @@
         /* Game State */
         let isClearing = false;
         let isPaused = false;
-
+        const START_STAGE = 1;
 
         let WIDTH = window.innerWidth;
         let HEIGHT = window.innerHeight;
@@ -942,10 +942,10 @@
         const REDZONE_ROT_SPEED = 0.0015;
         const REDZONE_SPARK_RATE = 0.12;
 
-        const CORE_DEFAULT = 45;
-        const CORE_MAX = 85;
-        const CORE_GROW = 10;
-        let CORE_RADIUS = CORE_DEFAULT;
+        const CORE_DEFAULT = 50;
+        const CORE_MAX = 95;
+        const CORE_GROW = 6;
+        let CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (START_STAGE - 1));
 
         let pendingCoreBoost = false;
         let isContinue = false;
@@ -963,7 +963,7 @@
 
         let shotTimer = null;
         let shotTimeLimit = 0;
-        const TIMER_START_STAGE = 1;
+
         const TIMER_MAX_SEC = 30.0;
         const TIMER_MID_SEC = 10.0;
         const TIMER_MIN_SEC = 2.0;
@@ -971,7 +971,7 @@
         let barAnimId = null;
         let timerStartTime = 0;
 
-        let stage = 1;
+        let stage = START_STAGE;
         document.getElementById("stage-val").innerText = stage;
 
         let hiStage = localStorage.getItem("stellarGravity_hiStage") || 1;
@@ -2087,24 +2087,23 @@
                     localStorage.setItem("stellarGravity_hiStage", hiStage);
                 }
             } else {
-                stage = 1;
+                stage = START_STAGE;
                 score = 0;
                 clearCount = 0;
                 difficulty = 1.0;
                 CORE_RADIUS = CORE_DEFAULT;
                 document.getElementById("score-val").innerText = "0";
             }
+
+            CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (stage - 1));
+
             document.getElementById("stage-val").innerText = stage;
             document.getElementById("overlay").classList.add("hide");
 
             // 安全なリセット処理
             Composite.clear(engine.world, false);
-
-            if (isNext && pendingCoreBoost) {
-                CORE_RADIUS = Math.min(CORE_MAX, CORE_RADIUS + CORE_GROW);
-                pendingCoreBoost = false;
-            }
             Composite.add(engine.world, Bodies.circle(CENTER.x, CENTER.y, CORE_RADIUS, { isStatic: true, render: { visible: false } }));
+
             nextQueue = [Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)];
             const currentPlanet = PLANETS[nextQueue[1]];
             const nameEl = document.getElementById("next-name");
