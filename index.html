@@ -79,26 +79,31 @@
         }
 
             /* Common Panel Style */
-   
+
+        /* 共通パネルスタイル：内側にグリッドとフェード効果を追加 */
         .hud-panel-left, .hud-panel-right {
-            background: transparent; 
-            border: none; 
+            background: rgba(5, 15, 30, 0.3);
+            border: none;
             box-shadow: none;
+            /* パネル内限定のグリッド */
+            background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px);
+            background-size: 15px 15px;
+            /* ▼▼▼ 追加：端に向かってフェードアウトさせるマスク ▼▼▼ */
+            /* 四方の縁をグラデーションで透過させます */
+            -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
+            mask-image: radial-gradient(ellipse at center, black 40%, transparent 95%);
+            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
 
             padding: 8px 12px;
             position: relative;
             overflow: hidden;
             height: 110px;
-            min-width: 100px;
+            min-width: 130px;
             border-radius: 8px;
             display: flex;
             flex-direction: column;
             justify-content: space-evenly;
         }
-
-
-
-    
 
             .hud-panel-left > *, .hud-panel-right > * {
                 position: relative;
@@ -142,6 +147,7 @@
 
             .hi-score-num {
                 font-size: 30px;
+                font-weight: 400;
                 color: #ffd700;
                 text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
                 font-variant-numeric: tabular-nums;
@@ -155,10 +161,12 @@
             text-shadow: 0 0 10px #fff;
         }
 
-            #hi-stage-val {
-                font-size: 20px;
-                color: #fff;
-            }
+        #hi-stage-val {
+            font-size: 20px;
+            font-weight: 500;
+            color: #fff;
+            text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
+        }
 
             /* NEXT UI */
             #next-ui {
@@ -874,10 +882,6 @@
 
         const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
 
-        // --- Gravity Grid Variables ---
-        const GRID_SPACING = 10; // グリッドの間隔
-        let gridPoints = [];     // 格子点の配列
-        let shockwaves = [];     // 発生中の衝撃波リスト
 
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
@@ -1233,7 +1237,6 @@
         }
 
         /* Drawing Logic */
-        /* Drawing Logic */
         function drawPlanet(ctx, x, y, r, color, time, bodyId) {
             ctx.save();
             ctx.translate(x, y);
@@ -1309,25 +1312,7 @@
             starCanvas = null;
         }
 
-        function initGrid() {
-            gridPoints = [];
-            // 画面より少し広めにグリッドを作る（揺れた時に端が見えないように）
-            const margin = 200;
-            const cols = Math.ceil((WIDTH + margin * 2) / GRID_SPACING);
-            const rows = Math.ceil((HEIGHT + margin * 2) / GRID_SPACING);
-
-            for (let i = 0; i <= cols; i++) {
-                gridPoints[i] = [];
-                for (let j = 0; j <= rows; j++) {
-                    const x = i * GRID_SPACING - margin;
-                    const y = j * GRID_SPACING - margin;
-                    // ox, oy: 本来の位置, x, y: 歪んだ後の位置
-                    gridPoints[i][j] = { x, y, ox: x, oy: y };
-                }
-            }
-        }
-
-
+  
         /* =========================================================
          * Refactored Initialization & Loops
          * ========================================================= */
@@ -1431,9 +1416,6 @@
             Runner.run(runner, engine);
         }
 
-        // ---------------------------------------------------------
-        // 3. Game Logic Events (Gravity & Collision)
-        // ---------------------------------------------------------
         // ---------------------------------------------------------
         // 3. Game Logic Events (Gravity & Collision)
         // ---------------------------------------------------------
@@ -1582,112 +1564,7 @@
             }
             ctx.restore();
 
-            // =========================================================
-            // 2. グリッドの物理計算
-            // =========================================================
-            const bodies = Composite.allBodies(engine.world);
-
-            // ★復活: 重力源リスト（ただしパワーを控えめに設定）
-            const gravitySources = [];
-
-            // コア (パワーを半減: 12 -> 6)
-            gravitySources.push({
-                x: CENTER.x,
-                y: CENTER.y,
-                power: CORE_RADIUS * 8
-            });
-
-            // 惑星 (パワーを半減: 3 -> 1.5)
-            bodies.forEach(b => {
-                if (!b.isStatic && b.index !== undefined) {
-                    gravitySources.push({
-                        x: b.position.x,
-                        y: b.position.y,
-                        power: b.circleRadius * 2
-                    });
-                }
-            });
-
-            // 衝撃波の更新
-            for (let i = shockwaves.length - 1; i >= 0; i--) {
-                const sw = shockwaves[i];
-                sw.life -= 0.015;
-                sw.radius += 5;
-                if (sw.life <= 0) shockwaves.splice(i, 1);
-            }
-
-            // グリッド各点の座標計算
-            const cols = gridPoints.length;
-            const rows = gridPoints[0].length;
-
-            for (let i = 0; i < cols; i++) {
-                for (let j = 0; j < rows; j++) {
-                    const p = gridPoints[i][j];
-                    let dx = 0;
-                    let dy = 0;
-
-                    // ★復活: A. 重力源による吸い寄せ (マイルド版)
-                    gravitySources.forEach(src => {
-                        const distX = src.x - p.ox;
-                        const distY = src.y - p.oy;
-                        const distSq = distX * distX + distY * distY;
-
-                        // 【調整ポイント】
-                        // 以前: factor = src.power * 25 / (distSq + 2500)
-                        // 今回: 係数を「25 -> 4」に下げ、分母の定数を「2500 -> 10000」に上げて影響を滑らかに
-                        //const factor = src.power * 4 / (distSq + 10000);
-                        const factor = src.power * 20 / (distSq + 2500)
-
-                        dx += distX * factor;
-                        dy += distY * factor;
-                    });
-
-                    // B. 衝撃波による変位
-                    shockwaves.forEach(sw => {
-                        const dist = Math.sqrt((p.ox - sw.x) ** 2 + (p.oy - sw.y) ** 2);
-                        const waveDist = Math.abs(dist - sw.radius);
-
-                        if (waveDist < 80) {
-                            const angle = Math.atan2(p.oy - sw.y, p.ox - sw.x);
-                            const waveForce = Math.sin(waveDist * 0.1) * sw.life * 80;
-                            dx += Math.cos(angle) * waveForce;
-                            dy += Math.sin(angle) * waveForce;
-                        }
-                    });
-
-                    // C. 弾性
-                    p.x += (p.ox + dx - p.x) * 0.1;
-                    p.y += (p.oy + dy - p.y) * 0.1;
-                }
-            }
-
-            // =========================================================
-            // 3. グリッドの描画
-            // =========================================================
-            ctx.save();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = "rgba(0, 200, 200, 0.2)";
-
-            // 縦線
-            for (let i = 0; i < cols; i++) {
-                ctx.beginPath();
-                ctx.moveTo(gridPoints[i][0].x, gridPoints[i][0].y);
-                for (let j = 1; j < rows; j++) {
-                    ctx.lineTo(gridPoints[i][j].x, gridPoints[i][j].y);
-                }
-                ctx.stroke();
-            }
-
-            // 横線
-            for (let j = 0; j < rows; j++) {
-                ctx.beginPath();
-                ctx.moveTo(gridPoints[0][j].x, gridPoints[0][j].y);
-                for (let i = 1; i < cols; i++) {
-                    ctx.lineTo(gridPoints[i][j].x, gridPoints[i][j].y);
-                }
-                ctx.stroke();
-            }
-            ctx.restore();
+         
         }
 
 
@@ -1983,7 +1860,6 @@
         // ---------------------------------------------------------
         function preInit() {
             initPhysics();
-            initGrid();
             initNextCanvas();
             setupGameLogic();
             setupRenderLoop();
@@ -2415,7 +2291,6 @@
                     if (p.px !== undefined) { p.px += dx; p.py += dy; }
                 });
 
-                initGrid();
             }, 100);
         });
 
