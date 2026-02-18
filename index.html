@@ -56,64 +56,49 @@
             }
 
             /* =========================================================
-        * HUD (Top Score / Next) - Compact & TRON Style
-        * ========================================================= */
-            #ui-layer {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                padding: 12px 15px;
-                box-sizing: border-box;
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                pointer-events: none;
-                z-index: 10;
-                font-weight: normal;
-                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-                background-size: 100% 2px, 3px 100%;
-            }
+             * HUD (Top Score / Next) - Compact & TRON Style
+             * ========================================================= */
+            /* 共通パネルスタイル */
+#ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+            font-weight: normal;
+            
+            /* ▼▼▼ ここを変更（背景のメッシュを消す） ▼▼▼ */
+            background: none; 
+            /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+        }
 
             /* Common Panel Style */
-            .hud-panel-left, .hud-panel-right {
-                background: rgba(5, 15, 30, 0.85);
-                border: 2px solid #00f7ff;
-                box-shadow: 0 0 10px #00f7ff, inset 0 0 15px rgba(0, 247, 255, 0.4);
-                padding: 8px 12px;
-                position: relative;
-                overflow: hidden;
-                height: 110px;
-                min-width: 130px;
-                border-radius: 8px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-evenly;
-            }
+   
+        .hud-panel-left, .hud-panel-right {
+            background: transparent; 
+            border: none; 
+            box-shadow: none;
 
-                /* Light Scan Effect */
-                .hud-panel-left::before, .hud-panel-right::before {
-                    content: "";
-                    position: absolute;
-                    top: -50%;
-                    left: -50%;
-                    width: 200%;
-                    height: 200%;
-                    background: linear-gradient( transparent, rgba(0, 247, 255, 0.1), transparent );
-                    transform: rotate(45deg);
-                    animation: grid-scan 6s linear infinite;
-                    pointer-events: none;
-                }
+            padding: 8px 12px;
+            position: relative;
+            overflow: hidden;
+            height: 110px;
+            min-width: 100px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+        }
 
-            @keyframes grid-scan {
-                0% {
-                    transform: translateY(-100%) rotate(45deg);
-                }
 
-                100% {
-                    transform: translateY(100%) rotate(45deg);
-                }
-            }
+
+    
 
             .hud-panel-left > *, .hud-panel-right > * {
                 position: relative;
@@ -135,10 +120,10 @@
             }
 
             .hud-label, .next-label {
-                font-size: 10px;
+                font-size: 16px;
                 color: #00f7ff;
                 letter-spacing: 1px;
-                font-weight: 700;
+                font-weight: 300;
                 display: block;
                 margin-bottom: 0px;
                 text-transform: uppercase;
@@ -146,9 +131,9 @@
             }
 
             .score-num {
-                font-size: 26px;
+                font-size:32px;
                 color: #fff;
-                text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff, 0 0 30px #00f7ff;
+                text-shadow: 0 0 10px #fff, 0 0 15px #00f7ff;
                 font-weight: 400;
                 line-height: 1;
                 font-variant-numeric: tabular-nums;
@@ -156,24 +141,23 @@
             }
 
             .hi-score-num {
-                font-size: 18px;
+                font-size: 30px;
                 color: #ffd700;
                 text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
                 font-variant-numeric: tabular-nums;
             }
 
-            .hi-stage-text {
-                margin-left: 8px;
-                font-size: 10px;
-                color: #88ccff;
-                letter-spacing: 1px;
-                text-shadow: 0 0 5px #00f7ff;
-            }
+        .hi-stage-text {
+            margin-left: 8px;
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: #aaa;
+            text-shadow: 0 0 10px #fff;
+        }
 
             #hi-stage-val {
-                font-size: 12px;
+                font-size: 20px;
                 color: #fff;
-                font-weight: bold;
             }
 
             /* NEXT UI */
@@ -251,8 +235,8 @@
             }
 
             /* =========================================================
-        * Overlay (Title / Result)
-        * ========================================================= */
+             * Overlay (Title / Result)
+             * ========================================================= */
             #overlay {
                 position: fixed;
                 inset: 0;
@@ -272,8 +256,8 @@
                 }
 
             /* =========================================================
-        * Soundtrack Overlay
-        * ========================================================= */
+             * Soundtrack Overlay
+             * ========================================================= */
             #soundtrack-overlay {
                 position: fixed;
                 inset: 0;
@@ -407,7 +391,6 @@
             }
 
             .btn {
-            width: 280px;
                 margin-top: 30px;
                 padding: 15px 50px;
                 font-size: 18px;
@@ -426,7 +409,7 @@
 
         .sub-btn {
             margin-top: 15px; /* 間隔を少し微調整 */
-            padding: 7px 0; /* 上下パディングのみ指定（左右はwidthで決まるため0でOK） */
+            padding: 12px 0; /* 上下パディングのみ指定（左右はwidthで決まるため0でOK） */
             /* ▼▼▼ 幅を固定して揃える ▼▼▼ */
             width: 280px;
             /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
@@ -460,8 +443,7 @@
                 font-weight: bold;
                 color: white;
                 background: rgba(5, 15, 30, 0.85);
-                border: 1px solid #00f7ff;
-                
+                border: 2px solid #00f7ff;
                 border-radius: 30px;
                 cursor: pointer;
                 outline: none;
@@ -545,22 +527,27 @@
                 padding: 0;
             }
 
-            #stage-ui {
-                text-align: right;
-                pointer-events: none;
-            }
+        /* Stage Display Area */
+        #stage-ui {
+            text-align: right;
+            pointer-events: none;
+        }
 
-            .stage-label {
-                font-size: 12px;
-                letter-spacing: 2px;
-                color: #aaa;
-            }
+        /* ラベル：発光を抑える（text-shadowを最小限に） */
+        .stage-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #aaa;
+            text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff;
+        }
 
-            .stage-num {
-                font-size: 36px;
-                font-weight: bold;
-                text-shadow: 0 0 12px rgba(255,255,255,0.6);
-            }
+        /* 数値：強く発光（白とシアンの輝き） */
+        .stage-num {
+            font-size: 36px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff;
+        }
 
             .ui-faded {
                 opacity: 0.3;
@@ -772,7 +759,7 @@
             <div class="hud-item">
                 <span class="hud-label">HIGH SCORE</span>
                 <span id="hi-score-val" class="hi-score-num">0</span>
-                <span class="hi-stage-text">STG <span id="hi-stage-val">1</span></span>
+                <span class="hi-stage-text">Stage <span id="hi-stage-val">1</span></span>
             </div>
             <div class="hud-item">
                 <span class="hud-label">SCORE</span>
@@ -868,7 +855,7 @@
         </div>
 
         <div id="stage-ui" class="ui-faded">
-            <div class="stage-label">STAGE</div>
+            <div class="stage-label">Stage</div>
             <div id="stage-val" class="stage-num">1</div>
         </div>
     </div>
@@ -1679,7 +1666,7 @@
             // =========================================================
             ctx.save();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = "rgba(0, 247, 255, 0.12)";
+            ctx.strokeStyle = "rgba(0, 200, 200, 0.2)";
 
             // 縦線
             for (let i = 0; i < cols; i++) {
@@ -2180,7 +2167,7 @@
             if (nameInputArea) nameInputArea.style.display = "none";
             // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-            requestFullScreen();
+            //requestFullScreen();
             forceStopBGM();
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
             if (isPaused) isPaused = false;
