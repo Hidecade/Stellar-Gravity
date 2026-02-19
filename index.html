@@ -233,6 +233,10 @@
             justify-content: center;
             background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px);
             background-size: 15px 15px;
+
+            -webkit-touch-callout: none; /* iOSの長押しメニューを禁止 */
+            -webkit-user-select: none; /* テキスト選択を禁止 */
+            user-select: none;
         }
 
             #boost-btn:hover, #hud-pause-btn:hover, #bgm-toggle:hover {
@@ -894,6 +898,52 @@
                 color: white !important;
                 box-shadow: 0 0 20px rgba(255, 50, 50, 0.6) !important;
             }
+
+        /* --- 追加: ボムボタンのスタイル --- */
+        #bomb-btn {
+            position: fixed;
+            bottom: 60px;
+            left: 200px; /* BOOSTボタンの右隣 */
+            width: 120px;
+            height: 70px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            color: #ff3c3c;
+            background: rgba(20, 0, 0, 0.9);
+            border: 2px solid #ff3c3c;
+            border-radius: 0px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 0 15px rgba(255, 60, 60, 0.4);
+            transition: all 0.2s;
+            text-shadow: 0 0 5px #ff3c3c;
+            display: none; /* ゲーム開始前は非表示 */
+        }
+
+            #bomb-btn:hover {
+                background: #ff3c3c;
+                color: #000;
+                box-shadow: 0 0 25px #ff3c3c;
+            }
+
+            #bomb-btn.active {
+                background: #ff3c3c;
+                color: #fff;
+                box-shadow: 0 0 40px #ff3c3c, inset 0 0 20px #fff;
+                border-color: #fff;
+                animation: pulse-red 0.8s infinite alternate;
+            }
+
+        @keyframes pulse-red {
+            from {
+                box-shadow: 0 0 20px #ff0000;
+            }
+
+            to {
+                box-shadow: 0 0 40px #ff0000;
+            }
+        }
     </style>
 
 </head>
@@ -1002,6 +1052,7 @@
     </div>
 
     <button id="boost-btn">BOOST</button>
+    <button id="bomb-btn">BOMB <span id="bomb-count" style="margin-left:5px">3</span></button>
 
     <div id="bottom-right-ui">
         <div id="management-btn-area">
@@ -1240,6 +1291,9 @@
             document.getElementById("clear-message").style.display = "none";
 
             const clearHiBtn = document.getElementById("clear-hi-btn");
+
+
+
             if (clearHiBtn) clearHiBtn.style.display = "";
 
             bgmToggleBtn.style.pointerEvents = "auto";
@@ -1751,7 +1805,7 @@
             if (!isPaused) staticStarAngle -= 0.0025 * mult;
 
             const now = Date.now();
-        
+
 
             // =========================================================
             // 1. 星の描画
@@ -1780,7 +1834,7 @@
             }
             ctx.restore();
 
-    
+
         }
 
 
@@ -2084,6 +2138,7 @@
         /* Controls */
         const boostBtn = document.getElementById("boost-btn");
         const clearHiBtn = document.getElementById("clear-hi-btn");
+        boostBtn.addEventListener("contextmenu", (e) => e.preventDefault());
 
         boostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
         boostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
@@ -2808,11 +2863,11 @@
                     const stageVal = data.stage ? data.stage : "-";
 
                     tr.innerHTML = `
-                                                <td class="${rankClass}">${rank}</td>
-                                                <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
-                                                <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                                                <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                                            `;
+                                                            <td class="${rankClass}">${rank}</td>
+                                                            <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                                                            <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                                                            <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                                                        `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
