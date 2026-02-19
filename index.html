@@ -628,15 +628,16 @@
             display: none;
             flex-direction: column;
             align-items: center;
+            /* ▼▼▼ ここを修正: 上下中央揃えに変更 ▼▼▼ */
             justify-content: center;
             z-index: 2500;
             font-family: 'Orbitron', sans-serif;
             border: 1px solid #00f7ff;
             box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
-            overflow: hidden; /* 全体スクロール禁止 */
-            padding-top: 40px;
-            padding-bottom: 30px;
-            touch-action: pan-y;
+            /* 全体のはみ出し対策 */
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
             #ranking-overlay h2 {
@@ -648,19 +649,20 @@
                 border-bottom: 2px solid #00f7ff;
                 padding-bottom: 10px;
                 flex-shrink: 0;
+                margin-top: 0; /* 中央寄せを綺麗に見せるため */
             }
 
+        /* ランキングのテーブルを囲むラッパー */
         .ranking-scroll-wrapper {
-            width: 95%;
+            width: 100%;
             max-width: 500px;
-            flex: 1; /* 余った高さを占有 */
-            overflow-y: auto; /* ここだけスクロール */
-            min-height: 0;
-            margin-bottom: 20px;
+            /* ▼▼▼ ここを修正: 高さを固定せず、中身に応じる。最大でも画面の60%程度にする ▼▼▼ */
+            flex: 0 1 auto;
+            max-height: 60vh;
+            overflow-y: auto;
+            margin: 15px 0;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
-            scrollbar-width: thin;
-            scrollbar-color: #00f7ff transparent;
+            border: 1px solid rgba(0, 247, 255, 0.3);
         }
 
             .ranking-scroll-wrapper::-webkit-scrollbar {
@@ -742,6 +744,10 @@
             text-shadow: 0 0 12px #ff00ff;
             font-size: 18px;
             font-weight: bold;
+        }
+        #close-ranking-btn {
+            flex-shrink: 0;
+            margin-top: 10px;
         }
 
         /* =========================================================
