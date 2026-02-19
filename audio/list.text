@@ -1,0 +1,9 @@
+      const trackData = [
+          { name: "TITLE THEME", file: "audio/StellarGravity_Title.mp3", id: "title-bgm" },
+          { name: "NEBULA (Stage 1-2)", file: "audio/StellarGravity_00.mp3" },
+          { name: "PROTOSTAR (Stage 3-4)", file: "audio/StellarGravity_01.mp3" },
+          { name: "RED GIANT (Stage 5-6)", file: "audio/StellarGravity_02.mp3" },
+          { name: "SUPERNOVA (Stage 7+)", file: "audio/StellarGravity_03.mp3" },
+          { name: "RANKING THEME", file: "audio/Stellar_Gravity_Name.mp3", id: "name-bgm" }, // 追加
+          { name: "EVENT HORIZON (Clear)", file: "audio/StellarGravity_Clear.mp3", id: "clear-bgm" }
+      ];
