@@ -233,8 +233,6 @@
             justify-content: center;
             background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px);
             background-size: 15px 15px;
-
-
         }
 
             #boost-btn:hover, #hud-pause-btn:hover, #bgm-toggle:hover {
@@ -963,6 +961,7 @@
     <audio id="game-bgm" loop preload="auto"></audio>
     <audio id="clear-bgm" src="audio/StellarGravity_Clear.mp3" preload="auto"></audio>
     <audio id="title-bgm" src="audio/StellarGravity_Title.mp3" loop preload="auto"></audio>
+    <audio id="name-bgm" src="audio/Stellar_Gravity_Name.mp3" loop preload="auto"></audio>
 
 
     <div id="canvas-container"></div>
@@ -1098,6 +1097,7 @@
         const gameBgmEl = document.getElementById("game-bgm");
         const clearBgm = document.getElementById("clear-bgm");
         const titleBgm = document.getElementById("title-bgm");
+        const nameBgm = document.getElementById("name-bgm"); 
 
         // Pause Elements
         const hudPauseBtn = document.getElementById("hud-pause-btn");
@@ -2247,6 +2247,11 @@
             // 1. 先に名前入力欄を表示状態にする (重要)
             document.getElementById("name-input-area").style.display = "flex";
 
+            // ▼▼▼ ここでName用BGMを再生 ▼▼▼
+            if (isBgmEnabled) {
+                playNameBGM();
+            }
+
             // ★追加: ここで順位を計算して表示！
             if (typeof window.displayMyRank === "function") {
                 window.displayMyRank(score);
@@ -2656,7 +2661,7 @@
         function forceStopBGM() {
             if (bgmFadeInterval) { clearInterval(bgmFadeInterval); bgmFadeInterval = null; }
             isBgmFading = false;
-            [gameBgmEl, clearBgm, titleBgm].forEach(a => {
+            [gameBgmEl, clearBgm, titleBgm, nameBgm].forEach(a => {
                 if (a) { a.pause(); a.currentTime = 0; a.volume = 0.8; }
             });
             currentAudio = null;
@@ -2719,6 +2724,15 @@
             forceStopBGM();
             titleBgm.play().then(() => {
                 currentAudio = titleBgm;
+            }).catch(() => { });
+        }
+
+        function playNameBGM() {
+            if (!isBgmEnabled || isPaused) return;
+            forceStopBGM();
+            nameBgm.volume = 0.6; // 少し控えめな音量がおすすめ
+            nameBgm.play().then(() => {
+                currentAudio = nameBgm;
             }).catch(() => { });
         }
 
@@ -2874,11 +2888,11 @@
                     const stageVal = data.stage ? data.stage : "-";
 
                     tr.innerHTML = `
-                                                            <td class="${rankClass}">${rank}</td>
-                                                            <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
-                                                            <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                                                            <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
-                                                        `;
+                                                                    <td class="${rankClass}">${rank}</td>
+                                                                    <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
+                                                                    <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
+                                                                    <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                                                                `;
                     rankingBody.appendChild(tr);
                     rank++;
                 });
