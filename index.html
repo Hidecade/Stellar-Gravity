@@ -2253,10 +2253,7 @@
             // 1. 先に名前入力欄を表示状態にする (重要)
             document.getElementById("name-input-area").style.display = "flex";
 
-            // ▼▼▼ ここでName用BGMを再生 ▼▼▼
-            if (isBgmEnabled) {
-                playNameBGM();
-            }
+        
 
             // ★追加: ここで順位を計算して表示！
             if (typeof window.displayMyRank === "function") {
@@ -2272,7 +2269,7 @@
             updateResetButtonVisibility();
 
             if (isBgmEnabled) {
-                playTitleBGM();
+                playNameBGM();
             } else {
                 forceStopBGM(); // 設定がOFFなら確実に殺す
             }
