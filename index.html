@@ -234,9 +234,7 @@
             background-image: linear-gradient(rgba(0, 247, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 247, 255, 0.1) 1px, transparent 1px);
             background-size: 15px 15px;
 
-            -webkit-touch-callout: none; /* iOSの長押しメニューを禁止 */
-            -webkit-user-select: none; /* テキスト選択を禁止 */
-            user-select: none;
+
         }
 
             #boost-btn:hover, #hud-pause-btn:hover, #bgm-toggle:hover {
@@ -944,6 +942,18 @@
                 box-shadow: 0 0 40px #ff0000;
             }
         }
+
+        /* =========================================================
+         * Action Buttons (BOOST, PAUSE, BGM)
+         * ========================================================= */
+        #boost-btn, #bomb-btn, #hud-pause-btn, #bgm-toggle {
+            /* 既存のプロパティ ... */
+            /* ▼▼▼ 追加: iPhone/Safari向けの長押し無効化設定 ▼▼▼ */
+            -webkit-touch-callout: none; /* 長押し時のメニュー表示（コピー等）を禁止 */
+            -webkit-user-select: none; /* テキスト選択を禁止 */
+            user-select: none;
+            touch-action: none; /* ブラウザ標準のジェスチャー（ズーム等）を禁止 */
+        }
     </style>
 
 </head>
@@ -1291,9 +1301,6 @@
             document.getElementById("clear-message").style.display = "none";
 
             const clearHiBtn = document.getElementById("clear-hi-btn");
-
-
-
             if (clearHiBtn) clearHiBtn.style.display = "";
 
             bgmToggleBtn.style.pointerEvents = "auto";
@@ -2138,7 +2145,11 @@
         /* Controls */
         const boostBtn = document.getElementById("boost-btn");
         const clearHiBtn = document.getElementById("clear-hi-btn");
-        boostBtn.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        // ▼▼▼ 追加: システムの右クリック/長押しメニューを完全にブロック ▼▼▼
+        boostBtn.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+        }, false);
 
         boostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
         boostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
