@@ -950,13 +950,13 @@
         /* =========================================================
          * Action Buttons (BOOST, PAUSE, BGM)
          * ========================================================= */
-        #boost-btn, #bomb-btn, #hud-pause-btn, #bgm-toggle {
-            /* 既存のプロパティ ... */
-            /* ▼▼▼ 追加: iPhone/Safari向けの長押し無効化設定 ▼▼▼ */
-            -webkit-touch-callout: none; /* 長押し時のメニュー表示（コピー等）を禁止 */
-            -webkit-user-select: none; /* テキスト選択を禁止 */
-            user-select: none;
-            touch-action: none; /* ブラウザ標準のジェスチャー（ズーム等）を禁止 */
+        /* ボタン全般、特にBOOSTボタンに強力な抑制をかける */
+        #boost-btn, #bomb-btn, .btn {
+            -webkit-touch-callout: none !important; /* 長押しメニュー禁止 */
+            -webkit-user-select: none !important; /* テキスト選択禁止 */
+            user-select: none !important;
+            touch-action: none !important; /* ブラウザのジェスチャー（拡大等）禁止 */
+            -webkit-tap-highlight-color: transparent; /* タップ時の青い枠線を消す */
         }
     </style>
 
@@ -2341,9 +2341,8 @@
             // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
             requestFullScreen();
-            
+
             forceStopBGM();
-            
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
             if (isPaused) isPaused = false;
             document.getElementById("clear-message").style.display = "none";
@@ -2610,6 +2609,23 @@
             document.getElementById("hi-stage-val").innerText = "1";
             alert("HIGH SCORE をリセットしました");
         });
+
+
+        // すべてのボタンに対して右クリックメニュー（iOSの長押しメニュー）を無効化
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            }, false);
+        });
+
+        // 画面全体のダブルタップズームを禁止（連打対策）
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
 
         let isBgmEnabled = true;
         const bgmToggleBtn = document.getElementById("bgm-toggle");
