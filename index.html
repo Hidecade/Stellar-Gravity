@@ -2340,8 +2340,10 @@
             if (nameInputArea) nameInputArea.style.display = "none";
             // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-            //requestFullScreen();
+            requestFullScreen();
+            
             forceStopBGM();
+            
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
             if (isPaused) isPaused = false;
             document.getElementById("clear-message").style.display = "none";
