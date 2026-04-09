@@ -13,7 +13,7 @@
 
     window.StellarConfig = {
         app: {
-            version: "2026.04.10.1"
+            version: "2026.04.10.2"
         },
         combo: {
             bonusStep: 0.2,         // 1コンボごとに加算されるスコア倍率

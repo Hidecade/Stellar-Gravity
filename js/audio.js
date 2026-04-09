@@ -21,28 +21,37 @@
     masterGain.connect(audioCtx.destination);
 
     const trackData = [
-        { name: "TITLE THEME", file: "audio/StellarGravity_Title.mp3", id: "title-bgm" },
-        { name: "NEBULA (Stage 1-2)", file: "audio/StellarGravity_00.mp3" },
-        { name: "PROTOSTAR (Stage 3-4)", file: "audio/StellarGravity_01.mp3" },
-        { name: "RED GIANT (Stage 5-6)", file: "audio/StellarGravity_02.mp3" },
-        { name: "SUPERNOVA (Stage 7+)", file: "audio/StellarGravity_03.mp3" },
-        { name: "RANKING THEME", file: "audio/Stellar_Gravity_Name.mp3", id: "name-bgm" },
-        { name: "EVENT HORIZON (Clear)", file: "audio/StellarGravity_Clear.mp3", id: "clear-bgm" }
+        { name: "TITLE THEME", file: "audio/StellarGravity_Title.mp3", key: "title", gain: 0.8, loop: true },
+        { name: "NEBULA (Stage 1-2)", file: "audio/StellarGravity_00.mp3", key: "stage-00", gain: 0.8, loop: true },
+        { name: "PROTOSTAR (Stage 3-4)", file: "audio/StellarGravity_01.mp3", key: "stage-01", gain: 0.8, loop: true },
+        { name: "RED GIANT (Stage 5-6)", file: "audio/StellarGravity_02.mp3", key: "stage-02", gain: 0.8, loop: true },
+        { name: "SUPERNOVA (Stage 7+)", file: "audio/StellarGravity_03.mp3", key: "stage-03", gain: 0.8, loop: true },
+        { name: "RANKING THEME", file: "audio/Stellar_Gravity_Name.mp3", key: "name", gain: 0.6, loop: true },
+        { name: "EVENT HORIZON (Clear)", file: "audio/StellarGravity_Clear.mp3", key: "clear", gain: 0.3, loop: false }
     ];
+
+    const STATIC_BGM = {
+        clear: { file: "audio/StellarGravity_Clear.mp3", gain: 0.3, key: "clear", loop: false },
+        name: { file: "audio/Stellar_Gravity_Name.mp3", gain: 0.6, key: "name", loop: true },
+        title: { file: "audio/StellarGravity_Title.mp3", gain: 0.8, key: "title", loop: true }
+    };
 
     let noiseBuffer = null;
     let isBgmEnabled = localStorage.getItem("stellarGravity_bgm") !== "off";
-    const mediaSources = new WeakMap();
 
     let bgmFadeTimer = null;
-    let currentAudio = null;
     let currentBgmGain = 0.8;
     let activeTrackItem = null;
+    let bgmBuffers = {};
     let audioReadyPromise = null;
     let pendingPlayback = null;
     let playbackRequestId = 0;
-    const BGM_FADE_IN_SEC = 0.12;
-    const BGM_HARD_STOP_SEC = 0.02;
+    let currentBgmSource = null;
+    let currentBgmState = null;
+    let currentBgmOffset = 0;
+    let currentBgmStartTime = 0;
+    let isBgmPaused = false;
+    const BGM_FADE_OUT_SEC = 0.22;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -65,67 +74,43 @@
         return buffer;
     }
 
-    function ensureMediaSource(audioEl) {
-        if (!audioEl || mediaSources.has(audioEl)) {
-            return;
-        }
-
-        const source = audioCtx.createMediaElementSource(audioEl);
-        source.connect(bgmMasterGain);
-        mediaSources.set(audioEl, source);
-    }
-
-    function resolveBgmGain(audioEl) {
-        if (!audioEl) return 0.8;
-        if (audioEl.id === "clear-bgm") return 0.3;
-        if (audioEl.id === "name-bgm") return 0.6;
+    function resolveBgmGain(request) {
+        if (!request) return 0.8;
+        if (typeof request.gain === "number") return request.gain;
+        if (request.key === "clear") return 0.3;
+        if (request.key === "name") return 0.6;
         return 0.8;
     }
 
-    function applyBgmGain(level, fadeDuration = 0) {
+    function applyBgmGain(level) {
         currentBgmGain = level;
         const time = audioCtx.currentTime;
         bgmMasterGain.gain.cancelScheduledValues(time);
-
-        const safeCurrent = Math.max(bgmMasterGain.gain.value, 0.0001);
-        bgmMasterGain.gain.setValueAtTime(safeCurrent, time);
-
-        if (fadeDuration > 0) {
-            bgmMasterGain.gain.exponentialRampToValueAtTime(Math.max(level, 0.0001), time + fadeDuration);
-            return;
-        }
-
         bgmMasterGain.gain.setValueAtTime(level, time);
     }
 
-    function muteBgmOutput() {
-        const time = audioCtx.currentTime;
-        const safeCurrent = Math.max(bgmMasterGain.gain.value, 0.0001);
-        bgmMasterGain.gain.cancelScheduledValues(time);
-        bgmMasterGain.gain.setValueAtTime(safeCurrent, time);
-        bgmMasterGain.gain.exponentialRampToValueAtTime(0.0001, time + BGM_HARD_STOP_SEC);
+    function getStageBgmRequest() {
+        const bgmIndex = Math.min(Math.floor((state.getStage() - 1) / 2), 3);
+        const bgmNum = bgmIndex.toString().padStart(2, "0");
+        return {
+            file: `audio/StellarGravity_${bgmNum}.mp3`,
+            gain: 0.8,
+            key: `stage-${bgmNum}`,
+            loop: true
+        };
     }
 
-    async function primeAudioElement(audio) {
-        if (!audio) return;
-
-        ensureMediaSource(audio);
-        const previousMuted = audio.muted;
-        const previousVolume = audio.volume;
-
-        audio.muted = true;
-        audio.volume = 0;
-
-        try {
-            await audio.play();
-            audio.pause();
-            audio.currentTime = 0;
-        } catch (_) {
-            // iOS blocks can still happen here; caller will retry from a user gesture.
-        } finally {
-            audio.muted = previousMuted;
-            audio.volume = previousVolume || 1;
+    async function loadBgmBuffer(file) {
+        const url = new URL(file, window.location.href).href;
+        if (bgmBuffers[url]) {
+            return bgmBuffers[url];
         }
+
+        const response = await fetch(url, { cache: "default" });
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+        bgmBuffers[url] = audioBuffer;
+        return audioBuffer;
     }
 
     async function prepareAudioPlayback() {
@@ -139,10 +124,10 @@
             }
 
             await Promise.all([
-                primeAudioElement(gameBgmEl),
-                primeAudioElement(clearBgm),
-                primeAudioElement(titleBgm),
-                primeAudioElement(nameBgm)
+                loadBgmBuffer(STATIC_BGM.title.file),
+                loadBgmBuffer(STATIC_BGM.clear.file),
+                loadBgmBuffer(STATIC_BGM.name.file),
+                loadBgmBuffer(getStageBgmRequest().file)
             ]);
         })();
 
@@ -188,53 +173,106 @@
         window.addEventListener("keydown", retryHandler, { once: true });
     }
 
-    async function startManagedPlayback(audioEl, options = {}) {
-        if (!audioEl) {
+    function stopCurrentBgmSource(clearState = true, preservePauseState = false) {
+        if (currentBgmSource) {
+            currentBgmSource.onended = null;
+            try {
+                currentBgmSource.stop();
+            } catch (_) {
+                // already stopped
+            }
+            try {
+                currentBgmSource.disconnect();
+            } catch (_) {
+                // already disconnected
+            }
+        }
+
+        currentBgmSource = null;
+        if (!preservePauseState) {
+            isBgmPaused = false;
+            currentBgmOffset = 0;
+        }
+
+        if (clearState) {
+            currentBgmState = null;
+        }
+    }
+
+    function startBgmSource(buffer, request, offset = 0) {
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = request.loop !== false;
+        source.connect(bgmMasterGain);
+
+        const safeOffset = buffer.duration > 0 ? offset % buffer.duration : 0;
+        applyBgmGain(resolveBgmGain(request));
+        source.start(0, safeOffset);
+
+        currentBgmSource = source;
+        currentBgmStartTime = audioCtx.currentTime - safeOffset;
+        currentBgmOffset = safeOffset;
+        currentBgmState = {
+            ...request,
+            duration: buffer.duration,
+            url: new URL(request.file, window.location.href).href
+        };
+        isBgmPaused = false;
+
+        source.onended = () => {
+            if (currentBgmSource !== source || isBgmPaused) {
+                return;
+            }
+
+            currentBgmSource = null;
+            currentBgmOffset = 0;
+            if (currentBgmState && currentBgmState.loop === false) {
+                currentBgmState = null;
+            }
+        };
+    }
+
+    async function startManagedPlayback(request = {}) {
+        if (!request.file) {
             return false;
         }
 
         const {
-            gain = resolveBgmGain(audioEl),
             onBlocked = null,
             onStarted = null,
-            resetTime = true,
-            src = null
-        } = options;
+            offset = 0
+        } = request;
 
         const requestId = ++playbackRequestId;
 
         const runPlayback = async () => {
             await resumeAudioContext();
-            await prepareAudioPlayback().catch(() => {});
+
+            if (audioCtx.state !== "running") {
+                if (onBlocked) {
+                    onBlocked();
+                }
+                schedulePlaybackRetry(runPlayback);
+                return false;
+            }
+
+            const buffer = await loadBgmBuffer(request.file).catch(() => null);
+            if (!buffer) {
+                return false;
+            }
 
             if (requestId !== playbackRequestId) {
                 return false;
             }
 
-            ensureMediaSource(audioEl);
-
-            if (src && audioEl.src !== new URL(src, window.location.href).href) {
-                audioEl.src = src;
-                audioEl.load();
-            }
-
-            if (resetTime) {
-                audioEl.currentTime = 0;
-            }
-
-            audioEl.volume = 1;
-            applyBgmGain(0.0001);
-
             try {
-                await audioEl.play();
                 if (requestId !== playbackRequestId) {
-                    audioEl.pause();
                     return false;
                 }
 
+                stopCurrentBgmSource(false);
+                startBgmSource(buffer, request, offset);
                 clearPendingPlaybackRetry();
-                currentAudio = audioEl;
-                applyBgmGain(gain, BGM_FADE_IN_SEC);
                 if (onStarted) {
                     onStarted();
                 }
@@ -256,7 +294,7 @@
     }
 
     function fadeOut(audio, callback) {
-        if (!audio) {
+        if (!currentBgmSource) {
             if (callback) callback();
             return;
         }
@@ -267,29 +305,28 @@
         }
 
         const time = audioCtx.currentTime;
-        const startGain = bgmMasterGain.gain.value;
+        const startGain = Math.max(bgmMasterGain.gain.value, 0.0001);
         bgmMasterGain.gain.cancelScheduledValues(time);
         bgmMasterGain.gain.setValueAtTime(startGain, time);
-        bgmMasterGain.gain.linearRampToValueAtTime(0.0001, time + 0.3);
+        bgmMasterGain.gain.exponentialRampToValueAtTime(0.0001, time + BGM_FADE_OUT_SEC);
 
         bgmFadeTimer = setTimeout(() => {
             bgmFadeTimer = null;
-            audio.pause();
-            audio.currentTime = 0;
+            stopCurrentBgmSource();
             applyBgmGain(currentBgmGain);
 
             if (callback) callback();
-        }, 320);
+        }, Math.ceil(BGM_FADE_OUT_SEC * 1000) + 20);
     }
 
     function stopBGM(callback = null) {
-        if (!currentAudio) {
+        if (!currentBgmSource) {
+            stopCurrentBgmSource();
             if (callback) callback();
             return;
         }
 
-        fadeOut(currentAudio, () => {
-            currentAudio = null;
+        fadeOut(currentBgmSource, () => {
             if (callback) callback();
         });
     }
@@ -302,17 +339,19 @@
 
         clearPendingPlaybackRetry();
         playbackRequestId++;
-        muteBgmOutput();
+        stopCurrentBgmSource();
+        applyBgmGain(currentBgmGain);
+    }
 
-        [gameBgmEl, clearBgm, titleBgm, nameBgm].forEach((audio) => {
-            if (!audio) return;
-            audio.pause();
-            audio.currentTime = 0;
-            audio.volume = 1;
-        });
+    function queueBgmPlayback(request = {}) {
+        if (currentBgmSource) {
+            stopBGM(() => {
+                startManagedPlayback(request).catch(() => {});
+            });
+            return;
+        }
 
-        applyBgmGain(0.0001);
-        currentAudio = null;
+        startManagedPlayback(request).catch(() => {});
     }
 
     function playSuctionSound() {
@@ -443,68 +482,52 @@
     function playBGM() {
         if (!isBgmEnabled || state.getIsPaused()) return;
 
-        ensureMediaSource(gameBgmEl);
-        forceStopBGM();
-        const bgmIndex = Math.min(Math.floor((state.getStage() - 1) / 2), 3);
-        const bgmNum = bgmIndex.toString().padStart(2, "0");
-        startManagedPlayback(gameBgmEl, {
-            gain: resolveBgmGain(gameBgmEl),
-            src: `audio/StellarGravity_${bgmNum}.mp3`
-        }).catch(() => {});
+        queueBgmPlayback(getStageBgmRequest());
     }
 
     function playClearBgm() {
         if (!isBgmEnabled) {
-            forceStopBGM();
+            stopBGM();
             return;
         }
 
-        ensureMediaSource(clearBgm);
-        forceStopBGM();
-
-        startManagedPlayback(clearBgm, {
-            gain: resolveBgmGain(clearBgm)
-        }).catch(() => {});
+        queueBgmPlayback(STATIC_BGM.clear);
     }
 
     function playTitleBGM() {
         if (!isBgmEnabled || state.getIsPaused() || state.getIsGameRunning()) {
-            forceStopBGM();
+            stopBGM();
             return;
         }
 
-        ensureMediaSource(titleBgm);
-        forceStopBGM();
-        startManagedPlayback(titleBgm, {
-            gain: resolveBgmGain(titleBgm)
-        }).catch(() => {});
+        queueBgmPlayback(STATIC_BGM.title);
     }
 
     function playNameBGM() {
         if (!isBgmEnabled || state.getIsPaused()) return;
 
-        ensureMediaSource(nameBgm);
-        forceStopBGM();
-        startManagedPlayback(nameBgm, {
-            gain: resolveBgmGain(nameBgm)
-        }).catch(() => {});
+        queueBgmPlayback(STATIC_BGM.name);
     }
 
     function pauseCurrentAudio() {
-        if (currentAudio) {
-            currentAudio.pause();
+        if (!currentBgmSource || !currentBgmState) {
+            return;
         }
+
+        currentBgmOffset = Math.max(0, audioCtx.currentTime - currentBgmStartTime);
+        isBgmPaused = true;
+        stopCurrentBgmSource(false, true);
     }
 
     function resumeCurrentAudio() {
-        if (!isBgmEnabled || !currentAudio || !currentAudio.paused) return;
+        if (!isBgmEnabled || !isBgmPaused || !currentBgmState) return;
 
-        startManagedPlayback(currentAudio, {
-            gain: resolveBgmGain(currentAudio),
+        startManagedPlayback({
+            ...currentBgmState,
+            offset: currentBgmOffset,
             onBlocked: () => {
                 console.log("Audio resume blocked. Waiting for interaction.");
-            },
-            resetTime: false
+            }
         }).catch(() => {});
     }
 
@@ -516,8 +539,6 @@
     }
 
     function playTrack(track, listItem) {
-        forceStopBGM();
-
         if (activeTrackItem) {
             activeTrackItem.classList.remove("active");
             activeTrackItem.querySelector(".track-icon").textContent = "▶";
@@ -532,22 +553,19 @@
         activeTrackItem.classList.add("active");
         activeTrackItem.querySelector(".track-icon").textContent = "■";
 
-        let audioEl = gameBgmEl;
-        if (track.id && document.getElementById(track.id)) {
-            audioEl = document.getElementById(track.id);
-        }
-
-        startManagedPlayback(audioEl, {
-            gain: resolveBgmGain(audioEl),
+        queueBgmPlayback({
+            file: track.file,
+            gain: track.gain,
+            key: track.key,
+            loop: track.loop,
             onBlocked: () => {
                 if (activeTrackItem === listItem) {
                     activeTrackItem.classList.remove("active");
                     activeTrackItem.querySelector(".track-icon").textContent = "▶";
                     activeTrackItem = null;
                 }
-            },
-            src: track.id ? null : track.file
-        }).catch((error) => console.log(error));
+            }
+        });
     }
 
     function setupSoundtrack() {
@@ -573,7 +591,7 @@
 
         soundtrackBackBtn.addEventListener("click", (event) => {
             event.stopPropagation();
-            forceStopBGM();
+            stopBGM();
 
             if (activeTrackItem) {
                 activeTrackItem.classList.remove("active");
@@ -602,7 +620,7 @@
             if (isBgmEnabled) {
                 playTitleBGM();
             } else {
-                forceStopBGM();
+                stopBGM();
             }
         });
     }
