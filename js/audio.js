@@ -39,6 +39,8 @@
     let currentBgmGain = 0.8;
     let activeTrackItem = null;
     let audioReadyPromise = null;
+    let pendingPlayback = null;
+    let playbackRequestId = 0;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -132,6 +134,107 @@
         }
     }
 
+    function resumeAudioContext() {
+        if (audioCtx.state === "suspended") {
+            return audioCtx.resume().catch(() => {});
+        }
+
+        return Promise.resolve();
+    }
+
+    function clearPendingPlaybackRetry() {
+        if (!pendingPlayback) {
+            return;
+        }
+
+        window.removeEventListener("touchstart", pendingPlayback.retryHandler);
+        window.removeEventListener("mousedown", pendingPlayback.retryHandler);
+        window.removeEventListener("pointerdown", pendingPlayback.retryHandler);
+        window.removeEventListener("keydown", pendingPlayback.retryHandler);
+        pendingPlayback = null;
+    }
+
+    function schedulePlaybackRetry(runPlayback) {
+        clearPendingPlaybackRetry();
+
+        const retryHandler = () => {
+            clearPendingPlaybackRetry();
+            runPlayback().catch(() => {});
+        };
+
+        pendingPlayback = { retryHandler };
+        window.addEventListener("touchstart", retryHandler, { once: true });
+        window.addEventListener("mousedown", retryHandler, { once: true });
+        window.addEventListener("pointerdown", retryHandler, { once: true });
+        window.addEventListener("keydown", retryHandler, { once: true });
+    }
+
+    async function startManagedPlayback(audioEl, options = {}) {
+        if (!audioEl) {
+            return false;
+        }
+
+        const {
+            gain = resolveBgmGain(audioEl),
+            onBlocked = null,
+            onStarted = null,
+            resetTime = true,
+            src = null
+        } = options;
+
+        const requestId = ++playbackRequestId;
+
+        const runPlayback = async () => {
+            await resumeAudioContext();
+            await prepareAudioPlayback().catch(() => {});
+
+            if (requestId !== playbackRequestId) {
+                return false;
+            }
+
+            ensureMediaSource(audioEl);
+
+            if (src && audioEl.src !== new URL(src, window.location.href).href) {
+                audioEl.src = src;
+                audioEl.load();
+            }
+
+            if (resetTime) {
+                audioEl.currentTime = 0;
+            }
+
+            audioEl.volume = 1;
+            applyBgmGain(gain);
+
+            try {
+                await audioEl.play();
+                if (requestId !== playbackRequestId) {
+                    audioEl.pause();
+                    return false;
+                }
+
+                clearPendingPlaybackRetry();
+                currentAudio = audioEl;
+                if (onStarted) {
+                    onStarted();
+                }
+                return true;
+            } catch (_) {
+                if (requestId !== playbackRequestId) {
+                    return false;
+                }
+
+                if (onBlocked) {
+                    onBlocked();
+                }
+                schedulePlaybackRetry(runPlayback);
+                return false;
+            }
+        };
+
+        return runPlayback();
+    }
+
     function fadeOut(audio, callback) {
         if (!audio) {
             if (callback) callback();
@@ -176,6 +279,9 @@
             clearTimeout(bgmFadeTimer);
             bgmFadeTimer = null;
         }
+
+        clearPendingPlaybackRetry();
+        playbackRequestId++;
 
         [gameBgmEl, clearBgm, titleBgm, nameBgm].forEach((audio) => {
             if (!audio) return;
@@ -320,11 +426,10 @@
         forceStopBGM();
         const bgmIndex = Math.min(Math.floor((state.getStage() - 1) / 2), 3);
         const bgmNum = bgmIndex.toString().padStart(2, "0");
-        gameBgmEl.src = `audio/StellarGravity_${bgmNum}.mp3`;
-        gameBgmEl.volume = 1;
-        applyBgmGain(resolveBgmGain(gameBgmEl));
-        gameBgmEl.play().catch(() => {});
-        currentAudio = gameBgmEl;
+        startManagedPlayback(gameBgmEl, {
+            gain: resolveBgmGain(gameBgmEl),
+            src: `audio/StellarGravity_${bgmNum}.mp3`
+        }).catch(() => {});
     }
 
     function playClearBgm() {
@@ -335,24 +440,10 @@
 
         ensureMediaSource(clearBgm);
         forceStopBGM();
-        if (audioCtx.state === "suspended") audioCtx.resume();
 
-        clearBgm.currentTime = 0;
-        clearBgm.volume = 1;
-        applyBgmGain(resolveBgmGain(clearBgm));
-        const playPromise = clearBgm.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                currentAudio = clearBgm;
-            }).catch(() => {
-                const retryPlay = () => {
-                    clearBgm.play();
-                    currentAudio = clearBgm;
-                    window.removeEventListener("touchstart", retryPlay);
-                };
-                window.addEventListener("touchstart", retryPlay);
-            });
-        }
+        startManagedPlayback(clearBgm, {
+            gain: resolveBgmGain(clearBgm)
+        }).catch(() => {});
     }
 
     function playTitleBGM() {
@@ -363,10 +454,8 @@
 
         ensureMediaSource(titleBgm);
         forceStopBGM();
-        titleBgm.volume = 1;
-        applyBgmGain(resolveBgmGain(titleBgm));
-        titleBgm.play().then(() => {
-            currentAudio = titleBgm;
+        startManagedPlayback(titleBgm, {
+            gain: resolveBgmGain(titleBgm)
         }).catch(() => {});
     }
 
@@ -375,10 +464,8 @@
 
         ensureMediaSource(nameBgm);
         forceStopBGM();
-        nameBgm.volume = 1;
-        applyBgmGain(resolveBgmGain(nameBgm));
-        nameBgm.play().then(() => {
-            currentAudio = nameBgm;
+        startManagedPlayback(nameBgm, {
+            gain: resolveBgmGain(nameBgm)
         }).catch(() => {});
     }
 
@@ -391,12 +478,13 @@
     function resumeCurrentAudio() {
         if (!isBgmEnabled || !currentAudio || !currentAudio.paused) return;
 
-        const playPromise = currentAudio.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(() => {
+        startManagedPlayback(currentAudio, {
+            gain: resolveBgmGain(currentAudio),
+            onBlocked: () => {
                 console.log("Audio resume blocked. Waiting for interaction.");
-            });
-        }
+            },
+            resetTime: false
+        }).catch(() => {});
     }
 
     function unlockAudio() {
@@ -426,16 +514,19 @@
         let audioEl = gameBgmEl;
         if (track.id && document.getElementById(track.id)) {
             audioEl = document.getElementById(track.id);
-        } else {
-            audioEl.src = track.file;
         }
 
-        ensureMediaSource(audioEl);
-        audioEl.currentTime = 0;
-        audioEl.volume = 1;
-        applyBgmGain(resolveBgmGain(audioEl));
-        audioEl.play().catch((error) => console.log(error));
-        currentAudio = audioEl;
+        startManagedPlayback(audioEl, {
+            gain: resolveBgmGain(audioEl),
+            onBlocked: () => {
+                if (activeTrackItem === listItem) {
+                    activeTrackItem.classList.remove("active");
+                    activeTrackItem.querySelector(".track-icon").textContent = "▶";
+                    activeTrackItem = null;
+                }
+            },
+            src: track.id ? null : track.file
+        }).catch((error) => console.log(error));
     }
 
     function setupSoundtrack() {
