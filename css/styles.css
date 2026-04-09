@@ -45,7 +45,7 @@
             width: 100%;
             padding: 12px 5px;
             box-sizing: border-box;
-            display: flex;
+            display: none;
             justify-content: space-between;
             align-items: flex-start;
             pointer-events: none;
@@ -239,6 +239,7 @@
             height: 70px;
             font-size: 20px;
             z-index: 20;
+            display: none;
         }
 
             #boost-btn::before {
@@ -263,7 +264,7 @@
             position: fixed;
             right: 24px;
             bottom: 60px;
-            display: flex;
+            display: none;
             align-items: flex-end;
             gap: 15px;
             pointer-events: none;
@@ -351,7 +352,7 @@
         #overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.95);
+            background: transparent;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -388,7 +389,7 @@
         }
 
             h1#title-text {
-                text-shadow: 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
+                text-shadow: 0 0 12px rgba(0, 0, 0, 0.9), 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
             }
 
         /* Title Buttons */
@@ -881,57 +882,11 @@
                 box-shadow: 0 0 20px rgba(255, 50, 50, 0.6) !important;
             }
 
-        /* --- 追加: ボムボタンのスタイル --- */
-        #bomb-btn {
-            position: fixed;
-            bottom: 60px;
-            left: 200px; /* BOOSTボタンの右隣 */
-            width: 120px;
-            height: 70px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 800;
-            font-size: 18px;
-            color: #ff3c3c;
-            background: rgba(20, 0, 0, 0.9);
-            border: 2px solid #ff3c3c;
-            border-radius: 0px;
-            cursor: pointer;
-            z-index: 20;
-            box-shadow: 0 0 15px rgba(255, 60, 60, 0.4);
-            transition: all 0.2s;
-            text-shadow: 0 0 5px #ff3c3c;
-            display: none; /* ゲーム開始前は非表示 */
-        }
-
-            #bomb-btn:hover {
-                background: #ff3c3c;
-                color: #000;
-                box-shadow: 0 0 25px #ff3c3c;
-            }
-
-            #bomb-btn.active {
-                background: #ff3c3c;
-                color: #fff;
-                box-shadow: 0 0 40px #ff3c3c, inset 0 0 20px #fff;
-                border-color: #fff;
-                animation: pulse-red 0.8s infinite alternate;
-            }
-
-        @keyframes pulse-red {
-            from {
-                box-shadow: 0 0 20px #ff0000;
-            }
-
-            to {
-                box-shadow: 0 0 40px #ff0000;
-            }
-        }
-
         /* =========================================================
          * Action Buttons (BOOST, PAUSE, BGM)
          * ========================================================= */
         /* ボタン全般、特にBOOSTボタンに強力な抑制をかける */
-        #boost-btn, #bomb-btn, .btn {
+        #boost-btn, .btn {
             -webkit-touch-callout: none !important; /* 長押しメニュー禁止 */
             -webkit-user-select: none !important; /* テキスト選択禁止 */
             user-select: none !important;

@@ -440,26 +440,32 @@
 
                 ctx.globalAlpha = 1;
 
-                const isWarning = gameOverTime !== null;
-                drawRedZone(ctx, { center: CENTER, deadlineRadius: DEADLINE_RADIUS, isWarning, time: t });
-                spawnSparks({
-                    center: CENTER,
-                    deadlineRadius: DEADLINE_RADIUS,
-                    isBoosting,
-                    isIOS,
-                    isPaused,
-                    isWarning,
-                    particles
-                });
+                const isOverlayVisible = !document.getElementById("overlay").classList.contains("hide");
 
-                drawCore(ctx, now, {
-                    center: CENTER,
-                    coreRadius: CORE_RADIUS,
-                    implosionAlpha,
-                    implosionScale,
-                    isBlackHoleCore,
-                    isImploding
-                });
+                if (!isOverlayVisible) {
+                    const isWarning = gameOverTime !== null;
+                    drawRedZone(ctx, { center: CENTER, deadlineRadius: DEADLINE_RADIUS, isWarning, time: t });
+                    drawCore(ctx, now, {
+                        center: CENTER,
+                        coreRadius: CORE_RADIUS,
+                        implosionAlpha,
+                        implosionScale,
+                        isBlackHoleCore,
+                        isImploding
+                    });
+                }
+
+                if (!isOverlayVisible) {
+                    spawnSparks({
+                        center: CENTER,
+                        deadlineRadius: DEADLINE_RADIUS,
+                        isBoosting,
+                        isIOS,
+                        isPaused,
+                        isWarning: gameOverTime !== null,
+                        particles
+                    });
+                }
 
                 // Draw Existing Planets
                 Composite.allBodies(engine.world).forEach(b => {
@@ -695,6 +701,7 @@
         }
 
         preInit();
+        updateResetButtonVisibility();
 
         document.getElementById("start-btn").addEventListener("click", (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -756,6 +763,9 @@
 
         function updateResetButtonVisibility() {
             // 変数取得
+            const uiLayer = document.getElementById("ui-layer");
+            const boostButton = document.getElementById("boost-btn");
+            const bottomRightUi = document.getElementById("bottom-right-ui");
             const pBtn = document.getElementById("hud-pause-btn");
             const bPos = document.getElementById("bgm-control-pos");
             const stageUi = document.getElementById("stage-ui");
@@ -770,11 +780,17 @@
 
             if (isGameRunning) {
                 // --- ゲームプレイ中 ---
+                if (uiLayer) uiLayer.style.display = "flex";
+                if (boostButton) boostButton.style.display = "flex";
+                if (bottomRightUi) bottomRightUi.style.display = "flex";
                 if (pBtn) pBtn.style.display = "flex"; // PAUSEボタン表示
                 if (bPos) bPos.style.display = "none"; // BGMボタン非表示
                 if (stageUi) stageUi.classList.remove("ui-faded");
             } else {
                 // --- ゲーム停止中 ---
+                if (uiLayer) uiLayer.style.display = "none";
+                if (boostButton) boostButton.style.display = "none";
+                if (bottomRightUi) bottomRightUi.style.display = "none";
                 if (pBtn) pBtn.style.display = "none"; // PAUSEボタン非表示
                 if (bPos) bPos.style.display = "block"; // BGMボタン表示
                 if (stageUi) stageUi.classList.add("ui-faded");
