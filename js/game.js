@@ -400,7 +400,18 @@
                             isBlackHoleCore = true;
                             isGameRunning = false;
                             isClickable = false;
-                            triggerSupernovaAt(mid.x, mid.y, "#ffffff");
+                            triggerSupernovaAt({
+                                height: HEIGHT,
+                                particles,
+                                playBlackHoleSound,
+                                playExplosionSound,
+                                setImplosionAlpha: (value) => { implosionAlpha = value; },
+                                setImplosionScale: (value) => { implosionScale = value; },
+                                setIsImploding: (value) => { isImploding = value; },
+                                width: WIDTH,
+                                x: mid.x,
+                                y: mid.y
+                            });
                             setTimeout(removeAllDynamicBodies, EFFECTS_CONFIG.supernovaClearDelayMs);
                             setTimeout(triggerGameClear, EFFECTS_CONFIG.supernovaEndDelayMs);
                         } else {
