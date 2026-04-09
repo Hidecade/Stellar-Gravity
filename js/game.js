@@ -16,6 +16,7 @@
             init: initAudio,
             isBgmEnabled,
             pauseCurrentAudio,
+            prepareAudioPlayback,
             playBGM,
             playBlackHoleSound,
             playClearBgm,
@@ -217,6 +218,16 @@
             isPaused = false;
             isClickable = false;
             isContinue = false;
+            isClearing = false;
+            isBlackHoleCore = false;
+            pendingCoreBoost = false;
+            gameOverTime = null;
+            comboCount = 0;
+            lastMergeTime = 0;
+            particles.length = 0;
+            implosionScale = 1.0;
+            implosionAlpha = 1.0;
+            isImploding = false;
 
             forceStopBGM();
 
@@ -229,6 +240,7 @@
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
             document.getElementById("start-btn").textContent = "START";
             document.getElementById("clear-message").style.display = "none";
+            document.getElementById("name-input-area").style.display = "none";
 
             const clearHiBtn = document.getElementById("clear-hi-btn");
             if (clearHiBtn) clearHiBtn.style.display = "";
@@ -237,6 +249,13 @@
             bgmToggleBtn.style.opacity = "0.75";
 
             updateResetButtonVisibility();
+        }
+
+        function showTitleScreen() {
+            returnToTitle();
+            if (isBgmEnabled()) {
+                playTitleBGM();
+            }
         }
 
         document.getElementById("hi-score-val").innerText = hiScore;
@@ -265,6 +284,7 @@
         // ---------------------------------------------------------
         function initPhysics() {
             bgStars = generateStars({
+                deadZoneRadius: DEADLINE_RADIUS,
                 height: HEIGHT,
                 starCount: STAR_COUNT,
                 starSizeMax: STAR_SIZE_MAX,
@@ -713,6 +733,8 @@
 
             requestFullScreen();
 
+            prepareAudioPlayback().catch(() => {});
+
             forceStopBGM();
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
             if (isPaused) isPaused = false;
@@ -910,8 +932,7 @@
 
                     // タイトルに戻る処理
                     stopBGM(() => {
-                        returnToTitle();
-                        if (isBgmEnabled()) playTitleBGM();
+                        showTitleScreen();
                     });
                 }
             };
@@ -1004,4 +1025,6 @@
             getIsPaused: () => isPaused,
             getStage: () => stage
         });
+
+        window.showTitleScreen = showTitleScreen;
 

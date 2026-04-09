@@ -38,6 +38,7 @@
     let currentAudio = null;
     let currentBgmGain = 0.8;
     let activeTrackItem = null;
+    let audioReadyPromise = null;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -82,6 +83,53 @@
         const time = audioCtx.currentTime;
         bgmMasterGain.gain.cancelScheduledValues(time);
         bgmMasterGain.gain.setValueAtTime(level, time);
+    }
+
+    async function primeAudioElement(audio) {
+        if (!audio) return;
+
+        ensureMediaSource(audio);
+        const previousMuted = audio.muted;
+        const previousVolume = audio.volume;
+
+        audio.muted = true;
+        audio.volume = 0;
+
+        try {
+            await audio.play();
+            audio.pause();
+            audio.currentTime = 0;
+        } catch (_) {
+            // iOS blocks can still happen here; caller will retry from a user gesture.
+        } finally {
+            audio.muted = previousMuted;
+            audio.volume = previousVolume || 1;
+        }
+    }
+
+    async function prepareAudioPlayback() {
+        if (audioReadyPromise) {
+            return audioReadyPromise;
+        }
+
+        audioReadyPromise = (async () => {
+            if (audioCtx.state === "suspended") {
+                await audioCtx.resume();
+            }
+
+            await Promise.all([
+                primeAudioElement(gameBgmEl),
+                primeAudioElement(clearBgm),
+                primeAudioElement(titleBgm),
+                primeAudioElement(nameBgm)
+            ]);
+        })();
+
+        try {
+            await audioReadyPromise;
+        } finally {
+            audioReadyPromise = null;
+        }
     }
 
     function fadeOut(audio, callback) {
@@ -352,18 +400,7 @@
     }
 
     function unlockAudio() {
-        if (audioCtx.state === "suspended") {
-            audioCtx.resume();
-        }
-
-        [gameBgmEl, clearBgm, titleBgm, nameBgm].forEach((audio) => {
-            if (!audio) return;
-            ensureMediaSource(audio);
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-            }).catch(() => {});
-        });
+        prepareAudioPlayback().catch(() => {});
 
         window.removeEventListener("touchstart", unlockAudio);
         window.removeEventListener("mousedown", unlockAudio);
@@ -476,6 +513,7 @@
         init,
         isBgmEnabled: () => isBgmEnabled,
         pauseCurrentAudio,
+        prepareAudioPlayback,
         playBGM,
         playBlackHoleSound,
         playClearBgm,

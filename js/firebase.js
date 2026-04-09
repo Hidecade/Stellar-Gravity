@@ -139,6 +139,10 @@
                     updateResetButtonVisibility();
                 }
 
+                if (typeof window.showTitleScreen === "function") {
+                    window.showTitleScreen();
+                }
+
                 // タイトル画面の表記に戻す
                 document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
                 document.getElementById("start-btn").textContent = "START";
@@ -171,13 +175,14 @@
         // SKIPボタン
         skipBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            document.getElementById("name-input-area").style.display = "none";
+            if (typeof window.showTitleScreen === "function") {
+                window.showTitleScreen();
+                return;
+            }
 
-            // タイトル画面の表記に戻す
+            document.getElementById("name-input-area").style.display = "none";
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
             document.getElementById("start-btn").textContent = "START";
-
-            // ボタンを再表示させるために呼び出し
             updateResetButtonVisibility();
         });
 

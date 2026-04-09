@@ -1,5 +1,5 @@
 (function () {
-    function generateNebulae(width, height) {
+    function generateNebulae(width, height, deadZoneRadius = 0) {
         const palettes = [
             ["255, 150, 110", "255, 210, 160"],
             ["120, 175, 255", "185, 215, 255"]
@@ -8,7 +8,7 @@
         const count = 3;
         const centerX = width / 2;
         const centerY = height / 2;
-        const safeRadius = Math.min(width, height) * 0.24;
+        const safeRadius = Math.max(Math.min(width, height) * 0.24, deadZoneRadius + 36);
 
         for (let index = 0; index < count; index++) {
             const palette = palettes[index % palettes.length];
@@ -172,6 +172,18 @@
         };
     }
 
+    function pickStarNearCenter(centerX, centerY, rotationRadius) {
+        const angle = Math.random() * Math.PI * 2;
+        const minDistance = rotationRadius * 0.08;
+        const maxDistance = rotationRadius * 0.24;
+        const distance = minDistance + Math.sqrt(Math.random()) * (maxDistance - minDistance);
+
+        return {
+            x: centerX + Math.cos(angle) * distance,
+            y: centerY + Math.sin(angle) * distance
+        };
+    }
+
     function drawPlanet(ctx, x, y, radius, color, time, bodyId) {
         ctx.save();
         ctx.translate(x, y);
@@ -203,14 +215,14 @@
         ctx.restore();
     }
 
-    function generateStars({ width, height, starCount, starSizeMin, starSizeMax }) {
+    function generateStars({ width, height, starCount, starSizeMin, starSizeMax, deadZoneRadius = 0 }) {
         const stars = [];
         const diagonal = Math.sqrt(width * width + height * height);
         const maxDimension = diagonal * 0.55;
         const centerX = width / 2;
         const centerY = height / 2;
         const rotationRadius = diagonal * 0.56;
-        const nebulae = generateNebulae(width, height);
+        const nebulae = generateNebulae(width, height, deadZoneRadius);
         const starScale = 0.75;
         const starPalettes = [
             "255, 255, 255",
@@ -231,19 +243,23 @@
             else if (rand < 0.95) baseColor = starPalettes[4];
             else baseColor = starPalettes[5];
 
-            const useNebulaBias = Math.random() < 0.26;
+            const distributionRoll = Math.random();
+            const useNebulaBias = distributionRoll < 0.26;
+            const useCenterBias = !useNebulaBias && distributionRoll < 0.34;
             const position = useNebulaBias
                 ? pickStarAroundNebula(nebulae, width, height)
-                : pickStarInRotationField(centerX, centerY, rotationRadius);
+                : useCenterBias
+                    ? pickStarNearCenter(centerX, centerY, rotationRadius)
+                    : pickStarInRotationField(centerX, centerY, rotationRadius);
             const dx = position.x - centerX;
             const dy = position.y - centerY;
 
             stars.push({
                 r: Math.min(maxDimension, Math.sqrt(dx * dx + dy * dy)),
                 angle: Math.atan2(dy, dx),
-                size: (starSizeMin + Math.random() * (starSizeMax - starSizeMin) + (useNebulaBias ? Math.random() * 0.18 : 0)) * starScale,
+                size: (starSizeMin + Math.random() * (starSizeMax - starSizeMin) + ((useNebulaBias || useCenterBias) ? Math.random() * 0.18 : 0)) * starScale,
                 colorBase: baseColor,
-                baseAlpha: (useNebulaBias ? 0.28 : 0.24) + Math.random() * (useNebulaBias ? 0.42 : 0.42),
+                baseAlpha: (useNebulaBias || useCenterBias ? 0.28 : 0.24) + Math.random() * 0.42,
                 blinkSpeed: 0.002 + Math.random() * 0.005,
                 blinkPhase: Math.random() * Math.PI * 2
             });
@@ -484,7 +500,7 @@
 
         if (isImploding) {
             ctx.globalAlpha = implosionAlpha;
-            const glowRadius = currentRadius * 3;
+            const glowRadius = currentRadius * 1.5;
             const grad = ctx.createRadialGradient(0, 0, currentRadius, 0, 0, glowRadius);
             grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
             grad.addColorStop(1, "rgba(255, 0, 0, 0)");
@@ -517,7 +533,7 @@
             ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
             ctx.fill();
         } else {
-            const glowRadius = coreRadius * 3 + Math.sin(now * 0.008) * 5;
+            const glowRadius = coreRadius * 1.5 + Math.sin(now * 0.008) * 2.5;
             const grad = ctx.createRadialGradient(0, 0, coreRadius, 0, 0, glowRadius);
             grad.addColorStop(0, "rgba(255, 120, 50, 0.9)");
             grad.addColorStop(1, "rgba(255, 0, 0, 0)");
