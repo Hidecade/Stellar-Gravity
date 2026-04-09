@@ -12,6 +12,9 @@
     ];
 
     window.StellarConfig = {
+        app: {
+            version: "2026.04.10.1"
+        },
         combo: {
             bonusStep: 0.2,         // 1コンボごとに加算されるスコア倍率
             comboWindowMs: 800,     // コンボ継続とみなす時間幅(ms)

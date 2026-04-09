@@ -41,6 +41,8 @@
     let audioReadyPromise = null;
     let pendingPlayback = null;
     let playbackRequestId = 0;
+    const BGM_FADE_IN_SEC = 0.12;
+    const BGM_HARD_STOP_SEC = 0.02;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -80,11 +82,28 @@
         return 0.8;
     }
 
-    function applyBgmGain(level) {
+    function applyBgmGain(level, fadeDuration = 0) {
         currentBgmGain = level;
         const time = audioCtx.currentTime;
         bgmMasterGain.gain.cancelScheduledValues(time);
+
+        const safeCurrent = Math.max(bgmMasterGain.gain.value, 0.0001);
+        bgmMasterGain.gain.setValueAtTime(safeCurrent, time);
+
+        if (fadeDuration > 0) {
+            bgmMasterGain.gain.exponentialRampToValueAtTime(Math.max(level, 0.0001), time + fadeDuration);
+            return;
+        }
+
         bgmMasterGain.gain.setValueAtTime(level, time);
+    }
+
+    function muteBgmOutput() {
+        const time = audioCtx.currentTime;
+        const safeCurrent = Math.max(bgmMasterGain.gain.value, 0.0001);
+        bgmMasterGain.gain.cancelScheduledValues(time);
+        bgmMasterGain.gain.setValueAtTime(safeCurrent, time);
+        bgmMasterGain.gain.exponentialRampToValueAtTime(0.0001, time + BGM_HARD_STOP_SEC);
     }
 
     async function primeAudioElement(audio) {
@@ -204,7 +223,7 @@
             }
 
             audioEl.volume = 1;
-            applyBgmGain(gain);
+            applyBgmGain(0.0001);
 
             try {
                 await audioEl.play();
@@ -215,6 +234,7 @@
 
                 clearPendingPlaybackRetry();
                 currentAudio = audioEl;
+                applyBgmGain(gain, BGM_FADE_IN_SEC);
                 if (onStarted) {
                     onStarted();
                 }
@@ -282,6 +302,7 @@
 
         clearPendingPlaybackRetry();
         playbackRequestId++;
+        muteBgmOutput();
 
         [gameBgmEl, clearBgm, titleBgm, nameBgm].forEach((audio) => {
             if (!audio) return;
@@ -290,7 +311,7 @@
             audio.volume = 1;
         });
 
-        applyBgmGain(currentBgmGain);
+        applyBgmGain(0.0001);
         currentAudio = null;
     }
 

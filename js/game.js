@@ -41,6 +41,7 @@
             triggerSupernovaAt
         } = window.StellarRender;
         const {
+            app: APP_CONFIG,
             combo: COMBO_CONFIG,
             core: CORE_CONFIG,
             effects: EFFECTS_CONFIG,
@@ -117,6 +118,9 @@
         let implosionScale = 1.0;
         let implosionAlpha = 1.0;
         let isImploding = false;
+
+        const VERSION_STORAGE_KEY = "stellarGravity_appVersion";
+        const VERSION_RELOAD_SESSION_KEY = "stellarGravity_versionReloaded";
 
         const CLEAR_INDEX = PLANETS.length - 1;
         let isBlackHoleCore = false;
@@ -549,6 +553,57 @@
             setupRenderLoop();
         }
 
+        async function clearRuntimeCaches() {
+            if ("caches" in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+            }
+
+            if ("serviceWorker" in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map((registration) => registration.unregister()));
+            }
+        }
+
+        async function ensureLatestVersion() {
+            const currentVersion = APP_CONFIG?.version;
+            if (!currentVersion) {
+                return false;
+            }
+
+            const storedVersion = localStorage.getItem(VERSION_STORAGE_KEY);
+            if (!storedVersion) {
+                localStorage.setItem(VERSION_STORAGE_KEY, currentVersion);
+                sessionStorage.removeItem(VERSION_RELOAD_SESSION_KEY);
+                return false;
+            }
+
+            if (storedVersion === currentVersion) {
+                sessionStorage.removeItem(VERSION_RELOAD_SESSION_KEY);
+                return false;
+            }
+
+            if (sessionStorage.getItem(VERSION_RELOAD_SESSION_KEY) === currentVersion) {
+                localStorage.setItem(VERSION_STORAGE_KEY, currentVersion);
+                return false;
+            }
+
+            localStorage.setItem(VERSION_STORAGE_KEY, currentVersion);
+            sessionStorage.setItem(VERSION_RELOAD_SESSION_KEY, currentVersion);
+
+            try {
+                await clearRuntimeCaches();
+            } catch (error) {
+                console.warn("Failed to clear runtime caches before reload.", error);
+            }
+
+            const reloadUrl = new URL(window.location.href);
+            reloadUrl.searchParams.set("v", currentVersion);
+            reloadUrl.searchParams.set("reload", Date.now().toString());
+            window.location.replace(reloadUrl.toString());
+            return true;
+        }
+
         /* Controls */
         const boostBtn = document.getElementById("boost-btn");
         const clearHiBtn = document.getElementById("clear-hi-btn");
@@ -731,8 +786,18 @@
             startShotTimer();
         }
 
-        preInit();
-        updateResetButtonVisibility();
+        function finalizeBoot() {
+            preInit();
+            updateResetButtonVisibility();
+
+            initAudio({
+                getIsGameRunning: () => isGameRunning,
+                getIsPaused: () => isPaused,
+                getStage: () => stage
+            });
+
+            window.showTitleScreen = showTitleScreen;
+        }
 
         document.getElementById("start-btn").addEventListener("click", (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -1031,11 +1096,12 @@
             }
         }, { passive: false });
 
-        initAudio({
-            getIsGameRunning: () => isGameRunning,
-            getIsPaused: () => isPaused,
-            getStage: () => stage
-        });
+        (async function bootstrapGame() {
+            const reloaded = await ensureLatestVersion();
+            if (reloaded) {
+                return;
+            }
 
-        window.showTitleScreen = showTitleScreen;
+            finalizeBoot();
+        })();
 
