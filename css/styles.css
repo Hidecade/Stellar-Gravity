@@ -237,7 +237,7 @@
         #boost-controls {
             position: fixed;
             bottom: 60px;
-            left: 32px;
+            left: calc(env(safe-area-inset-left, 0px) + 52px);
             z-index: 20;
             display: none;
             gap: 14px;
@@ -246,11 +246,13 @@
 
         #boost-left-btn,
         #boost-right-btn {
-            width: 72px;
+            width: 82px;
             height: 70px;
             padding: 0;
             pointer-events: auto;
             position: relative;
+            touch-action: none;
+            -webkit-touch-callout: none;
         }
 
         .boost-arrow-svg {
@@ -298,6 +300,18 @@
             gap: 15px;
             pointer-events: none;
             z-index: 1000;
+        }
+
+        @media screen and (orientation: portrait) {
+            #bottom-right-ui {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 10px;
+            }
+
+            #management-btn-area {
+                justify-content: flex-end;
+            }
         }
 
         #management-btn-area {
@@ -950,6 +964,71 @@
         .track-icon {
             font-size: 12px;
         }
+
+        #soundtrack-progress-panel {
+            width: 80%;
+            max-width: 400px;
+            margin: 8px 0 18px;
+            padding: 12px 14px;
+            border: 1px solid rgba(0, 247, 255, 0.25);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: inset 0 0 18px rgba(0, 247, 255, 0.08);
+            box-sizing: border-box;
+        }
+
+        #soundtrack-progress-times {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.82);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #soundtrack-seek-bar {
+            width: 100%;
+            height: 6px;
+            margin: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, rgba(0, 247, 255, 0.9) 0%, rgba(0, 247, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.12) 100%);
+            border-radius: 999px;
+            outline: none;
+            cursor: pointer;
+        }
+
+            #soundtrack-seek-bar::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 1px solid rgba(255, 255, 255, 0.9);
+                background: #00f7ff;
+                box-shadow: 0 0 12px rgba(0, 247, 255, 0.65);
+            }
+
+            #soundtrack-seek-bar::-moz-range-thumb {
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 1px solid rgba(255, 255, 255, 0.9);
+                background: #00f7ff;
+                box-shadow: 0 0 12px rgba(0, 247, 255, 0.65);
+            }
+
+            #soundtrack-seek-bar::-moz-range-track {
+                height: 6px;
+                border-radius: 999px;
+                background: transparent;
+            }
+
+            #soundtrack-seek-bar:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
 
         /* =========================================================
          * ポーズ画面

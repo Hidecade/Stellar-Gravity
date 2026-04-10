@@ -4,6 +4,9 @@
     const soundtrackOverlay = document.getElementById("soundtrack-overlay");
     const trackListContainer = document.getElementById("track-list-container");
     const soundtrackBackBtn = document.getElementById("soundtrack-back-btn");
+    const soundtrackSeekBar = document.getElementById("soundtrack-seek-bar");
+    const soundtrackCurrentTime = document.getElementById("soundtrack-current-time");
+    const soundtrackTotalTime = document.getElementById("soundtrack-total-time");
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const masterGain = audioCtx.createGain();
@@ -48,6 +51,9 @@
     let currentBgmOffset = 0;
     let currentBgmStartTime = 0;
     let isBgmPaused = false;
+    let soundtrackProgressAnimationId = null;
+    let isSoundtrackSeeking = false;
+    let activeTrackData = null;
     const BGM_FADE_OUT_SEC = 0.22;
     const PAUSE_FADE_OUT_SEC = 0.08;
     let isInitialized = false;
@@ -61,6 +67,95 @@
         if (bgmToggleBtn) {
             bgmToggleBtn.textContent = isBgmEnabled ? "BGM ON" : "BGM OFF";
         }
+    }
+
+    function formatTime(seconds) {
+        const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+        const minutes = Math.floor(safeSeconds / 60);
+        const remainSeconds = safeSeconds % 60;
+        return `${minutes}:${remainSeconds.toString().padStart(2, "0")}`;
+    }
+
+    function setSeekBarProgress(position, duration) {
+        if (!soundtrackSeekBar) return;
+
+        const safeDuration = Math.max(duration || 0, 0.01);
+        const safePosition = Math.min(Math.max(position || 0, 0), safeDuration);
+        const progress = Math.min(100, Math.max(0, (safePosition / safeDuration) * 100));
+
+        soundtrackSeekBar.max = String(safeDuration);
+        soundtrackSeekBar.value = String(safePosition);
+        soundtrackSeekBar.style.background = `linear-gradient(90deg, rgba(0, 247, 255, 0.95) 0%, rgba(0, 247, 255, 0.55) ${progress}%, rgba(255, 255, 255, 0.12) ${progress}%, rgba(255, 255, 255, 0.12) 100%)`;
+    }
+
+    function getCurrentPlaybackPosition() {
+        if (!currentBgmState || !currentBgmState.duration) {
+            return 0;
+        }
+
+        if (isBgmPaused) {
+            return currentBgmOffset;
+        }
+
+        const elapsed = Math.max(0, audioCtx.currentTime - currentBgmStartTime);
+        if (currentBgmState.loop === false) {
+            return Math.min(currentBgmState.duration, elapsed);
+        }
+
+        return currentBgmState.duration > 0 ? elapsed % currentBgmState.duration : 0;
+    }
+
+    function stopSoundtrackProgressLoop() {
+        if (!soundtrackProgressAnimationId) return;
+
+        cancelAnimationFrame(soundtrackProgressAnimationId);
+        soundtrackProgressAnimationId = null;
+    }
+
+    function resetSoundtrackProgress(duration = 0) {
+        if (soundtrackCurrentTime) {
+            soundtrackCurrentTime.textContent = "0:00";
+        }
+        if (soundtrackTotalTime) {
+            soundtrackTotalTime.textContent = formatTime(duration);
+        }
+        if (soundtrackSeekBar) {
+            soundtrackSeekBar.disabled = duration <= 0;
+            setSeekBarProgress(0, Math.max(duration, 1));
+        }
+    }
+
+    function updateSoundtrackProgress() {
+        const duration = activeTrackData?.duration || currentBgmState?.duration || 0;
+        const isTrackActive = Boolean(activeTrackItem && currentBgmState && activeTrackData && currentBgmState.key === activeTrackData.key);
+
+        if (!isTrackActive) {
+            resetSoundtrackProgress(duration);
+            stopSoundtrackProgressLoop();
+            return;
+        }
+
+        const position = isSoundtrackSeeking && soundtrackSeekBar
+            ? Number(soundtrackSeekBar.value || 0)
+            : getCurrentPlaybackPosition();
+
+        if (soundtrackCurrentTime) {
+            soundtrackCurrentTime.textContent = formatTime(position);
+        }
+        if (soundtrackTotalTime) {
+            soundtrackTotalTime.textContent = formatTime(duration);
+        }
+        if (soundtrackSeekBar && !isSoundtrackSeeking) {
+            soundtrackSeekBar.disabled = false;
+            setSeekBarProgress(position, duration || 1);
+        }
+
+        soundtrackProgressAnimationId = requestAnimationFrame(updateSoundtrackProgress);
+    }
+
+    function startSoundtrackProgressLoop() {
+        stopSoundtrackProgressLoop();
+        soundtrackProgressAnimationId = requestAnimationFrame(updateSoundtrackProgress);
     }
 
     function createNoiseBuffer() {
@@ -210,6 +305,10 @@
         if (clearState) {
             currentBgmState = null;
         }
+
+        if (!preservePauseState && !currentBgmSource) {
+            stopSoundtrackProgressLoop();
+        }
     }
 
     function startBgmSource(buffer, request, offset = 0) {
@@ -356,6 +455,9 @@
         playbackRequestId++;
         stopCurrentBgmSource();
         applyBgmGain(currentBgmGain);
+        activeTrackData = null;
+        activeTrackItem = null;
+        resetSoundtrackProgress();
     }
 
     function queueBgmPlayback(request = {}) {
@@ -521,25 +623,107 @@
         }
 
         if (activeTrackItem === listItem) {
+            activeTrackData = null;
             activeTrackItem = null;
+            stopBGM();
+            resetSoundtrackProgress();
             return;
         }
 
+        activeTrackData = track;
         activeTrackItem = listItem;
         activeTrackItem.classList.add("active");
         activeTrackItem.querySelector(".track-icon").textContent = "■";
+
+        loadBgmBuffer(track.file).then((buffer) => {
+            if (activeTrackData?.key !== track.key) return;
+            activeTrackData = { ...track, duration: buffer.duration };
+            if (!currentBgmState || currentBgmState.key !== track.key) {
+                resetSoundtrackProgress(buffer.duration);
+            }
+        }).catch(() => {});
 
         queueBgmPlayback({
             file: track.file,
             gain: track.gain,
             key: track.key,
             loop: track.loop,
+            onStarted: () => {
+                activeTrackData = {
+                    ...track,
+                    duration: currentBgmState?.duration || activeTrackData?.duration || 0
+                };
+                startSoundtrackProgressLoop();
+            },
             onBlocked: () => {
                 if (activeTrackItem === listItem) {
                     activeTrackItem.classList.remove("active");
                     activeTrackItem.querySelector(".track-icon").textContent = "▶";
+                    activeTrackData = null;
                     activeTrackItem = null;
+                    resetSoundtrackProgress();
                 }
+            }
+        });
+    }
+
+    function seekActiveTrack(position) {
+        if (!activeTrackData?.file) {
+            return;
+        }
+
+        const duration = activeTrackData.duration || currentBgmState?.duration || 0;
+        const safePosition = Math.min(Math.max(position, 0), duration || 0);
+
+        startManagedPlayback({
+            file: activeTrackData.file,
+            gain: activeTrackData.gain,
+            key: activeTrackData.key,
+            loop: activeTrackData.loop,
+            offset: safePosition,
+            onStarted: () => {
+                startSoundtrackProgressLoop();
+            },
+            onBlocked: () => {
+                resetSoundtrackProgress(duration);
+            }
+        }).catch(() => {});
+    }
+
+    function setupSoundtrackSeekBar() {
+        if (!soundtrackSeekBar) {
+            return;
+        }
+
+        resetSoundtrackProgress();
+
+        soundtrackSeekBar.addEventListener("input", () => {
+            const duration = activeTrackData?.duration || currentBgmState?.duration || 0;
+            isSoundtrackSeeking = true;
+            const position = Number(soundtrackSeekBar.value || 0);
+            if (soundtrackCurrentTime) {
+                soundtrackCurrentTime.textContent = formatTime(position);
+            }
+            if (soundtrackTotalTime) {
+                soundtrackTotalTime.textContent = formatTime(duration);
+            }
+            setSeekBarProgress(position, duration || 1);
+        });
+
+        const commitSeek = () => {
+            if (!isSoundtrackSeeking) return;
+
+            isSoundtrackSeeking = false;
+            const position = Number(soundtrackSeekBar.value || 0);
+            seekActiveTrack(position);
+        };
+
+        soundtrackSeekBar.addEventListener("change", commitSeek);
+        soundtrackSeekBar.addEventListener("mouseup", commitSeek);
+        soundtrackSeekBar.addEventListener("touchend", commitSeek, { passive: true });
+        soundtrackSeekBar.addEventListener("keyup", (event) => {
+            if (event.code === "ArrowLeft" || event.code === "ArrowRight" || event.code === "Home" || event.code === "End") {
+                commitSeek();
             }
         });
     }
@@ -548,6 +732,8 @@
         if (!trackListContainer || !soundtrackBtn || !soundtrackBackBtn || !soundtrackOverlay) {
             return;
         }
+
+        setupSoundtrackSeekBar();
 
         trackData.forEach((track) => {
             const li = document.createElement("li");
@@ -562,6 +748,7 @@
         soundtrackBtn.addEventListener("click", (event) => {
             event.stopPropagation();
             stopBGM();
+            resetSoundtrackProgress(activeTrackData?.duration || 0);
             soundtrackOverlay.style.display = "flex";
         });
 
@@ -572,9 +759,11 @@
             if (activeTrackItem) {
                 activeTrackItem.classList.remove("active");
                 activeTrackItem.querySelector(".track-icon").textContent = "▶";
+                activeTrackData = null;
                 activeTrackItem = null;
             }
 
+            resetSoundtrackProgress();
             soundtrackOverlay.style.display = "none";
             if (isBgmEnabled) {
                 playTitleBGM();
