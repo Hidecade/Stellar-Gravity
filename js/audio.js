@@ -56,6 +56,7 @@
     let activeTrackData = null;
     const BGM_FADE_OUT_SEC = 0.22;
     const PAUSE_FADE_OUT_SEC = 0.08;
+    const SOUNDTRACK_PLAYBACK_LOOP = false;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -336,10 +337,15 @@
                 return;
             }
 
+            const endedState = currentBgmState;
             currentBgmSource = null;
             currentBgmOffset = 0;
             if (currentBgmState && currentBgmState.loop === false) {
                 currentBgmState = null;
+            }
+
+            if (endedState && endedState.loop === false && typeof endedState.onEnded === "function") {
+                endedState.onEnded();
             }
         };
     }
@@ -616,6 +622,38 @@
         }).catch(() => {});
     }
 
+    function getTrackIndexByKey(trackKey) {
+        return trackData.findIndex((track) => track.key === trackKey);
+    }
+
+    function playTrackByIndex(index) {
+        if (!trackListContainer || !trackData.length) {
+            return;
+        }
+
+        const wrappedIndex = (index + trackData.length) % trackData.length;
+        const track = trackData[wrappedIndex];
+        const listItem = trackListContainer.children[wrappedIndex];
+        if (!track || !listItem) {
+            return;
+        }
+
+        playTrack(track, listItem);
+    }
+
+    function playNextSoundtrackTrack() {
+        if (!activeTrackData || soundtrackOverlay?.style.display !== "flex") {
+            return;
+        }
+
+        const currentIndex = getTrackIndexByKey(activeTrackData.key);
+        if (currentIndex < 0) {
+            return;
+        }
+
+        playTrackByIndex(currentIndex + 1);
+    }
+
     function playTrack(track, listItem) {
         if (activeTrackItem) {
             activeTrackItem.classList.remove("active");
@@ -630,14 +668,14 @@
             return;
         }
 
-        activeTrackData = track;
+        activeTrackData = { ...track, loop: SOUNDTRACK_PLAYBACK_LOOP };
         activeTrackItem = listItem;
         activeTrackItem.classList.add("active");
         activeTrackItem.querySelector(".track-icon").textContent = "■";
 
         loadBgmBuffer(track.file).then((buffer) => {
             if (activeTrackData?.key !== track.key) return;
-            activeTrackData = { ...track, duration: buffer.duration };
+            activeTrackData = { ...track, duration: buffer.duration, loop: SOUNDTRACK_PLAYBACK_LOOP };
             if (!currentBgmState || currentBgmState.key !== track.key) {
                 resetSoundtrackProgress(buffer.duration);
             }
@@ -647,13 +685,20 @@
             file: track.file,
             gain: track.gain,
             key: track.key,
-            loop: track.loop,
+            loop: SOUNDTRACK_PLAYBACK_LOOP,
             onStarted: () => {
                 activeTrackData = {
                     ...track,
-                    duration: currentBgmState?.duration || activeTrackData?.duration || 0
+                    duration: currentBgmState?.duration || activeTrackData?.duration || 0,
+                    loop: SOUNDTRACK_PLAYBACK_LOOP
                 };
                 startSoundtrackProgressLoop();
+            },
+            onEnded: () => {
+                if (activeTrackData?.key !== track.key) {
+                    return;
+                }
+                playNextSoundtrackTrack();
             },
             onBlocked: () => {
                 if (activeTrackItem === listItem) {
@@ -679,10 +724,13 @@
             file: activeTrackData.file,
             gain: activeTrackData.gain,
             key: activeTrackData.key,
-            loop: activeTrackData.loop,
+            loop: SOUNDTRACK_PLAYBACK_LOOP,
             offset: safePosition,
             onStarted: () => {
                 startSoundtrackProgressLoop();
+            },
+            onEnded: () => {
+                playNextSoundtrackTrack();
             },
             onBlocked: () => {
                 resetSoundtrackProgress(duration);
