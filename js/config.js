@@ -13,7 +13,7 @@
 
     window.StellarConfig = {
         app: {
-            version: "2026.04.10.3"
+            version: "2026.04.10.4"
         },
         combo: {
             bonusStep: 0.2,         // 1コンボごとに加算されるスコア倍率
@@ -28,7 +28,7 @@
         effects: {
             supernovaBonus: 3000,       // ブラックホール生成時のボーナス点
             supernovaClearDelayMs: 450, // 超新星演出後に通常天体を消すまでの待ち時間(ms)
-            supernovaEndDelayMs: 1100   // 超新星演出からクリア表示までの待ち時間(ms)
+            supernovaEndDelayMs: 950    // 超新星演出からクリア表示までの待ち時間(ms)
         },
         gameplay: {
             clickableResetDelayMs: 200, // 発射後に次の入力を受け付けるまでの待ち時間(ms)
@@ -48,15 +48,15 @@
             difficultyStep: 0.12        // ステージクリアごとに増える難易度倍率
         },
         render: {
-            boostGlowIntervalMs: 50, // BOOSTボタン発光更新の間隔(ms)
-            maxParticlesDesktop: 300, // PC時の最大パーティクル数
-            maxParticlesMobile: 150, // モバイル時の最大パーティクル数
-            rotateBaseSpeed: 0.015, // 発射軌道の基本回転速度
+            boostGlowIntervalMs: 50,    // BOOSTボタン発光更新の間隔(ms)
+            maxParticlesDesktop: 300,   // PC時の最大パーティクル数
+            maxParticlesMobile: 150,    // モバイル時の最大パーティクル数
+            rotateBaseSpeed: 0.015,     // 発射軌道の基本回転速度
             rotateBoostMultiplier: 3.5, // BOOST中の回転速度倍率
-            starBoostMultiplier: 3.0, // BOOST中の背景星回転倍率
+            starBoostMultiplier: 3.0,   // BOOST中の背景星回転倍率
             starCount: Math.floor(120 * 4), // 背景に生成する星の総数
-            starSizeMax: 2.0, // 背景星サイズの最大値
-            starSizeMin: 0.2 // 背景星サイズの最小値
+            starSizeMax: 2.0,           // 背景星サイズの最大値
+            starSizeMin: 0.2            // 背景星サイズの最小値
         },
         system: {
             resizeDebounceMs: 100 // リサイズ再計算を遅延させる時間(ms)

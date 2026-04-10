@@ -1,4 +1,5 @@
 (function () {
+    
     function generateNebulae(width, height, deadZoneRadius = 0) {
         const palettes = [
             ["255, 150, 110", "255, 210, 160"],
@@ -313,26 +314,28 @@
         };
         requestAnimationFrame(animateImplosion);
 
-        particles.push({ type: "flash", life: 0.8, color: "rgba(0, 247, 255, 0.5)" });
-        setTimeout(() => { particles.push({ type: "flash", life: 0.5, color: "rgba(138, 43, 226, 0.4)" }); }, 120);
-        setTimeout(() => { particles.push({ type: "flash", life: 0.4, color: "rgba(0, 0, 50, 0.6)" }); }, 300);
+        particles.push({ type: "flash", life: 0.9, color: "rgba(0, 247, 255, 0.55)" });
+        setTimeout(() => { particles.push({ type: "flash", life: 0.55, color: "rgba(138, 43, 226, 0.45)" }); }, 100);
+        setTimeout(() => { particles.push({ type: "flash", life: 0.4, color: "rgba(255, 255, 255, 0.18)" }); }, 220);
+        setTimeout(() => { particles.push({ type: "flash", life: 0.45, color: "rgba(0, 0, 50, 0.6)" }); }, 320);
 
         const waves = [
-            { r: 10, sp: 10, life: 1.2 },
-            { r: 40, sp: 8, life: 1.1 },
-            { r: 90, sp: 6, life: 1.0 },
-            { r: 160, sp: 4, life: 0.9 },
-            { r: 240, sp: 2.5, life: 0.8 }
+            { r: 10, sp: 10, life: 1.25, color: "rgba(255,255,255,0.95)", width: 2.6 },
+            { r: 36, sp: 8.8, life: 1.15, color: "rgba(0,247,255,0.9)", width: 2.4 },
+            { r: 82, sp: 6.4, life: 1.05, color: "rgba(189,0,255,0.8)", width: 2.2 },
+            { r: 150, sp: 4.6, life: 0.95, color: "rgba(255,255,255,0.75)", width: 2.0 },
+            { r: 225, sp: 3.1, life: 0.9, color: "rgba(0,247,255,0.65)", width: 1.8 },
+            { r: 310, sp: 1.8, life: 0.75, color: "rgba(255,255,255,0.35)", width: 1.4 }
         ];
         waves.forEach((wave, index) => {
             setTimeout(() => {
-                particles.push({ type: "shockwave", x, y, radius: wave.r, speed: wave.sp, life: wave.life });
-            }, index * 80);
+                particles.push({ type: "shockwave", x, y, radius: wave.r, speed: wave.sp, life: wave.life, color: wave.color, width: wave.width });
+            }, index * 70);
         });
 
-        for (let index = 0; index < 160; index++) {
+        for (let index = 0; index < 220; index++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 14 + 4;
+            const speed = Math.random() * 16 + 4;
             let particleColor = "#ffffff";
             const rand = Math.random();
             if (rand < 0.4) particleColor = "#00f7ff";
@@ -343,28 +346,45 @@
                 y,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                life: 1.2,
+                life: 1.3,
                 color: particleColor,
-                size: Math.random() * 3.2 + 1.2
+                size: Math.random() * 3.6 + 1.2
+            });
+        }
+
+        for (let index = 0; index < 36; index++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 10 + 8;
+            particles.push({
+                type: "spark",
+                x,
+                y,
+                px: x,
+                py: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.85,
+                color: Math.random() < 0.5 ? "rgba(255,255,255,1)" : "rgba(0,247,255,1)",
+                size: Math.random() * 1.8 + 1.2
             });
         }
 
         setTimeout(() => {
             particles.push({ type: "flash", life: 0.9, color: "rgba(0,0,0,0.9)" });
-            particles.push({ type: "shockwave", x, y, radius: Math.max(width, height), speed: -12, life: 1.4 });
+            particles.push({ type: "shockwave", x, y, radius: Math.max(width, height), speed: -12, life: 1.45, color: "rgba(255,255,255,0.85)", width: 3.2 });
 
-            for (let index = 0; index < 120; index++) {
+            for (let index = 0; index < 160; index++) {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = Math.random() * 260 + 60;
-                const speed = Math.random() * 8 + 4;
+                const speed = Math.random() * 9 + 4;
                 particles.push({
                     x: x + Math.cos(angle) * radius,
                     y: y + Math.sin(angle) * radius,
                     vx: -Math.cos(angle + Math.PI / 6) * speed,
                     vy: -Math.sin(angle + Math.PI / 6) * speed,
                     life: 1.1,
-                    color: "#00f7ff",
-                    size: Math.random() * 2.2 + 0.8
+                    color: Math.random() < 0.75 ? "#00f7ff" : "#ffffff",
+                    size: Math.random() * 2.6 + 0.8
                 });
             }
 
@@ -627,8 +647,11 @@
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(255,255,255,${particle.life})`;
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = particle.color || `rgba(255,255,255,${particle.life})`;
+                ctx.globalAlpha = particle.life;
+                ctx.lineWidth = particle.width || 2;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = particle.color || "rgba(255,255,255,0.8)";
                 ctx.stroke();
                 ctx.restore();
             } else if (particle.type === "flash") {

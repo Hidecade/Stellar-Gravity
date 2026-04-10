@@ -31,6 +31,19 @@
         const submitBtn = document.getElementById("submit-score-btn");
         const skipBtn = document.getElementById("skip-score-btn");
 
+        function formatRankingScore(score) {
+            return score
+                .toLocaleString()
+                .split("")
+                .map((char) => {
+                    if (char === ",") {
+                        return `<span class="ranking-score-digit ranking-score-comma">${char}</span>`;
+                    }
+                    return `<span class="ranking-score-digit">${char}</span>`;
+                })
+                .join("");
+        }
+
         // --- ランキング取得・表示関数 ---
         async function fetchAndShowRanking() {
             rankingOverlay.style.display = "flex";
@@ -64,7 +77,7 @@
                                                                     <td class="${rankClass}">${rank}</td>
                                                                     <td style="text-align:left; padding-left:10px;">${escapeHtml(data.name)}</td>
                                                                     <td style="font-family:'Orbitron'; color:#aaa;">${stageVal}</td>
-                                                                    <td style="text-align:right; font-family:'Orbitron';">${data.score.toLocaleString()}</td>
+                                                                    <td class="ranking-score-cell" style="text-align:right;">${formatRankingScore(data.score)}</td>
                                                                 `;
                     rankingBody.appendChild(tr);
                     rank++;

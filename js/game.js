@@ -881,6 +881,7 @@
             const hint = document.getElementById("controls-hint");
             const startBtn = document.getElementById("start-btn");
             const nameArea = document.getElementById("name-input-area");
+            const titleVersion = document.getElementById("title-version");
 
             if (isGameRunning) {
                 // --- ゲームプレイ中 ---
@@ -908,6 +909,7 @@
                 if (soundtrackBtn) soundtrackBtn.style.display = titleElementsStyle;
                 if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
                 if (hint) hint.style.display = titleElementsStyle;
+                if (titleVersion) titleVersion.style.display = titleElementsStyle;
 
                 if (startBtn) {
                     startBtn.style.display = isGameOverInput ? "none" : "block";

@@ -702,6 +702,7 @@
                 padding: 8px 4px;
                 border-bottom: 1px solid rgba(0, 247, 255, 0.2);
                 text-align: center;
+                font-family: 'Orbitron', sans-serif;
             }
 
             .ranking-table th {
@@ -721,6 +722,26 @@
             .ranking-table td {
                 font-variant-numeric: tabular-nums;
                 line-height: 1.1;
+                font-weight: 400;
+            }
+
+            .ranking-table td.ranking-score-cell {
+                font-family: 'Orbitron', sans-serif !important;
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.25px;
+                white-space: nowrap;
+            }
+
+            .ranking-score-digit {
+                display: inline-block;
+                min-width: 0.85em;
+                text-align: center;
+            }
+
+            .ranking-score-comma {
+                min-width: 0.35em;
+                text-align: center;
+                margin-right: 0.08em;
             }
 
         .rank-1 {
