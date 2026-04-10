@@ -195,7 +195,7 @@
          * 操作ボタン共通
          * BOOST、PAUSE、BGMトグルの共通見た目
          * ========================================================= */
-        #boost-btn, #hud-pause-btn, #bgm-toggle {
+        #boost-left-btn, #boost-right-btn, #hud-pause-btn, #bgm-toggle {
             font-family: 'Orbitron', sans-serif;
             font-weight: 800;
             color: #00f7ff;
@@ -218,14 +218,14 @@
             background-size: 15px 15px;
         }
 
-            #boost-btn:hover, #hud-pause-btn:hover, #bgm-toggle:hover {
+            #boost-left-btn:hover, #boost-right-btn:hover, #hud-pause-btn:hover, #bgm-toggle:hover {
                 background: linear-gradient( 180deg, rgba(0, 247, 255, 0.3) 0%, rgba(5, 25, 40, 0.9) 100% );
                 box-shadow: 0 0 25px rgba(0, 247, 255, 0.6);
                 color: #fff;
                 text-shadow: 0 0 10px #fff, 0 0 20px #00f7ff;
             }
 
-            #boost-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
+            #boost-left-btn:active, #boost-right-btn:active, #hud-pause-btn:active, #bgm-toggle:active {
                 background: radial-gradient(circle, rgba(220, 255, 255, 0.5) 0%, rgba(0, 247, 255, 0.3) 90%);
                 color: #fff;
                 text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 40px #00f7ff;
@@ -234,18 +234,43 @@
                 transform: scale(0.97);
             }
 
-        #boost-btn {
+        #boost-controls {
             position: fixed;
             bottom: 60px;
             left: 32px;
-            width: 160px;
-            height: 70px;
-            font-size: 20px;
             z-index: 20;
             display: none;
+            gap: 14px;
+            pointer-events: none;
         }
 
-            #boost-btn::before {
+        #boost-left-btn,
+        #boost-right-btn {
+            width: 72px;
+            height: 70px;
+            padding: 0;
+            pointer-events: auto;
+            position: relative;
+        }
+
+        .boost-arrow-svg {
+            display: block;
+            width: 40px;
+            height: 40px;
+            color: #00f7ff;
+            filter: drop-shadow(0 0 8px rgba(0, 247, 255, 0.8));
+        }
+
+        .boost-arrow-svg path {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+            #boost-left-btn::before,
+            #boost-right-btn::before {
                 content: "";
                 position: absolute;
                 inset: -6px;
@@ -256,7 +281,8 @@
                 transition: all 0.3s;
             }
 
-            #boost-btn:hover::before {
+            #boost-left-btn:hover::before,
+            #boost-right-btn:hover::before {
                 inset: -10px;
                 border-color: rgba(0, 247, 255, 0.6);
                 opacity: 0.5;
@@ -483,6 +509,23 @@
                 box-shadow: 0 0 15px rgba(0, 247, 255, 0.4);
                 color: #fff;
             }
+
+        .btn.menu-selected,
+        .pause-menu-btn.menu-selected {
+            opacity: 1;
+            background: rgba(0, 247, 255, 0.2);
+            border-color: #00f7ff !important;
+            box-shadow: 0 0 24px rgba(0, 247, 255, 0.55);
+            color: #fff;
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        #pause-quit-btn.menu-selected {
+            background: rgba(255, 96, 96, 0.18);
+            border-color: rgba(255, 120, 120, 0.8) !important;
+            box-shadow: 0 0 24px rgba(255, 96, 96, 0.35);
+            color: #fff2f2;
+        }
 
         #controls-hint {
             font-family: 'Orbitron', sans-serif;
@@ -889,6 +932,19 @@
                 background: rgba(0, 247, 255, 0.2);
                 color: #fff;
                 text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
+            }
+
+            .track-item.menu-selected {
+                border-color: rgba(255, 255, 255, 0.8);
+                background: rgba(255, 255, 255, 0.12);
+                color: #fff;
+                box-shadow: 0 0 14px rgba(255, 255, 255, 0.22);
+            }
+
+            .track-item.active.menu-selected {
+                border-color: #00f7ff;
+                background: rgba(0, 247, 255, 0.26);
+                box-shadow: 0 0 18px rgba(0, 247, 255, 0.32);
             }
 
         .track-icon {

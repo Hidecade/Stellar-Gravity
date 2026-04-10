@@ -19,7 +19,6 @@
             pauseCurrentAudio,
             prepareAudioPlayback,
             playBGM,
-            playBlackHoleSound,
             playClearBgm,
             playExplosionSound,
             playNameBGM,
@@ -76,6 +75,7 @@
         let isContinue = false;
 
         let isBoosting = false;
+        let rotationDirection = 1;
         const ROTATE_BASE_SPEED = RENDER_CONFIG.rotateBaseSpeed;
         const ROTATE_BOOST_MULT = RENDER_CONFIG.rotateBoostMultiplier;
         const STAR_BOOST_MULT = RENDER_CONFIG.starBoostMultiplier;
@@ -458,11 +458,10 @@
                             isBlackHoleCore = true;
                             isGameRunning = false;
                             isClickable = false;
-                            stopBGM();
+                            playClearBgm();
                             triggerSupernovaAt({
                                 height: HEIGHT,
                                 particles,
-                                playBlackHoleSound,
                                 playExplosionSound,
                                 setImplosionAlpha: (value) => { implosionAlpha = value; },
                                 setImplosionScale: (value) => { implosionScale = value; },
@@ -504,7 +503,7 @@
                 if (isGameRunning && !isPaused) {
                     const base = ROTATE_BASE_SPEED * difficulty;
                     const speed = isBoosting ? base * ROTATE_BOOST_MULT : base;
-                    launcherAngle += speed;
+                    launcherAngle += speed * rotationDirection;
                 }
 
                 // Update UI Text
@@ -549,6 +548,7 @@
                     isBoosting,
                     isGameRunning,
                     isPaused,
+                    rotationDirection,
                     setStaticStarAngle: (value) => { staticStarAngle = value; },
                     starBoostMult: STAR_BOOST_MULT
                 });
@@ -691,38 +691,264 @@
         }
 
         /* Controls */
-        const boostBtn = document.getElementById("boost-btn");
+        const boostControls = document.getElementById("boost-controls");
+        const boostLeftBtn = document.getElementById("boost-left-btn");
+        const boostRightBtn = document.getElementById("boost-right-btn");
         const clearHiBtn = document.getElementById("clear-hi-btn");
+        const overlay = document.getElementById("overlay");
+        const startBtn = document.getElementById("start-btn");
+        const showRankingBtn = document.getElementById("show-ranking-btn");
+        const rankingOverlay = document.getElementById("ranking-overlay");
+        const closeRankingBtn = document.getElementById("close-ranking-btn");
+        const soundtrackBtn = document.getElementById("soundtrack-btn");
+        const soundtrackOverlay = document.getElementById("soundtrack-overlay");
+        const soundtrackBackBtn = document.getElementById("soundtrack-back-btn");
+        const trackListContainer = document.getElementById("track-list-container");
+        const menuNavigationState = {
+            context: "",
+            elements: [],
+            index: 0
+        };
 
-        // ▼▼▼ 追加: システムの右クリック/長押しメニューを完全にブロック ▼▼▼
-        boostBtn.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-        }, false);
+        function isElementVisible(element) {
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            if (style.display === "none" || style.visibility === "hidden") return false;
+            if (element.disabled) return false;
+            return element.getClientRects().length > 0;
+        }
 
-        boostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
-        boostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
-        boostBtn.addEventListener("mouseleave", () => { isBoosting = false; });
-        boostBtn.addEventListener("touchstart", (e) => { e.preventDefault(); e.stopPropagation(); isBoosting = true; }, { passive: false });
-        boostBtn.addEventListener("touchend", (e) => { e.preventDefault(); e.stopPropagation(); isBoosting = false; }, { passive: false });
-        boostBtn.addEventListener("touchcancel", () => { isBoosting = false; });
+        function clearMenuSelection() {
+            document.querySelectorAll(".menu-selected").forEach((element) => {
+                element.classList.remove("menu-selected");
+            });
+        }
+
+        function applyMenuSelection() {
+            clearMenuSelection();
+            const selectedElement = menuNavigationState.elements[menuNavigationState.index];
+            if (!selectedElement) return;
+
+            selectedElement.classList.add("menu-selected");
+            if (typeof selectedElement.scrollIntoView === "function") {
+                selectedElement.scrollIntoView({ block: "nearest" });
+            }
+        }
+
+        function getActiveMenuContext() {
+            if (isElementVisible(pauseOverlay)) {
+                return {
+                    context: "pause",
+                    elements: [pauseResumeBtn, pauseQuitBtn].filter(isElementVisible)
+                };
+            }
+
+            if (isElementVisible(soundtrackOverlay)) {
+                return {
+                    context: "soundtrack",
+                    elements: [
+                        ...Array.from(trackListContainer?.querySelectorAll(".track-item") || []),
+                        soundtrackBackBtn
+                    ].filter(isElementVisible)
+                };
+            }
+
+            if (isElementVisible(rankingOverlay)) {
+                return {
+                    context: "ranking",
+                    elements: [closeRankingBtn].filter(isElementVisible)
+                };
+            }
+
+            if (!overlay.classList.contains("hide")) {
+                return {
+                    context: "title",
+                    elements: [startBtn, showRankingBtn, soundtrackBtn, clearHiBtn].filter(isElementVisible)
+                };
+            }
+
+            return {
+                context: "",
+                elements: []
+            };
+        }
+
+        function refreshMenuNavigation(forceFirst = false) {
+            const previousElement = menuNavigationState.elements[menuNavigationState.index];
+            const nextState = getActiveMenuContext();
+
+            if (!nextState.context || !nextState.elements.length) {
+                menuNavigationState.context = "";
+                menuNavigationState.elements = [];
+                menuNavigationState.index = 0;
+                clearMenuSelection();
+                return false;
+            }
+
+            const contextChanged = menuNavigationState.context !== nextState.context;
+            const sameElements = menuNavigationState.elements.length === nextState.elements.length
+                && menuNavigationState.elements.every((element, index) => element === nextState.elements[index]);
+
+            menuNavigationState.context = nextState.context;
+            menuNavigationState.elements = nextState.elements;
+
+            if (forceFirst || contextChanged || !sameElements) {
+                const preservedIndex = previousElement ? nextState.elements.indexOf(previousElement) : -1;
+                menuNavigationState.index = preservedIndex >= 0 ? preservedIndex : 0;
+            } else {
+                menuNavigationState.index = Math.min(menuNavigationState.index, nextState.elements.length - 1);
+            }
+
+            applyMenuSelection();
+            return true;
+        }
+
+        function moveMenuSelection(step) {
+            if (!refreshMenuNavigation()) return false;
+
+            const total = menuNavigationState.elements.length;
+            menuNavigationState.index = (menuNavigationState.index + step + total) % total;
+            applyMenuSelection();
+            return true;
+        }
+
+        function activateSelectedMenuItem() {
+            if (!refreshMenuNavigation()) return false;
+
+            const selectedElement = menuNavigationState.elements[menuNavigationState.index];
+            if (!selectedElement) return false;
+
+            selectedElement.click();
+            return true;
+        }
+
+        function handleMenuNavigationKeydown(event) {
+            const activeElement = document.activeElement;
+            if (activeElement && (
+                activeElement.tagName === "INPUT"
+                || activeElement.tagName === "TEXTAREA"
+                || activeElement.isContentEditable
+            )) {
+                return false;
+            }
+
+            if (!refreshMenuNavigation()) return false;
+
+            if (event.code === "ArrowUp" || event.code === "ArrowLeft") {
+                event.preventDefault();
+                moveMenuSelection(-1);
+                return true;
+            }
+
+            if (event.code === "ArrowDown" || event.code === "ArrowRight") {
+                event.preventDefault();
+                moveMenuSelection(1);
+                return true;
+            }
+
+            if (event.code === "Enter") {
+                event.preventDefault();
+                activateSelectedMenuItem();
+                return true;
+            }
+
+            return false;
+        }
+
+        function setupMenuNavigationObserver() {
+            const observer = new MutationObserver(() => {
+                refreshMenuNavigation();
+            });
+
+            [overlay, rankingOverlay, soundtrackOverlay, pauseOverlay].forEach((element) => {
+                if (!element) return;
+                observer.observe(element, {
+                    attributes: true,
+                    attributeFilter: ["class", "style"]
+                });
+            });
+
+            if (trackListContainer) {
+                observer.observe(trackListContainer, {
+                    childList: true
+                });
+            }
+        }
+
+        function startDirectionalBoost(direction, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            rotationDirection = direction;
+            isBoosting = true;
+        }
+
+        function stopDirectionalBoost(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            isBoosting = false;
+        }
+
+        [boostLeftBtn, boostRightBtn].forEach((button) => {
+            if (!button) return;
+            button.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+            }, false);
+        });
+
+        if (boostLeftBtn) {
+            boostLeftBtn.addEventListener("mousedown", (e) => startDirectionalBoost(-1, e));
+            boostLeftBtn.addEventListener("mouseup", stopDirectionalBoost);
+            boostLeftBtn.addEventListener("mouseleave", stopDirectionalBoost);
+            boostLeftBtn.addEventListener("touchstart", (e) => startDirectionalBoost(-1, e), { passive: false });
+            boostLeftBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
+            boostLeftBtn.addEventListener("touchcancel", stopDirectionalBoost);
+        }
+
+        if (boostRightBtn) {
+            boostRightBtn.addEventListener("mousedown", (e) => startDirectionalBoost(1, e));
+            boostRightBtn.addEventListener("mouseup", stopDirectionalBoost);
+            boostRightBtn.addEventListener("mouseleave", stopDirectionalBoost);
+            boostRightBtn.addEventListener("touchstart", (e) => startDirectionalBoost(1, e), { passive: false });
+            boostRightBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
+            boostRightBtn.addEventListener("touchcancel", stopDirectionalBoost);
+        }
 
         window.addEventListener("keydown", (e) => {
+            if (handleMenuNavigationKeydown(e)) {
+                return;
+            }
             if (isPaused) return;
-            if (e.code === "Space") { e.preventDefault(); isBoosting = true; }
-            if (e.code === "Enter" || e.code === "ArrowUp") {
+            if (e.code === "ArrowLeft") { startDirectionalBoost(-1, e); }
+            if (e.code === "ArrowRight") { startDirectionalBoost(1, e); }
+            if (e.code === "Space") {
                 e.preventDefault();
                 if (isGameRunning && document.getElementById("overlay").classList.contains("hide")) {
                     shoot(e);
                 }
             }
+            if (e.code === "KeyP") {
+                e.preventDefault();
+                if (isGameRunning && !isPaused) {
+                    togglePause(true);
+                }
+            }
         });
 
         window.addEventListener("keyup", (e) => {
-            if (e.code === "Space") isBoosting = false;
+            if (e.code === "ArrowLeft" || e.code === "ArrowRight") {
+                stopDirectionalBoost(e);
+            }
         });
 
         setInterval(() => {
-            boostBtn.style.boxShadow = isBoosting ? "0 0 20px rgba(79,172,254,0.9)" : "none";
+            if (!boostLeftBtn || !boostRightBtn) return;
+
+            boostLeftBtn.style.boxShadow = isBoosting && rotationDirection < 0 ? "0 0 20px rgba(79,172,254,0.9)" : "none";
+            boostRightBtn.style.boxShadow = isBoosting && rotationDirection > 0 ? "0 0 20px rgba(79,172,254,0.9)" : "none";
         }, RENDER_CONFIG.boostGlowIntervalMs);
 
         function updateScore(points) {
@@ -842,7 +1068,6 @@
                         clearMsg.style.display = "block";
                     }
                     updateResetButtonVisibility();
-                    playClearBgm();
                 }
             }, EFFECTS_CONFIG.supernovaEndDelayMs);
         }
@@ -864,7 +1089,7 @@
                 render: { visible: false }
             });
             const BASE_SPEED = GAMEPLAY_CONFIG.shootBaseSpeed * difficulty;
-            const BOOST_DRIFT = isBoosting ? GAMEPLAY_CONFIG.shootBoostDrift : 0;
+            const BOOST_DRIFT = isBoosting ? GAMEPLAY_CONFIG.shootBoostDrift * rotationDirection : 0;
             const vxC = -Math.cos(launcherAngle);
             const vyC = -Math.sin(launcherAngle);
             const vxT = -Math.sin(launcherAngle);
@@ -891,6 +1116,9 @@
                 getIsPaused: () => isPaused,
                 getStage: () => stage
             });
+
+            setupMenuNavigationObserver();
+            refreshMenuNavigation(true);
 
             window.showTitleScreen = showTitleScreen;
         }
@@ -961,7 +1189,7 @@
         function updateResetButtonVisibility() {
             // 変数取得
             const uiLayer = document.getElementById("ui-layer");
-            const boostButton = document.getElementById("boost-btn");
+            const boostButton = document.getElementById("boost-controls");
             const bottomRightUi = document.getElementById("bottom-right-ui");
             const pBtn = document.getElementById("hud-pause-btn");
             const bPos = document.getElementById("bgm-control-pos");
@@ -1008,6 +1236,8 @@
                     startBtn.style.display = isGameOverInput ? "none" : "block";
                 }
             }
+
+            refreshMenuNavigation();
         }
 
 
@@ -1118,10 +1348,13 @@
         }
 
         function isInsideShootArea(clientX, clientY) {
-            const boostRect = document.getElementById("boost-btn").getBoundingClientRect();
-            const resetAreaRect = document.getElementById("management-btn-area").getBoundingClientRect();
-            const deadLineTop = Math.min(boostRect.top, resetAreaRect.top) - 30;
-            return clientY > 0 && clientY < deadLineTop;
+            const boostControlsRect = document.getElementById("boost-controls")?.getBoundingClientRect();
+            const managementRect = document.getElementById("management-btn-area")?.getBoundingClientRect();
+            const cutoffTop = Math.min(
+                boostControlsRect?.top ?? window.innerHeight,
+                managementRect?.top ?? window.innerHeight
+            ) - 30;
+            return clientY > 0 && clientY < cutoffTop;
         }
 
         window.addEventListener("pointerdown", (e) => {

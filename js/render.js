@@ -282,7 +282,6 @@
         const {
             height,
             particles,
-            playBlackHoleSound,
             playExplosionSound,
             setImplosionAlpha,
             setImplosionScale,
@@ -385,7 +384,6 @@
             requestAnimationFrame(animateImplosion);
         };
         requestAnimationFrame(animateImplosion);
-        playBlackHoleSound();
 
         particles.push({ type: "flash", life: 0.55, color: "rgba(255, 210, 160, 0.22)" });
         particles.push({ type: "flash", life: 0.7, color: "rgba(255, 120, 80, 0.14)" });
@@ -438,7 +436,7 @@
     }
 
     function drawBackground(ctx, options) {
-        const { bgStars, center, getStaticStarAngle, isBoosting, isGameRunning, isPaused, setStaticStarAngle, starBoostMult } = options;
+        const { bgStars, center, getStaticStarAngle, isBoosting, isGameRunning, isPaused, rotationDirection = 1, setStaticStarAngle, starBoostMult } = options;
         if (!bgStars) return;
 
         const stars = Array.isArray(bgStars) ? bgStars : bgStars.stars;
@@ -446,7 +444,8 @@
         const multiplier = isGameRunning && isBoosting ? starBoostMult : 1.0;
         const shouldRotate = isGameRunning ? !isPaused : true;
         if (shouldRotate) {
-            setStaticStarAngle(getStaticStarAngle() - baseSpeed * multiplier);
+            const backgroundDirection = isGameRunning ? -rotationDirection : -1;
+            setStaticStarAngle(getStaticStarAngle() + baseSpeed * multiplier * backgroundDirection);
         }
 
         const now = Date.now();

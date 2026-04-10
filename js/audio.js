@@ -31,9 +31,6 @@
         name: { file: "audio/Stellar_Gravity_Name.mp3", gain: 0.6, key: "name", loop: true },
         title: { file: "audio/StellarGravity_Title.mp3", gain: 0.8, key: "title", loop: true }
     };
-    const STATIC_SFX = {
-        blackHole: { file: "audio/StellarGravity_BlackHole.mp3", gain: 0.46 }
-    };
 
     let noiseBuffer = null;
     let isBgmEnabled = localStorage.getItem("stellarGravity_bgm") !== "off";
@@ -51,8 +48,6 @@
     let currentBgmOffset = 0;
     let currentBgmStartTime = 0;
     let isBgmPaused = false;
-    let sfxBuffers = {};
-    let activeBlackHoleSfx = null;
     const BGM_FADE_OUT_SEC = 0.22;
     const PAUSE_FADE_OUT_SEC = 0.08;
     let isInitialized = false;
@@ -130,8 +125,7 @@
                 loadBgmBuffer(STATIC_BGM.title.file),
                 loadBgmBuffer(STATIC_BGM.clear.file),
                 loadBgmBuffer(STATIC_BGM.name.file),
-                loadBgmBuffer(getStageBgmRequest().file),
-                loadSfxBuffer(STATIC_SFX.blackHole.file)
+                loadBgmBuffer(getStageBgmRequest().file)
             ]);
         })();
 
@@ -150,76 +144,8 @@
         return Promise.resolve();
     }
 
-    async function loadSfxBuffer(file) {
-        const url = new URL(file, window.location.href).href;
-        if (sfxBuffers[url]) {
-            return sfxBuffers[url];
-        }
-
-        const response = await fetch(url, { cache: "default" });
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-        sfxBuffers[url] = audioBuffer;
-        return audioBuffer;
-    }
-
-    function playBufferedSfx(request) {
-        resumeAudioContext()
-            .then(() => loadSfxBuffer(request.file))
-            .then((buffer) => {
-                if (!buffer) return;
-
-                const source = audioCtx.createBufferSource();
-                const gain = audioCtx.createGain();
-                source.buffer = buffer;
-                gain.gain.value = request.gain ?? 1;
-                source.connect(gain);
-                gain.connect(sfxMasterGain);
-
-                if (request.key === "blackHole") {
-                    if (activeBlackHoleSfx) {
-                        try {
-                            activeBlackHoleSfx.source.stop();
-                        } catch (_) {
-                            // already stopped
-                        }
-                    }
-
-                    activeBlackHoleSfx = { gain, source };
-                    source.onended = () => {
-                        if (activeBlackHoleSfx && activeBlackHoleSfx.source === source) {
-                            activeBlackHoleSfx = null;
-                        }
-                    };
-                }
-
-                source.start();
-            })
-            .catch(() => {});
-    }
-
     function fadeOutBlackHoleSound(durationSec = 0.8) {
-        if (!activeBlackHoleSfx) return;
-
-        const { gain, source } = activeBlackHoleSfx;
-        const time = audioCtx.currentTime;
-        const startGain = Math.max(gain.gain.value, 0.0001);
-        gain.gain.cancelScheduledValues(time);
-        gain.gain.setValueAtTime(startGain, time);
-        gain.gain.exponentialRampToValueAtTime(0.0001, time + durationSec);
-
-        window.setTimeout(() => {
-            if (!activeBlackHoleSfx || activeBlackHoleSfx.source !== source) {
-                return;
-            }
-
-            try {
-                source.stop();
-            } catch (_) {
-                // already stopped
-            }
-            activeBlackHoleSfx = null;
-        }, Math.ceil(durationSec * 1000) + 40);
+        void durationSec;
     }
 
     function clearPendingPlaybackRetry() {
@@ -523,9 +449,6 @@
         noise.stop(time + 0.5);
     }
 
-    function playBlackHoleSound() {
-        playBufferedSfx({ ...STATIC_SFX.blackHole, key: "blackHole" });
-    }
 
     function playBGM() {
         if (!isBgmEnabled || state.getIsPaused()) return;
@@ -697,7 +620,6 @@
         pauseCurrentAudio,
         prepareAudioPlayback,
         playBGM,
-        playBlackHoleSound,
         playClearBgm,
         playExplosionSound,
         playNameBGM,

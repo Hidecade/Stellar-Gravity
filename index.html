@@ -58,7 +58,7 @@
         </h1>
 
         <div id="controls-hint" style="margin-top: 25px; font-size: 10px; letter-spacing: 2px; color: #aaa; line-height: 1.6;">
-            [PC] ENTER / UP : SHOOT | SPACE : BOOST<br>
+            [PC] LEFT / RIGHT : BOOST | SPACE : SHOOT | P : PAUSE<br>
             [TOUCH] TAP SCREEN : SHOOT
         </div>
 
@@ -121,7 +121,20 @@
         <button id="pause-quit-btn" class="pause-menu-btn">TITLE</button>
     </div>
 
-    <button id="boost-btn">BOOST</button>
+    <div id="boost-controls">
+        <button id="boost-left-btn" aria-label="Boost Left">
+            <svg class="boost-arrow-svg" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M14 19a14 14 0 1 1 5 18" />
+                <path d="M13 11v11h11" />
+            </svg>
+        </button>
+        <button id="boost-right-btn" aria-label="Boost Right">
+            <svg class="boost-arrow-svg" viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M34 19a14 14 0 1 0-5 18" />
+                <path d="M35 11v11H24" />
+            </svg>
+        </button>
+    </div>
 
     <div id="bottom-right-ui">
         <div id="management-btn-area">
