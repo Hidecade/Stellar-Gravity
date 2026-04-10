@@ -244,6 +244,12 @@
             pointer-events: none;
         }
 
+        @media screen and (orientation: landscape) {
+            #boost-controls {
+                left: calc(env(safe-area-inset-left, 0px) + 40px);
+            }
+        }
+
         #boost-left-btn,
         #boost-right-btn {
             width: 82px;
