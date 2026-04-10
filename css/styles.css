@@ -1,6 +1,7 @@
 ﻿        /* =========================================================
-        * Global / Layout
-        * ========================================================= */
+         * 全体レイアウト
+         * ページ全体の固定表示と共通フォントを管理
+         * ========================================================= */
         body {
             margin: 0;
             background: #000;
@@ -36,7 +37,8 @@
         }
 
         /* =========================================================
-         * HUD (Top Score / Next) - Compact & TRON Style
+         * HUD上部表示
+         * スコア、ハイスコア、NEXT表示を管理
          * ========================================================= */
         #ui-layer {
             position: fixed;
@@ -136,7 +138,7 @@
             text-shadow: 0 0 10px #ffd700, 0 0 20px #ff6600;
         }
 
-        /* NEXT UI */
+        /* 次の天体プレビュー */
         #next-ui {
             height: 46px;
             width: 46px;
@@ -169,7 +171,7 @@
             white-space: nowrap;
         }
 
-        /* Timer Bar */
+        /* ショット制限時間ゲージ */
         #timer-bar-container {
             width: 100%;
             height: 4px;
@@ -190,7 +192,8 @@
         }
 
         /* =========================================================
-         * Action Buttons (BOOST, PAUSE, BGM)
+         * 操作ボタン共通
+         * BOOST、PAUSE、BGMトグルの共通見た目
          * ========================================================= */
         #boost-btn, #hud-pause-btn, #bgm-toggle {
             font-family: 'Orbitron', sans-serif;
@@ -259,7 +262,7 @@
                 opacity: 0.5;
             }
 
-        /* Right Bottom UI */
+        /* 右下の管理UI */
         #bottom-right-ui {
             position: fixed;
             right: 24px;
@@ -347,7 +350,8 @@
         }
 
         /* =========================================================
-         * Overlay (Title / Result / Game Over)
+         * タイトル・結果オーバーレイ
+         * タイトル画面、ゲームオーバー、クリア表示を管理
          * ========================================================= */
         #overlay {
             position: fixed;
@@ -367,7 +371,7 @@
             -webkit-overflow-scrolling: touch;
         }
 
-            /* 中身を中央に寄せるための疑似要素 */
+            /* 中身が少ない場合でも縦方向の中央寄せを維持する */
             #overlay::before, #overlay::after {
                 content: "";
                 margin: auto;
@@ -379,7 +383,7 @@
                 pointer-events: none;
             }
 
-        /* Title Logo */
+        /* タイトルロゴ */
         h1 {
             margin: 0;
             font-size: 42px;
@@ -392,7 +396,17 @@
                 text-shadow: 0 0 12px rgba(0, 0, 0, 0.9), 0 0 20px #00f7ff, 0 0 40px #00f7ff, 0 0 80px #fff;
             }
 
-        /* Title Buttons */
+        #title-version {
+            margin-top: 18px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.65);
+            text-shadow: 0 0 8px rgba(0, 247, 255, 0.35);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* タイトル画面の共通ボタン */
         .btn {
             font-family: 'Orbitron', sans-serif;
             background: transparent;
@@ -412,7 +426,7 @@
                 box-shadow: 0 0 30px #00f7ff;
             }
 
-        /* メインのSTARTボタン */
+        /* メイン開始ボタン */
         #start-btn {
             margin-top: 30px;
             padding: 15px 60px;
@@ -420,7 +434,7 @@
             min-width: 220px;
         }
 
-        /* サブボタン（少し小さく） */
+        /* 補助ボタン群 */
         .sub-btn {
             margin-top: 12px;
             padding: 8px 0;
@@ -453,7 +467,7 @@
             line-height: 1.6;
         }
 
-        /* Name Input Area */
+        /* 名前入力エリア */
         #name-input-area {
             margin-top: 15px;
             display: none;
@@ -530,7 +544,12 @@
             opacity: 1;
         }
 
-        /* --- レスポンシブ: タイトルの改行制御 --- */
+        /* =========================================================
+         * レスポンシブ調整
+         * タイトル改行と低い画面高さ向けの圧縮表示
+         * ========================================================= */
+
+        /* タイトルの改行制御 */
         .title-br {
             display: block;
         }
@@ -555,12 +574,19 @@
             }
         }
 
-        /* --- レスポンシブ: 画面高さが低い場合 --- */
+        /* 画面高さが低い場合の全体圧縮 */
         @media screen and (max-height: 600px) {
             h1#title-text {
                 font-size: 24px !important;
                 letter-spacing: 3px !important;
                 margin-bottom: 5px !important;
+            }
+
+            #title-version {
+                margin-top: 8px !important;
+                margin-bottom: 4px !important;
+                font-size: 9px !important;
+                letter-spacing: 2px !important;
             }
 
             #controls-hint {
@@ -599,7 +625,8 @@
         }
 
         /* =========================================================
-         * Ranking UI (Fixed Header & Scrollable Body)
+         * ランキング画面
+         * 固定ヘッダー付きテーブルとスクロール領域を管理
          * ========================================================= */
         #ranking-overlay {
             position: fixed;
@@ -609,7 +636,7 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            /* ▼▼▼ ここを修正: 上下中央揃えに変更 ▼▼▼ */
+            /* 内容量が少なくても中央に見せる */
             justify-content: center;
             z-index: 2500;
             font-family: 'Orbitron', sans-serif;
@@ -630,14 +657,14 @@
                 border-bottom: 2px solid #00f7ff;
                 padding-bottom: 10px;
                 flex-shrink: 0;
-                margin-top: 0; /* 中央寄せを綺麗に見せるため */
+                margin-top: 0; /* 中央寄せ時の余白ずれを防ぐ */
             }
 
-        /* ランキングのテーブルを囲むラッパー */
+        /* テーブル本体のスクロールラッパー */
         .ranking-scroll-wrapper {
             width: 100%;
             max-width: 500px;
-            /* ▼▼▼ ここを修正: 高さを固定せず、中身に応じる。最大でも画面の60%程度にする ▼▼▼ */
+            /* 高さ固定にせず、最大だけ制限する */
             flex: 0 1 auto;
             max-height: 60vh;
             overflow-y: auto;
@@ -684,7 +711,7 @@
                 text-shadow: 0 0 8px rgba(0, 247, 255, 0.6);
                 padding-top: 12px;
                 padding-bottom: 12px;
-                position: sticky; /* ヘッダー固定 */
+                position: sticky; /* テーブルヘッダーを固定表示 */
                 top: 0;
                 z-index: 2;
                 background-color: #050a14;
@@ -699,6 +726,7 @@
         .rank-1 {
             background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
             background-size: 200% auto;
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: rainbow-text 3s linear infinite;
@@ -732,7 +760,8 @@
         }
 
         /* =========================================================
-         * Soundtrack Overlay
+         * サウンドトラック画面
+         * 曲リストと再生状態表示を管理
          * ========================================================= */
         #soundtrack-overlay {
             position: fixed;
@@ -745,14 +774,14 @@
             z-index: 1500;
             text-align: center;
             touch-action: pan-y;
-            /* 背景に少しぼかしを入れてリッチにする */
+            /* 背景を少しぼかして前面UIを見やすくする */
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 1px solid #00f7ff; /* 外枠もネオンに */
+            border: 1px solid #00f7ff; /* 外枠もネオン表現に統一 */
             box-shadow: inset 0 0 50px rgba(0, 247, 255, 0.2);
         }
 
-            /* ▼▼▼ 追加: タイトルをネオン化 ▼▼▼ */
+            /* 見出しはタイトル画面と同系統のネオン表現 */
             #soundtrack-overlay h2 {
                 font-size: 24px;
                 letter-spacing: 4px;
@@ -804,11 +833,11 @@
             .track-item:hover {
                 background: rgba(255,255,255,0.1);
                 color: white;
-                box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); /* ホバー時も少し光らせる */
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.2); /* ホバー時は白寄りに発光 */
             }
 
             .track-item.active {
-                border-color: #00f7ff; /* アクティブ枠線をシアンに統一 */
+                border-color: #00f7ff; /* 再生中の曲をシアンで強調 */
                 background: rgba(0, 247, 255, 0.2);
                 color: #fff;
                 text-shadow: 0 0 8px rgba(0, 247, 255, 0.8);
@@ -819,7 +848,8 @@
         }
 
         /* =========================================================
-         * Pause Overlay
+         * ポーズ画面
+         * 一時停止中の操作メニューを管理
          * ========================================================= */
         #pause-overlay {
             position: fixed;
@@ -883,9 +913,10 @@
             }
 
         /* =========================================================
-         * Action Buttons (BOOST, PAUSE, BGM)
+         * タッチ操作抑制
+         * iOS長押しメニューや選択、ジェスチャーを防ぐ
          * ========================================================= */
-        /* ボタン全般、特にBOOSTボタンに強力な抑制をかける */
+        /* ボタン全般、特にBOOSTまわりの誤操作を防ぐ */
         #boost-btn, .btn {
             -webkit-touch-callout: none !important; /* 長押しメニュー禁止 */
             -webkit-user-select: none !important; /* テキスト選択禁止 */

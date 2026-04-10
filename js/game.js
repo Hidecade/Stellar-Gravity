@@ -468,6 +468,7 @@
                     center: CENTER,
                     getStaticStarAngle: () => staticStarAngle,
                     isBoosting,
+                    isGameRunning,
                     isPaused,
                     setStaticStarAngle: (value) => { staticStarAngle = value; },
                     starBoostMult: STAR_BOOST_MULT
@@ -789,6 +790,11 @@
         function finalizeBoot() {
             preInit();
             updateResetButtonVisibility();
+
+            const versionEl = document.getElementById("title-version");
+            if (versionEl) {
+                versionEl.textContent = `ver. ${APP_CONFIG?.version || "dev"}`;
+            }
 
             initAudio({
                 getIsGameRunning: () => isGameRunning,

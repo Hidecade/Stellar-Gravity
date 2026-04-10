@@ -23,12 +23,6 @@
 
 <body>
 
-    <audio id="game-bgm" loop preload="auto"></audio>
-    <audio id="clear-bgm" src="audio/StellarGravity_Clear.mp3" preload="auto"></audio>
-    <audio id="title-bgm" src="audio/StellarGravity_Title.mp3" loop preload="auto"></audio>
-    <audio id="name-bgm" src="audio/Stellar_Gravity_Name.mp3" loop preload="auto"></audio>
-
-
     <div id="canvas-container"></div>
 
     <div id="ui-layer">
@@ -62,7 +56,7 @@
             STELLAR<br class="title-br" /><span class="title-space">&nbsp;</span>GRAVITY
         </h1>
 
-        <div id="controls-hint" style="margin-top: 25px; font-size: 10px; letter-spacing: 2px; color: #888; line-height: 1.6;">
+        <div id="controls-hint" style="margin-top: 25px; font-size: 10px; letter-spacing: 2px; color: #aaa; line-height: 1.6;">
             [PC] ENTER / UP : SHOOT | SPACE : BOOST<br>
             [TOUCH] TAP SCREEN : SHOOT
         </div>
@@ -88,6 +82,7 @@
         </div>
 
         <button id="clear-hi-btn" class="btn sub-btn">CLEAR MY HIGH SCORE</button>
+        <div id="title-version">ver. --</div>
         <p id="clear-message" style="margin-top:20px; font-size:16px; letter-spacing:1px; opacity:0.9; display:none;"></p>
     </div>
 

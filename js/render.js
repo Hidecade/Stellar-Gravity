@@ -377,13 +377,15 @@
     }
 
     function drawBackground(ctx, options) {
-        const { bgStars, center, getStaticStarAngle, isBoosting, isPaused, setStaticStarAngle, starBoostMult } = options;
+        const { bgStars, center, getStaticStarAngle, isBoosting, isGameRunning, isPaused, setStaticStarAngle, starBoostMult } = options;
         if (!bgStars) return;
 
         const stars = Array.isArray(bgStars) ? bgStars : bgStars.stars;
-        const multiplier = isBoosting ? starBoostMult : 1.0;
-        if (!isPaused) {
-            setStaticStarAngle(getStaticStarAngle() - 0.0025 * multiplier);
+        const baseSpeed = isGameRunning ? 0.0025 : 0.0007;
+        const multiplier = isGameRunning && isBoosting ? starBoostMult : 1.0;
+        const shouldRotate = isGameRunning ? !isPaused : true;
+        if (shouldRotate) {
+            setStaticStarAngle(getStaticStarAngle() - baseSpeed * multiplier);
         }
 
         const now = Date.now();

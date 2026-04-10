@@ -1,8 +1,4 @@
 (function () {
-    const gameBgmEl = document.getElementById("game-bgm");
-    const clearBgm = document.getElementById("clear-bgm");
-    const titleBgm = document.getElementById("title-bgm");
-    const nameBgm = document.getElementById("name-bgm");
     const bgmToggleBtn = document.getElementById("bgm-toggle");
     const soundtrackBtn = document.getElementById("soundtrack-btn");
     const soundtrackOverlay = document.getElementById("soundtrack-overlay");
@@ -46,12 +42,14 @@
     let audioReadyPromise = null;
     let pendingPlayback = null;
     let playbackRequestId = 0;
+    let pauseFadeTimer = null;
     let currentBgmSource = null;
     let currentBgmState = null;
     let currentBgmOffset = 0;
     let currentBgmStartTime = 0;
     let isBgmPaused = false;
     const BGM_FADE_OUT_SEC = 0.22;
+    const PAUSE_FADE_OUT_SEC = 0.08;
     let isInitialized = false;
     let state = {
         getIsPaused: () => false,
@@ -173,7 +171,18 @@
         window.addEventListener("keydown", retryHandler, { once: true });
     }
 
+    function clearPauseFadeTimer() {
+        if (!pauseFadeTimer) {
+            return;
+        }
+
+        clearTimeout(pauseFadeTimer);
+        pauseFadeTimer = null;
+    }
+
     function stopCurrentBgmSource(clearState = true, preservePauseState = false) {
+        clearPauseFadeTimer();
+
         if (currentBgmSource) {
             currentBgmSource.onended = null;
             try {
@@ -246,6 +255,7 @@
         const requestId = ++playbackRequestId;
 
         const runPlayback = async () => {
+            clearPauseFadeTimer();
             await resumeAudioContext();
 
             if (audioCtx.state !== "running") {
@@ -337,6 +347,7 @@
             bgmFadeTimer = null;
         }
 
+        clearPauseFadeTimer();
         clearPendingPlaybackRetry();
         playbackRequestId++;
         stopCurrentBgmSource();
@@ -514,9 +525,21 @@
             return;
         }
 
+        clearPauseFadeTimer();
         currentBgmOffset = Math.max(0, audioCtx.currentTime - currentBgmStartTime);
         isBgmPaused = true;
-        stopCurrentBgmSource(false, true);
+
+        const time = audioCtx.currentTime;
+        const startGain = Math.max(bgmMasterGain.gain.value, 0.0001);
+        bgmMasterGain.gain.cancelScheduledValues(time);
+        bgmMasterGain.gain.setValueAtTime(startGain, time);
+        bgmMasterGain.gain.exponentialRampToValueAtTime(0.0001, time + PAUSE_FADE_OUT_SEC);
+
+        pauseFadeTimer = setTimeout(() => {
+            pauseFadeTimer = null;
+            stopCurrentBgmSource(false, true);
+            applyBgmGain(currentBgmGain);
+        }, Math.ceil(PAUSE_FADE_OUT_SEC * 1000) + 20);
     }
 
     function resumeCurrentAudio() {
@@ -529,13 +552,6 @@
                 console.log("Audio resume blocked. Waiting for interaction.");
             }
         }).catch(() => {});
-    }
-
-    function unlockAudio() {
-        prepareAudioPlayback().catch(() => {});
-
-        window.removeEventListener("touchstart", unlockAudio);
-        window.removeEventListener("mousedown", unlockAudio);
     }
 
     function playTrack(track, listItem) {
@@ -634,8 +650,6 @@
 
         setupBgmToggle();
         setupSoundtrack();
-        window.addEventListener("touchstart", unlockAudio, { once: false });
-        window.addEventListener("mousedown", unlockAudio, { once: false });
     }
 
     window.StellarAudio = {
