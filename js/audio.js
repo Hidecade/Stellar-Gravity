@@ -32,7 +32,7 @@
         title: { file: "audio/StellarGravity_Title.mp3", gain: 0.8, key: "title", loop: true }
     };
     const STATIC_SFX = {
-        blackHole: { file: "audio/StellarGravity_BlackHole.mp3", gain: 0.72 }
+        blackHole: { file: "audio/StellarGravity_BlackHole.mp3", gain: 0.46 }
     };
 
     let noiseBuffer = null;
