@@ -390,6 +390,7 @@
             line-height: 1.1;
             letter-spacing: 6px;
             font-weight: 200;
+            transition: transform 0.45s ease;
         }
 
             h1#title-text {
@@ -432,6 +433,32 @@
             padding: 15px 60px;
             font-size: 20px;
             min-width: 220px;
+            transition: transform 0.45s ease;
+        }
+
+        #clear-message,
+        #title-version,
+        #clear-hi-btn,
+        #name-input-area,
+        #show-ranking-btn,
+        #soundtrack-btn,
+        #controls-hint {
+            transition: transform 0.45s ease;
+        }
+
+        #overlay.stage-clear-layout #title-text {
+            transform: translateY(-60px);
+        }
+
+        #overlay.stage-clear-layout #start-btn,
+        #overlay.stage-clear-layout #clear-message,
+        #overlay.stage-clear-layout #title-version,
+        #overlay.stage-clear-layout #clear-hi-btn,
+        #overlay.stage-clear-layout #name-input-area,
+        #overlay.stage-clear-layout #show-ranking-btn,
+        #overlay.stage-clear-layout #soundtrack-btn,
+        #overlay.stage-clear-layout #controls-hint {
+            transform: translateY(56px);
         }
 
         /* 補助ボタン群 */

@@ -12,6 +12,7 @@
         const pauseOverlay = document.getElementById("pause-overlay");
         const bgmToggleBtn = document.getElementById("bgm-toggle");
         const {
+            fadeOutBlackHoleSound,
             forceStopBGM,
             init: initAudio,
             isBgmEnabled,
@@ -44,6 +45,7 @@
             app: APP_CONFIG,
             combo: COMBO_CONFIG,
             core: CORE_CONFIG,
+            debug: DEBUG_CONFIG,
             effects: EFFECTS_CONFIG,
             gameplay: GAMEPLAY_CONFIG,
             planets: PLANETS,
@@ -118,12 +120,15 @@
         let implosionScale = 1.0;
         let implosionAlpha = 1.0;
         let isImploding = false;
+        let blackHoleRevealStartTime = null;
+        let stageClearOverlayStartTime = null;
 
         const VERSION_STORAGE_KEY = "stellarGravity_appVersion";
         const VERSION_RELOAD_SESSION_KEY = "stellarGravity_versionReloaded";
 
         const CLEAR_INDEX = PLANETS.length - 1;
         let isBlackHoleCore = false;
+        let hasTriggeredFirstMergeSupernova = false;
 
         let lastMergeTime = 0;
         let comboCount = 0;
@@ -224,6 +229,7 @@
             isContinue = false;
             isClearing = false;
             isBlackHoleCore = false;
+            hasTriggeredFirstMergeSupernova = false;
             pendingCoreBoost = false;
             gameOverTime = null;
             comboCount = 0;
@@ -232,6 +238,8 @@
             implosionScale = 1.0;
             implosionAlpha = 1.0;
             isImploding = false;
+            blackHoleRevealStartTime = null;
+            stageClearOverlayStartTime = null;
 
             forceStopBGM();
 
@@ -239,6 +247,7 @@
             Runner.run(runner, engine);
 
             const overlay = document.getElementById("overlay");
+            overlay.classList.remove("stage-clear-layout");
             overlay.classList.remove("hide");
 
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
@@ -278,8 +287,50 @@
         // ---------------------------------------------------------
 
         function removeAllDynamicBodies() {
-            const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic);
-            if (bodies.length) Composite.remove(engine.world, bodies);
+            const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic && b.index !== undefined);
+            if (!bodies.length) return;
+
+            bodies.forEach((body) => {
+                const bodyColor = PLANETS[body.index]?.color || "#ffffff";
+                const dx = body.position.x - CENTER.x;
+                const dy = body.position.y - CENTER.y;
+                const baseAngle = Math.atan2(dy, dx);
+                const burstCount = Math.max(14, Math.min(28, Math.round(body.circleRadius * 0.45)));
+
+                particles.push({
+                    type: "shockwave",
+                    x: body.position.x,
+                    y: body.position.y,
+                    radius: Math.max(10, body.circleRadius * 0.35),
+                    speed: 4.8,
+                    life: 0.45,
+                    color: "rgba(255,255,255,0.65)",
+                    width: 1.6
+                });
+
+                for (let index = 0; index < burstCount; index++) {
+                    const angle = baseAngle + (Math.random() * 1.8 - 0.9) + (Math.random() * Math.PI * 2 * 0.35);
+                    const speed = 2.8 + Math.random() * 6.5;
+                    const offset = Math.random() * Math.max(6, body.circleRadius * 0.28);
+                    const px = body.position.x + Math.cos(angle) * offset;
+                    const py = body.position.y + Math.sin(angle) * offset;
+
+                    particles.push({
+                        type: "spark",
+                        x: px,
+                        y: py,
+                        px,
+                        py,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.55 + Math.random() * 0.35,
+                        color: Math.random() < 0.22 ? "rgba(255,255,255,1)" : bodyColor,
+                        size: 1.1 + Math.random() * 2.6
+                    });
+                }
+            });
+
+            Composite.remove(engine.world, bodies);
         }
 
         /* --- 修正版: スペーシーな演出に変更した triggerSupernovaAt --- */
@@ -392,18 +443,22 @@
                     lastMergeTime = now;
 
                     const comboBonus = 1 + (comboCount * COMBO_CONFIG.bonusStep);
-                    const points = nI === CLEAR_INDEX ? EFFECTS_CONFIG.supernovaBonus : nP.score;
+                    const shouldForceSupernovaForTest = DEBUG_CONFIG.supernovaOnFirstMerge && !hasTriggeredFirstMergeSupernova;
+                    const shouldTriggerSupernova = nI === CLEAR_INDEX || shouldForceSupernovaForTest;
+                    const points = shouldTriggerSupernova ? EFFECTS_CONFIG.supernovaBonus : nP.score;
                     updateScore(Math.floor(points * comboBonus));
                     showComboText(mid.x, mid.y, comboCount);
 
                     // Create Next Body or Clear
                     setTimeout(() => {
-                        if (nI === CLEAR_INDEX) {
+                        if (shouldTriggerSupernova) {
                             if (isClearing) return;
+                            hasTriggeredFirstMergeSupernova = true;
                             isClearing = true;
                             isBlackHoleCore = true;
                             isGameRunning = false;
                             isClickable = false;
+                            stopBGM();
                             triggerSupernovaAt({
                                 height: HEIGHT,
                                 particles,
@@ -413,8 +468,8 @@
                                 setImplosionScale: (value) => { implosionScale = value; },
                                 setIsImploding: (value) => { isImploding = value; },
                                 width: WIDTH,
-                                x: mid.x,
-                                y: mid.y
+                                x: CENTER.x,
+                                y: CENTER.y
                             });
                             setTimeout(removeAllDynamicBodies, EFFECTS_CONFIG.supernovaClearDelayMs);
                             setTimeout(triggerGameClear, EFFECTS_CONFIG.supernovaEndDelayMs);
@@ -462,6 +517,30 @@
                     }
                 }
 
+                ctx.globalAlpha = 1;
+
+                const isOverlayVisible = !document.getElementById("overlay").classList.contains("hide");
+                const shouldShowBlackHoleBackdrop = isOverlayVisible && isClearing && isContinue && isBlackHoleCore;
+
+                if (isBlackHoleCore) {
+                    if (isImploding) {
+                        blackHoleRevealStartTime = null;
+                    } else if (blackHoleRevealStartTime === null) {
+                        blackHoleRevealStartTime = now;
+                    }
+                } else {
+                    blackHoleRevealStartTime = null;
+                }
+
+                const blackHoleRevealProgress = blackHoleRevealStartTime === null
+                    ? 0
+                    : Math.min(1, Math.max(0, (now - blackHoleRevealStartTime) / 2200));
+                const stageClearFadeDuration = EFFECTS_CONFIG.stageClearDeadlineFadeMs || 1200;
+                const isStageClearDeadlineFading = isOverlayVisible && isContinue && stageClearOverlayStartTime !== null;
+                const stageClearDeadlineAlpha = isStageClearDeadlineFading
+                    ? Math.max(0, 1 - ((now - stageClearOverlayStartTime) / stageClearFadeDuration))
+                    : 0;
+
                 // --- Draw Sequence ---
                 drawBackground(ctx, {
                     bgStars,
@@ -474,14 +553,20 @@
                     starBoostMult: STAR_BOOST_MULT
                 });
 
-                ctx.globalAlpha = 1;
-
-                const isOverlayVisible = !document.getElementById("overlay").classList.contains("hide");
-
-                if (!isOverlayVisible) {
+                if (!isOverlayVisible || stageClearDeadlineAlpha > 0) {
                     const isWarning = gameOverTime !== null;
-                    drawRedZone(ctx, { center: CENTER, deadlineRadius: DEADLINE_RADIUS, isWarning, time: t });
+                    drawRedZone(ctx, {
+                        alphaMultiplier: isOverlayVisible ? stageClearDeadlineAlpha : 1,
+                        center: CENTER,
+                        deadlineRadius: DEADLINE_RADIUS,
+                        isWarning,
+                        time: t
+                    });
+                }
+
+                if (!isOverlayVisible || shouldShowBlackHoleBackdrop) {
                     drawCore(ctx, now, {
+                        blackHoleRevealProgress,
                         center: CENTER,
                         coreRadius: CORE_RADIUS,
                         implosionAlpha,
@@ -689,6 +774,8 @@
         }
 
         function triggerGameOver() {
+            const overlay = document.getElementById("overlay");
+            overlay.classList.remove("stage-clear-layout");
 
             stopBGM();
 
@@ -697,7 +784,7 @@
             isGameRunning = false;
             isContinue = false;
             document.getElementById("stage-val").innerText = stage;
-            document.getElementById("overlay").classList.remove("hide");
+            overlay.classList.remove("hide");
             bgmToggleBtn.style.pointerEvents = "auto";
             bgmToggleBtn.style.opacity = "0.75";
             document.querySelector("#overlay h1").innerHTML = "GAME OVER";
@@ -738,12 +825,15 @@
             isGameRunning = false;
             isContinue = true;
             pendingCoreBoost = true;
+            stageClearOverlayStartTime = null;
             setTimeout(() => {
                 const overlay = document.getElementById("overlay");
                 const titleH1 = document.querySelector("#overlay h1");
                 const startBtn = document.getElementById("start-btn");
                 const clearMsg = document.getElementById("clear-message");
                 if (overlay) {
+                    stageClearOverlayStartTime = Date.now();
+                    overlay.classList.add("stage-clear-layout");
                     overlay.classList.remove("hide");
                     titleH1.innerHTML = "STAGE " + stage + "<br>CLEAR";
                     startBtn.textContent = "NEXT";
@@ -818,12 +908,15 @@
             prepareAudioPlayback().catch(() => {});
 
             forceStopBGM();
+            fadeOutBlackHoleSound();
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
             if (isPaused) isPaused = false;
             document.getElementById("clear-message").style.display = "none";
             isClearing = false;
             isBlackHoleCore = false;
             gameOverTime = null;
+            stageClearOverlayStartTime = null;
+            document.getElementById("overlay").classList.remove("stage-clear-layout");
             const startBtn = document.getElementById("start-btn");
             const isNext = startBtn.textContent === "NEXT";
             if (isNext) {
@@ -882,6 +975,8 @@
             const startBtn = document.getElementById("start-btn");
             const nameArea = document.getElementById("name-input-area");
             const titleVersion = document.getElementById("title-version");
+            const isStageClear = isContinue;
+            const isGameOverInput = (nameArea && nameArea.style.display === "flex");
 
             if (isGameRunning) {
                 // --- ゲームプレイ中 ---
@@ -893,16 +988,14 @@
                 if (stageUi) stageUi.classList.remove("ui-faded");
             } else {
                 // --- ゲーム停止中 ---
-                if (uiLayer) uiLayer.style.display = "none";
+                if (uiLayer) uiLayer.style.display = isStageClear ? "flex" : "none";
                 if (boostButton) boostButton.style.display = "none";
-                if (bottomRightUi) bottomRightUi.style.display = "none";
+                if (bottomRightUi) bottomRightUi.style.display = isStageClear ? "flex" : "none";
                 if (pBtn) pBtn.style.display = "none"; // PAUSEボタン非表示
-                if (bPos) bPos.style.display = "block"; // BGMボタン表示
-                if (stageUi) stageUi.classList.add("ui-faded");
+                if (bPos) bPos.style.display = isStageClear ? "none" : "block"; // BGMボタン表示
+                if (stageUi) stageUi.classList.toggle("ui-faded", !isStageClear);
 
                 // タイトル画面UIの制御
-                const isStageClear = isContinue;
-                const isGameOverInput = (nameArea && nameArea.style.display === "flex");
                 const titleElementsStyle = (isStageClear || isGameOverInput) ? "none" : "block";
 
                 if (clearHiBtn) clearHiBtn.style.display = titleElementsStyle;

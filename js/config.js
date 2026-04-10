@@ -13,7 +13,7 @@
 
     window.StellarConfig = {
         app: {
-            version: "2026.04.10.4"
+            version: "2026.04.10.14"
         },
         combo: {
             bonusStep: 0.2,         // 1コンボごとに加算されるスコア倍率
@@ -25,10 +25,14 @@
             growPerStage: 6,        // 1ステージ進むごとに増えるコア半径
             maxRadius: 95           // コア半径の最大値
         },
+        debug: {
+            supernovaOnFirstMerge: false // テスト用: 最初の融合で超新星演出を発火する
+        },
         effects: {
             supernovaBonus: 3000,       // ブラックホール生成時のボーナス点
-            supernovaClearDelayMs: 450, // 超新星演出後に通常天体を消すまでの待ち時間(ms)
-            supernovaEndDelayMs: 950    // 超新星演出からクリア表示までの待ち時間(ms)
+            supernovaClearDelayMs: 120, // 超新星演出開始後に通常天体を爆散退場させるまでの待ち時間(ms)
+            supernovaEndDelayMs: 1900,  // 超新星演出からクリア表示までの待ち時間(ms)
+            stageClearDeadlineFadeMs: 1400 // Stage Clear表示後にデッドラインを消し切るまでの時間(ms)
         },
         gameplay: {
             clickableResetDelayMs: 200, // 発射後に次の入力を受け付けるまでの待ち時間(ms)

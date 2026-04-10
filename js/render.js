@@ -291,20 +291,92 @@
             x,
             y
         } = options;
+        const timingScale = 2;
+
+        const spawnImplosionSparks = ({
+            centerX,
+            centerY,
+            count,
+            inwardPull = 1,
+            life = 1,
+            radiusMax,
+            radiusMin = 40,
+            speedMax,
+            speedMin
+        }) => {
+            for (let index = 0; index < count; index++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = radiusMin + Math.random() * (radiusMax - radiusMin);
+                const px = centerX + Math.cos(angle) * radius;
+                const py = centerY + Math.sin(angle) * radius;
+                const speed = speedMin + Math.random() * (speedMax - speedMin);
+                const swirl = (Math.random() * 2 - 1) * 1.6;
+                const inwardX = -Math.cos(angle) * speed * inwardPull;
+                const inwardY = -Math.sin(angle) * speed * inwardPull;
+                const tangentX = -Math.sin(angle) * swirl;
+                const tangentY = Math.cos(angle) * swirl;
+
+                let color = "rgba(255,255,255,1)";
+                const colorRoll = Math.random();
+                if (colorRoll < 0.34) color = "rgba(255,210,120,1)";
+                else if (colorRoll < 0.68) color = "rgba(255,120,80,1)";
+                else if (colorRoll < 0.86) color = "rgba(0,247,255,1)";
+
+                particles.push({
+                    type: "spark",
+                    x: px,
+                    y: py,
+                    px,
+                    py,
+                    vx: inwardX + tangentX,
+                    vy: inwardY + tangentY,
+                    life: life * (0.8 + Math.random() * 0.45),
+                    color,
+                    size: Math.random() * 1.8 + 1.2
+                });
+            }
+        };
+
+        const spawnRingBurst = ({ centerX, centerY, count, radius, speedMax, speedMin }) => {
+            for (let index = 0; index < count; index++) {
+                const angle = Math.random() * Math.PI * 2;
+                const px = centerX + Math.cos(angle) * radius;
+                const py = centerY + Math.sin(angle) * radius;
+                const speed = speedMin + Math.random() * (speedMax - speedMin);
+                particles.push({
+                    type: "spark",
+                    x: px,
+                    y: py,
+                    px,
+                    py,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.95 + Math.random() * 0.35,
+                    color: Math.random() < 0.55 ? "rgba(255,255,255,1)" : "rgba(0,247,255,1)",
+                    size: Math.random() * 2.1 + 1.1
+                });
+            }
+        };
 
         setIsImploding(true);
-        setImplosionScale(1.0);
+        setImplosionScale(1.35);
         setImplosionAlpha(1.0);
         const startTime = performance.now();
 
         const animateImplosion = (now) => {
             const elapsed = now - startTime;
-            if (elapsed < 300) {
-                setImplosionScale(1.0 + (elapsed / 300) * 0.5);
-            } else if (elapsed < 900) {
-                const progress = (elapsed - 300) / 600;
-                setImplosionScale(1.5 * (1 - progress));
-                setImplosionAlpha(1 - progress);
+            if (elapsed < 420 * timingScale) {
+                const progress = elapsed / (420 * timingScale);
+                setImplosionScale(1.35 - progress * 1.12);
+                setImplosionAlpha(1.0 - progress * 0.12);
+            } else if (elapsed < 760 * timingScale) {
+                const progress = (elapsed - 420 * timingScale) / (340 * timingScale);
+                setImplosionScale(0.23 + progress * 0.35);
+                setImplosionAlpha(0.88 - progress * 0.18);
+            } else if (elapsed < 1160 * timingScale) {
+                const progress = (elapsed - 760 * timingScale) / (400 * timingScale);
+                setImplosionScale(0.58 * (1 - progress));
+                setImplosionAlpha(0.7 * (1 - progress));
             } else {
                 setIsImploding(false);
                 setImplosionScale(0);
@@ -313,87 +385,56 @@
             requestAnimationFrame(animateImplosion);
         };
         requestAnimationFrame(animateImplosion);
+        playBlackHoleSound();
 
-        particles.push({ type: "flash", life: 0.9, color: "rgba(0, 247, 255, 0.55)" });
-        setTimeout(() => { particles.push({ type: "flash", life: 0.55, color: "rgba(138, 43, 226, 0.45)" }); }, 100);
-        setTimeout(() => { particles.push({ type: "flash", life: 0.4, color: "rgba(255, 255, 255, 0.18)" }); }, 220);
-        setTimeout(() => { particles.push({ type: "flash", life: 0.45, color: "rgba(0, 0, 50, 0.6)" }); }, 320);
+        particles.push({ type: "flash", life: 0.55, color: "rgba(255, 210, 160, 0.22)" });
+        particles.push({ type: "flash", life: 0.7, color: "rgba(255, 120, 80, 0.14)" });
 
-        const waves = [
-            { r: 10, sp: 10, life: 1.25, color: "rgba(255,255,255,0.95)", width: 2.6 },
-            { r: 36, sp: 8.8, life: 1.15, color: "rgba(0,247,255,0.9)", width: 2.4 },
-            { r: 82, sp: 6.4, life: 1.05, color: "rgba(189,0,255,0.8)", width: 2.2 },
-            { r: 150, sp: 4.6, life: 0.95, color: "rgba(255,255,255,0.75)", width: 2.0 },
-            { r: 225, sp: 3.1, life: 0.9, color: "rgba(0,247,255,0.65)", width: 1.8 },
-            { r: 310, sp: 1.8, life: 0.75, color: "rgba(255,255,255,0.35)", width: 1.4 }
-        ];
-        waves.forEach((wave, index) => {
-            setTimeout(() => {
-                particles.push({ type: "shockwave", x, y, radius: wave.r, speed: wave.sp, life: wave.life, color: wave.color, width: wave.width });
-            }, index * 70);
-        });
-
-        for (let index = 0; index < 220; index++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 16 + 4;
-            let particleColor = "#ffffff";
-            const rand = Math.random();
-            if (rand < 0.4) particleColor = "#00f7ff";
-            else if (rand < 0.7) particleColor = "#bd00ff";
-
-            particles.push({
-                x,
-                y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1.3,
-                color: particleColor,
-                size: Math.random() * 3.6 + 1.2
-            });
-        }
-
-        for (let index = 0; index < 36; index++) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 10 + 8;
-            particles.push({
-                type: "spark",
-                x,
-                y,
-                px: x,
-                py: y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 0.85,
-                color: Math.random() < 0.5 ? "rgba(255,255,255,1)" : "rgba(0,247,255,1)",
-                size: Math.random() * 1.8 + 1.2
-            });
-        }
-
+        spawnImplosionSparks({ centerX: x, centerY: y, count: 120, life: 1.15, radiusMax: Math.min(width, height) * 0.48, radiusMin: 70, speedMax: 15, speedMin: 6 });
         setTimeout(() => {
-            particles.push({ type: "flash", life: 0.9, color: "rgba(0,0,0,0.9)" });
-            particles.push({ type: "shockwave", x, y, radius: Math.max(width, height), speed: -12, life: 1.45, color: "rgba(255,255,255,0.85)", width: 3.2 });
-
-            for (let index = 0; index < 160; index++) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * 260 + 60;
-                const speed = Math.random() * 9 + 4;
-                particles.push({
-                    x: x + Math.cos(angle) * radius,
-                    y: y + Math.sin(angle) * radius,
-                    vx: -Math.cos(angle + Math.PI / 6) * speed,
-                    vy: -Math.sin(angle + Math.PI / 6) * speed,
-                    life: 1.1,
-                    color: Math.random() < 0.75 ? "#00f7ff" : "#ffffff",
-                    size: Math.random() * 2.6 + 0.8
-                });
-            }
-
-            playBlackHoleSound();
-        }, 520);
+            spawnImplosionSparks({ centerX: x, centerY: y, count: 100, life: 1.0, radiusMax: Math.min(width, height) * 0.42, radiusMin: 55, speedMax: 16, speedMin: 7 });
+        }, 80 * timingScale);
+        setTimeout(() => {
+            spawnImplosionSparks({ centerX: x, centerY: y, count: 80, life: 0.92, radiusMax: Math.min(width, height) * 0.36, radiusMin: 45, speedMax: 17, speedMin: 8 });
+        }, 170 * timingScale);
+        setTimeout(() => {
+            spawnImplosionSparks({ centerX: x, centerY: y, count: 60, life: 0.8, radiusMax: Math.min(width, height) * 0.28, radiusMin: 32, speedMax: 19, speedMin: 10 });
+        }, 260 * timingScale);
 
         playExplosionSound();
-        setTimeout(playExplosionSound, 180);
-        setTimeout(playExplosionSound, 420);
+        setTimeout(playExplosionSound, 90 * timingScale);
+        setTimeout(playExplosionSound, 180 * timingScale);
+        setTimeout(playExplosionSound, 260 * timingScale);
+
+        setTimeout(() => {
+            particles.push({ type: "flash", life: 0.38, color: "rgba(255,255,255,0.25)" });
+
+            const ringWaves = [
+                { r: 16, sp: 12.5, life: 1.25, color: "rgba(255,255,255,0.95)", width: 3.4 },
+                { r: 30, sp: 10.4, life: 1.15, color: "rgba(255,180,120,0.88)", width: 3.0 },
+                { r: 58, sp: 8.2, life: 1.08, color: "rgba(0,247,255,0.88)", width: 2.6 },
+                { r: 110, sp: 5.6, life: 0.98, color: "rgba(189,0,255,0.75)", width: 2.2 },
+                { r: 170, sp: 3.9, life: 0.88, color: "rgba(255,255,255,0.55)", width: 1.8 }
+            ];
+
+            ringWaves.forEach((wave, index) => {
+                setTimeout(() => {
+                    particles.push({ type: "shockwave", x, y, radius: wave.r, speed: wave.sp, life: wave.life, color: wave.color, width: wave.width });
+                }, index * 55 * timingScale);
+            });
+
+            spawnRingBurst({ centerX: x, centerY: y, count: 90, radius: 34, speedMax: 14, speedMin: 6 });
+            setTimeout(() => spawnRingBurst({ centerX: x, centerY: y, count: 70, radius: 74, speedMax: 12, speedMin: 5 }), 70 * timingScale);
+            setTimeout(() => spawnRingBurst({ centerX: x, centerY: y, count: 52, radius: 120, speedMax: 11, speedMin: 4 }), 130 * timingScale);
+        }, 430 * timingScale);
+
+        setTimeout(() => {
+            particles.push({ type: "flash", life: 0.95, color: "rgba(0,0,0,0.94)" });
+            particles.push({ type: "shockwave", x, y, radius: Math.max(width, height) * 0.62, speed: -18, life: 1.2, color: "rgba(255,255,255,0.8)", width: 3.8 });
+            particles.push({ type: "shockwave", x, y, radius: 20, speed: 5.8, life: 1.05, color: "rgba(0,247,255,0.55)", width: 1.6 });
+
+            spawnImplosionSparks({ centerX: x, centerY: y, count: 85, inwardPull: 1.3, life: 0.82, radiusMax: Math.min(width, height) * 0.22, radiusMin: 24, speedMax: 14, speedMin: 6 });
+        }, 830 * timingScale);
     }
 
     function drawBackground(ctx, options) {
@@ -453,7 +494,9 @@
     }
 
     function drawRedZone(ctx, options) {
-        const { center, deadlineRadius, isWarning, time } = options;
+        const { alphaMultiplier = 1, center, deadlineRadius, isWarning, time } = options;
+        if (alphaMultiplier <= 0) return;
+
         ctx.save();
         ctx.translate(center.x, center.y);
         ctx.beginPath();
@@ -465,14 +508,18 @@
         const blinkFreq = isWarning ? 0.015 : 0.006;
         const blink = blinkBase + (1 - blinkBase) * (0.5 + 0.5 * Math.sin(time * blinkFreq));
 
-        ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink})` : `rgba(255, 60, 60, ${blink})`;
+        ctx.strokeStyle = isWarning
+            ? `rgba(255, 0, 0, ${blink * alphaMultiplier})`
+            : `rgba(255, 60, 60, ${blink * alphaMultiplier})`;
         ctx.lineWidth = isWarning ? 4 : 2;
         ctx.stroke();
 
         ctx.beginPath();
         ctx.setLineDash([]);
         ctx.arc(0, 0, deadlineRadius + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = isWarning ? `rgba(255, 0, 0, ${blink * 0.5})` : "rgba(255, 80, 80, 0.25)";
+        ctx.strokeStyle = isWarning
+            ? `rgba(255, 0, 0, ${blink * 0.5 * alphaMultiplier})`
+            : `rgba(255, 80, 80, ${0.25 * alphaMultiplier})`;
         ctx.lineWidth = isWarning ? 10 : 6;
         ctx.stroke();
         ctx.restore();
@@ -515,7 +562,7 @@
     }
 
     function drawCore(ctx, now, options) {
-        const { center, coreRadius, implosionAlpha, implosionScale, isBlackHoleCore, isImploding } = options;
+        const { blackHoleRevealProgress = 1, center, coreRadius, implosionAlpha, implosionScale, isBlackHoleCore, isImploding } = options;
         ctx.save();
         ctx.translate(center.x, center.y);
         const currentRadius = coreRadius * implosionScale;
@@ -536,24 +583,157 @@
             ctx.fill();
             ctx.globalAlpha = 1.0;
         } else if (isBlackHoleCore) {
-            const time = performance.now() * 0.002;
-            for (let index = 0; index < 6; index++) {
-                const radius = coreRadius * (1.8 + index * 0.25);
-                const alpha = 0.15 + Math.sin(time + index) * 0.1;
+            const animationTime = performance.now();
+            const time = animationTime * 0.0012;
+            const wrapSpin = animationTime * 0.0009;
+            const lensSpin = -animationTime * 0.00045;
+            const reveal = Math.min(1, Math.max(0, blackHoleRevealProgress));
+            const easedReveal = 1 - Math.pow(1 - reveal, 3);
+            const baseScale = 0.72 + easedReveal * 0.28;
+            const shadowRadius = coreRadius * 0.94 * baseScale;
+            const ringRadius = coreRadius * 1.08 * (0.78 + easedReveal * 0.22);
+            const drawOrbitRibbon = ({ rotation, radiusX, radiusY, lineWidth, frontColor, backColor, frontShadow, backShadow }) => {
+                ctx.save();
+                ctx.rotate(rotation);
+                ctx.globalCompositeOperation = "screen";
+
                 ctx.beginPath();
-                ctx.arc(0, 0, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(255,80,40,${alpha})`;
-                ctx.lineWidth = 6;
+                ctx.lineWidth = lineWidth;
+                ctx.strokeStyle = backColor;
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = backShadow;
+                ctx.ellipse(0, 0, radiusX, radiusY, 0, Math.PI, Math.PI * 2);
                 ctx.stroke();
-            }
-            const holeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, coreRadius);
+
+                ctx.beginPath();
+                ctx.lineWidth = lineWidth * 1.08;
+                ctx.strokeStyle = frontColor;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = frontShadow;
+                ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            };
+
+            ctx.save();
+            ctx.scale(baseScale, baseScale);
+            ctx.globalAlpha = 0.18 + easedReveal * 0.82;
+
+            const outerGlow = ctx.createRadialGradient(0, 0, shadowRadius * 0.4, 0, 0, coreRadius * 3.9);
+            outerGlow.addColorStop(0, "rgba(255, 180, 120, 0)");
+            outerGlow.addColorStop(0.36, `rgba(255, 140, 80, ${0.08 + easedReveal * 0.08})`);
+            outerGlow.addColorStop(0.7, `rgba(255, 96, 40, ${0.06 + easedReveal * 0.06})`);
+            outerGlow.addColorStop(0.9, `rgba(90, 145, 255, ${0.04 + easedReveal * 0.04})`);
+            outerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+            ctx.fillStyle = outerGlow;
+            ctx.beginPath();
+            ctx.arc(0, 0, coreRadius * 3.9, 0, Math.PI * 2);
+            ctx.fill();
+
+            drawOrbitRibbon({
+                rotation: wrapSpin,
+                radiusX: coreRadius * 2.22,
+                radiusY: coreRadius * 0.58,
+                lineWidth: coreRadius * 0.07,
+                frontColor: `rgba(255, 204, 126, ${0.42 + easedReveal * 0.18})`,
+                backColor: `rgba(140, 78, 32, ${0.14 + easedReveal * 0.06})`,
+                frontShadow: "rgba(255, 158, 72, 0.62)",
+                backShadow: "rgba(120, 70, 28, 0.18)"
+            });
+            drawOrbitRibbon({
+                rotation: lensSpin + Math.PI / 2.8,
+                radiusX: coreRadius * 1.82,
+                radiusY: coreRadius * 0.82,
+                lineWidth: coreRadius * 0.05,
+                frontColor: `rgba(255, 168, 86, ${0.28 + easedReveal * 0.14})`,
+                backColor: `rgba(84, 122, 210, ${0.1 + easedReveal * 0.05})`,
+                frontShadow: "rgba(255, 128, 54, 0.42)",
+                backShadow: "rgba(84, 122, 210, 0.2)"
+            });
+            ctx.restore();
+
+            const photonRing = ctx.createRadialGradient(0, 0, ringRadius * 0.68, 0, 0, ringRadius * 1.34);
+            photonRing.addColorStop(0, "rgba(255,210,150,0)");
+            photonRing.addColorStop(0.28, `rgba(255,186,108, ${0.55 + easedReveal * 0.16})`);
+            photonRing.addColorStop(0.42, `rgba(255,132,58, ${0.82 + easedReveal * 0.12})`);
+            photonRing.addColorStop(0.62, `rgba(210,72,16, ${0.42 + easedReveal * 0.12})`);
+            photonRing.addColorStop(0.86, `rgba(94,148,255, ${0.08 + easedReveal * 0.06})`);
+            photonRing.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = photonRing;
+            ctx.beginPath();
+            ctx.arc(0, 0, ringRadius * 1.34, 0, Math.PI * 2);
+            ctx.fill();
+
+            drawOrbitRibbon({
+                rotation: wrapSpin * 1.35 + Math.sin(time * 0.9) * 0.18,
+                radiusX: ringRadius * 1.02,
+                radiusY: coreRadius * 0.34,
+                lineWidth: coreRadius * 0.034,
+                frontColor: `rgba(255, 226, 170, ${0.28 + easedReveal * 0.16})`,
+                backColor: `rgba(150, 88, 30, ${0.1 + easedReveal * 0.04})`,
+                frontShadow: "rgba(255, 210, 150, 0.38)",
+                backShadow: "rgba(120, 70, 28, 0.14)"
+            });
+
+            ctx.save();
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.beginPath();
+            ctx.arc(0, 0, shadowRadius * 1.02, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            const lensGlow = ctx.createRadialGradient(0, 0, shadowRadius * 0.82, 0, 0, coreRadius * 2.2);
+            lensGlow.addColorStop(0, "rgba(255,190,120,0)");
+            lensGlow.addColorStop(0.46, `rgba(255,148,84, ${0.12 + easedReveal * 0.08})`);
+            lensGlow.addColorStop(0.7, `rgba(96,150,255, ${0.08 + easedReveal * 0.05})`);
+            lensGlow.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = lensGlow;
+            ctx.beginPath();
+            ctx.arc(0, 0, coreRadius * 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.save();
+            ctx.rotate(lensSpin * 0.6);
+            ctx.globalCompositeOperation = "screen";
+            const warpAlpha = 0.12 + easedReveal * 0.1;
+            ctx.strokeStyle = `rgba(255, 168, 94, ${warpAlpha})`;
+            ctx.lineWidth = coreRadius * 0.06;
+            ctx.shadowBlur = 24;
+            ctx.shadowColor = `rgba(255, 136, 64, ${warpAlpha})`;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, coreRadius * 2.55, coreRadius * 0.72, 0, Math.PI * 1.08, Math.PI * 1.92);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(0, 0, coreRadius * 2.55, coreRadius * 0.72, 0, Math.PI * 0.08, Math.PI * 0.92);
+            ctx.stroke();
+            ctx.strokeStyle = `rgba(90, 150, 255, ${0.05 + easedReveal * 0.04})`;
+            ctx.lineWidth = coreRadius * 0.032;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, coreRadius * 3.05, coreRadius * 1.02, 0, Math.PI * 1.12, Math.PI * 1.88);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(0, 0, coreRadius * 3.05, coreRadius * 1.02, 0, Math.PI * 0.12, Math.PI * 0.88);
+            ctx.stroke();
+            ctx.restore();
+
+            const holeGrad = ctx.createRadialGradient(-coreRadius * 0.14, -coreRadius * 0.18, 0, 0, 0, shadowRadius);
             holeGrad.addColorStop(0, "rgba(0,0,0,1)");
-            holeGrad.addColorStop(0.6, "rgba(30,0,0,0.9)");
+            holeGrad.addColorStop(0.72, "rgba(4,4,8,1)");
             holeGrad.addColorStop(1, "rgba(0,0,0,1)");
             ctx.fillStyle = holeGrad;
             ctx.beginPath();
-            ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
+            ctx.arc(0, 0, shadowRadius, 0, Math.PI * 2);
             ctx.fill();
+
+            ctx.strokeStyle = `rgba(255, 176, 96, ${0.36 + easedReveal * 0.18})`;
+            ctx.lineWidth = coreRadius * 0.042;
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = "rgba(255, 146, 64, 0.42)";
+            ctx.beginPath();
+            ctx.arc(0, 0, ringRadius * 0.95, -0.15, Math.PI * 2 - 0.15);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.restore();
         } else {
             const glowRadius = coreRadius * 1.5 + Math.sin(now * 0.008) * 2.5;
             const grad = ctx.createRadialGradient(0, 0, coreRadius, 0, 0, glowRadius);
@@ -641,6 +821,11 @@
                 particle.x += (particle.vx || 0);
                 particle.y += (particle.vy || 0);
                 if (particle.type === "shockwave") particle.radius += (particle.speed || 0) * 0.5;
+            }
+
+            if (particle.type === "shockwave" && particle.radius <= 0) {
+                particles.splice(index, 1);
+                continue;
             }
 
             if (particle.type === "shockwave") {
