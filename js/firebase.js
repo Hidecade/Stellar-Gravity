@@ -185,6 +185,19 @@
             document.getElementById("start-btn").textContent = "START";
         });
 
+        function handleScoreSubmit(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (submitBtn.disabled) return;
+
+            const finalScore = Number(window.finalScore ?? 0);
+            const finalStage = Number(window.finalStage ?? 1);
+            window.submitMyScore(finalScore, finalStage);
+        }
+
         // SKIPボタン
         skipBtn.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -196,14 +209,18 @@
             document.getElementById("name-input-area").style.display = "none";
             document.querySelector("#overlay h1").innerHTML = "STELLAR<br>GRAVITY";
             document.getElementById("start-btn").textContent = "START";
-            updateResetButtonVisibility();
+            if (typeof window.updateResetButtonVisibility === "function") {
+                window.updateResetButtonVisibility();
+            }
         });
 
-        // 送信ボタン (引数にstageを追加)
-        submitBtn.addEventListener("click", () => {
-            const finalScore = window.finalScore || 0;
-            const finalStage = window.finalStage || 1; // ステージ情報を取得
-            window.submitMyScore(finalScore, finalStage);
+        // 送信ボタン: click / touch / Enter のすべてで確実に送信する
+        submitBtn.addEventListener("click", handleScoreSubmit);
+        submitBtn.addEventListener("touchend", handleScoreSubmit, { passive: false });
+        nameInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                handleScoreSubmit(event);
+            }
         });
 
         function escapeHtml(str) {

@@ -58,6 +58,7 @@
         let isClearing = false;
         let isPaused = false;
         const START_STAGE = GAMEPLAY_CONFIG.startStage;
+        const START_SCORE = 50000;
 
         let WIDTH = window.innerWidth;
         let HEIGHT = window.innerHeight;
@@ -1293,11 +1294,17 @@
                 }
             } else {
                 stage = START_STAGE;
-                score = 0;
+                score = START_SCORE;
                 clearCount = 0;
                 difficulty = 1.0;
                 CORE_RADIUS = CORE_DEFAULT;
-                document.getElementById("score-val").innerText = "0";
+                document.getElementById("score-val").innerText = String(score);
+
+                if (score > hiScore) {
+                    hiScore = score;
+                    document.getElementById("hi-score-val").innerText = hiScore;
+                    localStorage.setItem("stellarGravity_hiScore", hiScore);
+                }
             }
 
             CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (stage - 1));
