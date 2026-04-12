@@ -58,7 +58,7 @@
         let isClearing = false;
         let isPaused = false;
         const START_STAGE = GAMEPLAY_CONFIG.startStage;
-        const START_SCORE = 50000;
+        const START_SCORE = 0;
 
         let WIDTH = window.innerWidth;
         let HEIGHT = window.innerHeight;
