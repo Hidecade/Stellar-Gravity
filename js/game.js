@@ -76,6 +76,7 @@
 
         let isBoosting = false;
         let rotationDirection = 1;
+        let activeBoostPointerId = null;
         const CONTROL_MODE_STORAGE_KEY = "stellarGravity_controlMode";
         const CONTROL_MODES = {
             dual: "dual",
@@ -941,6 +942,10 @@
 
             rotationDirection = direction;
             isBoosting = true;
+
+            if (event && typeof event.pointerId === "number") {
+                activeBoostPointerId = event.pointerId;
+            }
         }
 
         function stopDirectionalBoost(event) {
@@ -948,7 +953,15 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
+
+            if (event && typeof event.pointerId === "number") {
+                if (activeBoostPointerId !== null && event.pointerId !== activeBoostPointerId) {
+                    return;
+                }
+            }
+
             isBoosting = false;
+            activeBoostPointerId = null;
         }
 
         [boostLeftBtn, boostRightBtn].forEach((button) => {
@@ -959,21 +972,65 @@
         });
 
         if (boostLeftBtn) {
-            boostLeftBtn.addEventListener("mousedown", (e) => startDirectionalBoost(-1, e));
-            boostLeftBtn.addEventListener("mouseup", stopDirectionalBoost);
-            boostLeftBtn.addEventListener("mouseleave", stopDirectionalBoost);
-            boostLeftBtn.addEventListener("touchstart", (e) => startDirectionalBoost(-1, e), { passive: false });
-            boostLeftBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
-            boostLeftBtn.addEventListener("touchcancel", stopDirectionalBoost);
+            if (window.PointerEvent) {
+                boostLeftBtn.addEventListener("pointerdown", (e) => {
+                    if (e.pointerType === "mouse" && e.button !== 0) return;
+                    startDirectionalBoost(-1, e);
+                    if (typeof boostLeftBtn.setPointerCapture === "function") {
+                        try {
+                            boostLeftBtn.setPointerCapture(e.pointerId);
+                        } catch (_) {
+                            // Ignore capture errors on unsupported browsers/devices.
+                        }
+                    }
+                }, { passive: false });
+                boostLeftBtn.addEventListener("pointerup", stopDirectionalBoost, { passive: false });
+                boostLeftBtn.addEventListener("pointercancel", stopDirectionalBoost, { passive: false });
+                boostLeftBtn.addEventListener("lostpointercapture", stopDirectionalBoost, { passive: false });
+                boostLeftBtn.addEventListener("pointerleave", (e) => {
+                    if (e.pointerType === "mouse") {
+                        stopDirectionalBoost(e);
+                    }
+                }, { passive: false });
+            } else {
+                boostLeftBtn.addEventListener("mousedown", (e) => startDirectionalBoost(-1, e));
+                boostLeftBtn.addEventListener("mouseup", stopDirectionalBoost);
+                boostLeftBtn.addEventListener("mouseleave", stopDirectionalBoost);
+                boostLeftBtn.addEventListener("touchstart", (e) => startDirectionalBoost(-1, e), { passive: false });
+                boostLeftBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
+                boostLeftBtn.addEventListener("touchcancel", stopDirectionalBoost, { passive: false });
+            }
         }
 
         if (boostRightBtn) {
-            boostRightBtn.addEventListener("mousedown", (e) => startDirectionalBoost(1, e));
-            boostRightBtn.addEventListener("mouseup", stopDirectionalBoost);
-            boostRightBtn.addEventListener("mouseleave", stopDirectionalBoost);
-            boostRightBtn.addEventListener("touchstart", (e) => startDirectionalBoost(1, e), { passive: false });
-            boostRightBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
-            boostRightBtn.addEventListener("touchcancel", stopDirectionalBoost);
+            if (window.PointerEvent) {
+                boostRightBtn.addEventListener("pointerdown", (e) => {
+                    if (e.pointerType === "mouse" && e.button !== 0) return;
+                    startDirectionalBoost(1, e);
+                    if (typeof boostRightBtn.setPointerCapture === "function") {
+                        try {
+                            boostRightBtn.setPointerCapture(e.pointerId);
+                        } catch (_) {
+                            // Ignore capture errors on unsupported browsers/devices.
+                        }
+                    }
+                }, { passive: false });
+                boostRightBtn.addEventListener("pointerup", stopDirectionalBoost, { passive: false });
+                boostRightBtn.addEventListener("pointercancel", stopDirectionalBoost, { passive: false });
+                boostRightBtn.addEventListener("lostpointercapture", stopDirectionalBoost, { passive: false });
+                boostRightBtn.addEventListener("pointerleave", (e) => {
+                    if (e.pointerType === "mouse") {
+                        stopDirectionalBoost(e);
+                    }
+                }, { passive: false });
+            } else {
+                boostRightBtn.addEventListener("mousedown", (e) => startDirectionalBoost(1, e));
+                boostRightBtn.addEventListener("mouseup", stopDirectionalBoost);
+                boostRightBtn.addEventListener("mouseleave", stopDirectionalBoost);
+                boostRightBtn.addEventListener("touchstart", (e) => startDirectionalBoost(1, e), { passive: false });
+                boostRightBtn.addEventListener("touchend", stopDirectionalBoost, { passive: false });
+                boostRightBtn.addEventListener("touchcancel", stopDirectionalBoost, { passive: false });
+            }
         }
 
         window.addEventListener("keydown", (e) => {
@@ -1334,6 +1391,7 @@
             isPaused = shouldPause;
 
             if (isPaused) {
+                stopDirectionalBoost();
                 // --- PAUSE ---
                 if (runner) Runner.stop(runner);
                 pauseCurrentAudio();
@@ -1440,7 +1498,8 @@
         }
 
         window.addEventListener("pointerdown", (e) => {
-            if (e.target.tagName === "BUTTON" || isPaused) return;
+            const targetElement = e.target instanceof Element ? e.target : null;
+            if ((targetElement && targetElement.closest("button")) || isPaused) return;
             if (isGameRunning && !isPaused) {
                 if (e.button !== 0) return;
                 if (isInsideShootArea(e.clientX, e.clientY)) {
