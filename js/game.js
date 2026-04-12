@@ -76,6 +76,12 @@
 
         let isBoosting = false;
         let rotationDirection = 1;
+        const CONTROL_MODE_STORAGE_KEY = "stellarGravity_controlMode";
+        const CONTROL_MODES = {
+            dual: "dual",
+            rightOnly: "rightOnly"
+        };
+        let controlMode = localStorage.getItem(CONTROL_MODE_STORAGE_KEY) || CONTROL_MODES.dual;
         const ROTATE_BASE_SPEED = RENDER_CONFIG.rotateBaseSpeed;
         const ROTATE_BOOST_MULT = RENDER_CONFIG.rotateBoostMultiplier;
         const STAR_BOOST_MULT = RENDER_CONFIG.starBoostMultiplier;
@@ -704,11 +710,59 @@
         const soundtrackOverlay = document.getElementById("soundtrack-overlay");
         const soundtrackBackBtn = document.getElementById("soundtrack-back-btn");
         const trackListContainer = document.getElementById("track-list-container");
+        const controlsHint = document.getElementById("controls-hint");
+        const controlModeSelector = document.getElementById("control-mode-selector");
+        const modeDualBtn = document.getElementById("mode-dual-btn");
+        const modeRightOnlyBtn = document.getElementById("mode-right-only-btn");
         const menuNavigationState = {
             context: "",
             elements: [],
             index: 0
         };
+
+        function sanitizeControlMode(value) {
+            return value === CONTROL_MODES.rightOnly ? CONTROL_MODES.rightOnly : CONTROL_MODES.dual;
+        }
+
+        function updateControlsHintText() {
+            if (!controlsHint) return;
+            if (controlMode === CONTROL_MODES.rightOnly) {
+                controlsHint.innerHTML = "[PC] RIGHT : BOOST | SPACE : SHOOT<br>[TOUCH] TAP SCREEN : SHOOT";
+            } else {
+                controlsHint.innerHTML = "[PC] LEFT / RIGHT : BOOST | SPACE : SHOOT<br>[TOUCH] TAP SCREEN : SHOOT";
+            }
+        }
+
+        function applyControlModeUi() {
+            controlMode = sanitizeControlMode(controlMode);
+
+            const isDualMode = controlMode === CONTROL_MODES.dual;
+            if (modeDualBtn) modeDualBtn.classList.toggle("mode-active", isDualMode);
+            if (modeRightOnlyBtn) modeRightOnlyBtn.classList.toggle("mode-active", !isDualMode);
+
+            if (boostLeftBtn) {
+                boostLeftBtn.style.display = isDualMode ? "flex" : "none";
+            }
+
+            if (boostRightBtn) {
+                boostRightBtn.classList.toggle("right-only-mode", !isDualMode);
+                boostRightBtn.setAttribute("aria-label", isDualMode ? "Boost Right" : "Boost");
+            }
+
+            if (!isDualMode && rotationDirection < 0) {
+                rotationDirection = 1;
+                isBoosting = false;
+            }
+
+            updateControlsHintText();
+            refreshMenuNavigation();
+        }
+
+        function setControlMode(nextMode) {
+            controlMode = sanitizeControlMode(nextMode);
+            localStorage.setItem(CONTROL_MODE_STORAGE_KEY, controlMode);
+            applyControlModeUi();
+        }
 
         function isElementVisible(element) {
             if (!element) return false;
@@ -763,7 +817,7 @@
             if (!overlay.classList.contains("hide")) {
                 return {
                     context: "title",
-                    elements: [startBtn, showRankingBtn, soundtrackBtn, clearHiBtn].filter(isElementVisible)
+                    elements: [startBtn, modeDualBtn, modeRightOnlyBtn, showRankingBtn, soundtrackBtn, clearHiBtn].filter(isElementVisible)
                 };
             }
 
@@ -880,6 +934,11 @@
                 event.preventDefault();
                 event.stopPropagation();
             }
+
+            if (controlMode === CONTROL_MODES.rightOnly && direction < 0) {
+                return;
+            }
+
             rotationDirection = direction;
             isBoosting = true;
         }
@@ -922,7 +981,11 @@
                 return;
             }
             if (isPaused) return;
-            if (e.code === "ArrowLeft") { startDirectionalBoost(-1, e); }
+            if (e.code === "ArrowLeft") {
+                if (controlMode === CONTROL_MODES.dual) {
+                    startDirectionalBoost(-1, e);
+                }
+            }
             if (e.code === "ArrowRight") { startDirectionalBoost(1, e); }
             if (e.code === "Space") {
                 e.preventDefault();
@@ -943,6 +1006,22 @@
                 stopDirectionalBoost(e);
             }
         });
+
+        if (modeDualBtn) {
+            modeDualBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setControlMode(CONTROL_MODES.dual);
+            });
+        }
+
+        if (modeRightOnlyBtn) {
+            modeRightOnlyBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setControlMode(CONTROL_MODES.rightOnly);
+            });
+        }
 
         setInterval(() => {
             if (!boostLeftBtn || !boostRightBtn) return;
@@ -1105,6 +1184,7 @@
         function finalizeBoot() {
             preInit();
             updateResetButtonVisibility();
+            applyControlModeUi();
 
             const versionEl = document.getElementById("title-version");
             if (versionEl) {
@@ -1200,6 +1280,7 @@
             const soundtrackBtn = document.getElementById("soundtrack-btn");
             const showRankingBtn = document.getElementById("show-ranking-btn");
             const hint = document.getElementById("controls-hint");
+            const modeSelector = document.getElementById("control-mode-selector");
             const startBtn = document.getElementById("start-btn");
             const nameArea = document.getElementById("name-input-area");
             const titleVersion = document.getElementById("title-version");
@@ -1230,6 +1311,7 @@
                 if (soundtrackBtn) soundtrackBtn.style.display = titleElementsStyle;
                 if (showRankingBtn) showRankingBtn.style.display = titleElementsStyle;
                 if (hint) hint.style.display = titleElementsStyle;
+                if (modeSelector) modeSelector.style.display = titleElementsStyle === "none" ? "none" : "flex";
                 if (titleVersion) titleVersion.style.display = titleElementsStyle;
 
                 if (startBtn) {

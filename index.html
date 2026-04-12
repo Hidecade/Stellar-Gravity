@@ -58,11 +58,16 @@
         </h1>
 
         <div id="controls-hint" style="margin-top: 25px; font-size: 10px; letter-spacing: 2px; color: #aaa; line-height: 1.6;">
-            [PC] LEFT / RIGHT : BOOST | SPACE : SHOOT | P : PAUSE<br>
+            [PC] LEFT / RIGHT : BOOST | SPACE : SHOOT<br>
             [TOUCH] TAP SCREEN : SHOOT
         </div>
 
         <button id="start-btn" class="btn">START</button>
+
+        <div id="control-mode-selector" aria-label="Control Mode Selector">
+            <button id="mode-dual-btn" class="btn mode-btn">L/R Mode</button>
+            <button id="mode-right-only-btn" class="btn mode-btn">R Mode</button>
+        </div>
 
         <button id="show-ranking-btn" class="btn sub-btn" style="margin-top: 20px;">WORLD RANKING</button>
 
@@ -140,6 +145,7 @@
                 <path d="M34 19a14 14 0 1 0-5 18" />
                 <path d="M35 11v11H24" />
             </svg>
+            <span class="boost-text-label" aria-hidden="true">BOOST</span>
         </button>
     </div>
 
