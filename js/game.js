@@ -51,8 +51,20 @@
             progression: PROGRESSION_CONFIG,
             render: RENDER_CONFIG,
             system: SYSTEM_CONFIG,
-            timer: TIMER_CONFIG
+            timer: TIMER_CONFIG,
+            challengeTimer: CHALLENGE_TIMER_CONFIG,
+            challengeDifficulty: CHALLENGE_DIFFICULTY_CONFIG
         } = window.StellarConfig;
+
+        // --- Challenge Mode State ---
+        let isChallengeMode = false;
+        function getTimerConfig() { return isChallengeMode ? CHALLENGE_TIMER_CONFIG : TIMER_CONFIG; }
+        function getDifficultyConfig() { return isChallengeMode ? CHALLENGE_DIFFICULTY_CONFIG : PROGRESSION_CONFIG; }
+        let TIMER_MAX_SEC = TIMER_CONFIG.maxSeconds;
+        let TIMER_MID_SEC = TIMER_CONFIG.midSeconds;
+        let TIMER_MIN_SEC = TIMER_CONFIG.minSeconds;
+        let DIFF_STEP = PROGRESSION_CONFIG.difficultyStep;
+        let DIFF_MAX = PROGRESSION_CONFIG.difficultyMax;
 
         /* Game State */
         let isClearing = false;
@@ -70,6 +82,8 @@
         const CORE_DEFAULT = CORE_CONFIG.defaultRadius;
         const CORE_MAX = CORE_CONFIG.maxRadius;
         const CORE_GROW = CORE_CONFIG.growPerStage;
+        const CHALLENGE_CORE_DEFAULT = window.StellarConfig.challengeCore.defaultRadius;
+        // ゲーム開始時のコア半径をモードで切り替え
         let CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (START_STAGE - 1));
 
         let pendingCoreBoost = false;
@@ -88,17 +102,12 @@
         const ROTATE_BOOST_MULT = RENDER_CONFIG.rotateBoostMultiplier;
         const STAR_BOOST_MULT = RENDER_CONFIG.starBoostMultiplier;
 
+
         let clearCount = 0;
         let difficulty = 1.0;
-        const DIFF_STEP = PROGRESSION_CONFIG.difficultyStep;
-        const DIFF_MAX = PROGRESSION_CONFIG.difficultyMax;
-
+        // DIFF_STEP, DIFF_MAX, TIMER_MAX_SEC, TIMER_MID_SEC, TIMER_MIN_SECはletで管理（const重複宣言を削除）
         let shotTimer = null;
         let shotTimeLimit = 0;
-
-        const TIMER_MAX_SEC = TIMER_CONFIG.maxSeconds;
-        const TIMER_MID_SEC = TIMER_CONFIG.midSeconds;
-        const TIMER_MIN_SEC = TIMER_CONFIG.minSeconds;
 
         let barAnimId = null;
         let timerStartTime = 0;
@@ -143,6 +152,10 @@
 
         function onClear() {
             clearCount++;
+            // 難易度設定もモードごとに切り替え
+            const diffConf = getDifficultyConfig();
+            DIFF_STEP = diffConf.difficultyStep;
+            DIFF_MAX = diffConf.difficultyMax;
             difficulty = Math.min(DIFF_MAX, 1.0 + clearCount * DIFF_STEP);
         }
 
@@ -167,11 +180,42 @@
                 return;
             }
 
-            if (stage <= TIMER_CONFIG.midStageStart) {
-                shotTimeLimit = TIMER_MAX_SEC - (stage - 1) * TIMER_CONFIG.earlyStageStepSeconds;
+            // モードごとにタイマー設定を切り替え
+            const timerConf = getTimerConfig();
+            TIMER_MAX_SEC = timerConf.maxSeconds;
+            TIMER_MID_SEC = timerConf.midSeconds;
+            TIMER_MIN_SEC = timerConf.minSeconds;
+            if (stage <= timerConf.midStageStart) {
+                shotTimeLimit = TIMER_MAX_SEC - (stage - 1) * timerConf.earlyStageStepSeconds;
             } else {
-                shotTimeLimit = Math.max(TIMER_MIN_SEC, TIMER_MID_SEC - (stage - TIMER_CONFIG.midStageStart) * TIMER_CONFIG.lateStageStepSeconds);
+                shotTimeLimit = Math.max(TIMER_MIN_SEC, TIMER_MID_SEC - (stage - timerConf.midStageStart) * timerConf.lateStageStepSeconds);
             }
+        // --- Challenge Modeボタンのイベント ---
+        const challengeBtn = document.getElementById("challenge-mode-btn");
+        if (challengeBtn) {
+            challengeBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // チャレンジモードON
+                isChallengeMode = true;
+                // ボタン色ON
+                challengeBtn.classList.add("mode-active");
+                // スタートボタンを強調
+                const startBtn = document.getElementById("start-btn");
+                if (startBtn) {
+                    startBtn.focus();
+                    startBtn.textContent = "START (CHALLENGE)";
+                }
+                // 難易度・タイマー設定を即時反映
+                const diffConf = getDifficultyConfig();
+                DIFF_STEP = diffConf.difficultyStep;
+                DIFF_MAX = diffConf.difficultyMax;
+                const timerConf = getTimerConfig();
+                TIMER_MAX_SEC = timerConf.maxSeconds;
+                TIMER_MID_SEC = timerConf.midSeconds;
+                TIMER_MIN_SEC = timerConf.minSeconds;
+            });
+        }
 
             const nextPlanetIndex = nextQueue.length > 1 ? nextQueue[1] : nextQueue[0];
             const nextPlanetColor = PLANETS[nextPlanetIndex].color;
@@ -1297,8 +1341,20 @@
                 score = START_SCORE;
                 clearCount = 0;
                 difficulty = 1.0;
-                CORE_RADIUS = CORE_DEFAULT;
+                // コア半径をモードで切り替え（growPerStageも反映）
+                if (isChallengeMode) {
+                    CORE_RADIUS = Math.min(CORE_MAX, CHALLENGE_CORE_DEFAULT + CORE_GROW * (START_STAGE - 1));
+                } else {
+                    CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (START_STAGE - 1));
+                }
                 document.getElementById("score-val").innerText = String(score);
+
+                // 通常モードで開始
+                isChallengeMode = false;
+                // ボタン色リセット
+                const challengeBtn = document.getElementById("challenge-mode-btn");
+                if (challengeBtn) challengeBtn.classList.remove("mode-active");
+                if (startBtn) startBtn.textContent = "START";
 
                 if (score > hiScore) {
                     hiScore = score;
@@ -1307,6 +1363,7 @@
                 }
             }
 
+            // ステージ進行時は通常通り（モード切替はしない）
             CORE_RADIUS = Math.min(CORE_MAX, CORE_DEFAULT + CORE_GROW * (stage - 1));
 
             document.getElementById("stage-val").innerText = stage;

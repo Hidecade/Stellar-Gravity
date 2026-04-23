@@ -21,9 +21,14 @@
             dustCount: 25           // コンボ表示時に出す粒子数
         },
         core: {
-            defaultRadius: 50,      // ステージ1開始時のコア半径
+            defaultRadius: 50,      // ステージ1開始時のコア半径（通常）
             growPerStage: 6,        // 1ステージ進むごとに増えるコア半径
             maxRadius: 95           // コア半径の最大値
+        },
+        challengeCore: {
+            defaultRadius: 80,      // チャレンジモード時のコア初期半径
+            growPerStage: 6,        // 1ステージ進むごとに増えるコア半径（共通）
+            maxRadius: 95           // コア半径の最大値（共通）
         },
         debug: {
             supernovaOnFirstMerge: false // テスト用: 最初の融合で超新星演出を発火する
@@ -66,12 +71,24 @@
             resizeDebounceMs: 100 // リサイズ再計算を遅延させる時間(ms)
         },
         timer: {
-            earlyStageStepSeconds: 4.0, // 序盤ステージで1段階ごとに減る制限時間(秒)
-            lateStageStepSeconds: 1.0, // 中盤以降ステージで1段階ごとに減る制限時間(秒)
-            midStageStart: 6, // 制限時間の減衰ルールが切り替わる基準ステージ
-            maxSeconds: 30.0, // 最長の制限時間(秒)
-            midSeconds: 10.0, // 中盤開始時の基準制限時間(秒)
-            minSeconds: 2.0 // 制限時間の下限(秒)
+            earlyStageStepSeconds: 4.0, // 通常:序盤ステージで1段階ごとに減る制限時間(秒)
+            lateStageStepSeconds: 1.0, // 通常:中盤以降ステージで1段階ごとに減る制限時間(秒)
+            midStageStart: 6, // 通常:制限時間の減衰ルールが切り替わる基準ステージ
+            maxSeconds: 30.0, // 通常:最長の制限時間(秒)
+            midSeconds: 10.0, // 通常:中盤開始時の基準制限時間(秒)
+            minSeconds: 2.0 // 通常:制限時間の下限(秒)
+        },
+        challengeTimer: {
+            earlyStageStepSeconds: 2.0, // チャレンジ:序盤ステージで1段階ごとに減る制限時間(秒)
+            lateStageStepSeconds: 0.5, // チャレンジ:中盤以降ステージで1段階ごとに減る制限時間(秒)
+            midStageStart: 4, // チャレンジ:制限時間の減衰ルールが切り替わる基準ステージ
+            maxSeconds: 10.0, // チャレンジ:最長の制限時間(秒)
+            midSeconds: 4.0, // チャレンジ:中盤開始時の基準制限時間(秒)
+            minSeconds: 1.0 // チャレンジ:制限時間の下限(秒)
+        },
+        challengeDifficulty: {
+            difficultyMax: 5.0,         // チャレンジ:難易度倍率の上限
+            difficultyStep: 0.25        // チャレンジ:ステージクリアごとに増える難易度倍率
         }
     };
 })();
