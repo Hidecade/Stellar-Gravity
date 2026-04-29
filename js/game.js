@@ -1280,6 +1280,11 @@
 
             prepareAudioPlayback().catch(() => {});
 
+            // iOS対策: ユーザー操作直後にBGM再生を明示的にリトライ
+            if (isBgmEnabled()) {
+                playBGM();
+            }
+
             forceStopBGM();
             fadeOutBlackHoleSound();
             if (runner) { Runner.stop(runner); Runner.run(runner, engine); }
@@ -1334,7 +1339,7 @@
             isClickable = true;
             isGameRunning = true;
             updateResetButtonVisibility();
-            playBGM();
+            // playBGM()は上で呼んでいるのでここでは重複呼び出ししない
             startShotTimer();
         });
 
